@@ -210,15 +210,30 @@ class PromoController extends Controller
 
         // Handle ordering
         if ($request->has('order')) {
-            $orderColumn = $request->columns[$request->order[0]['column']]['data'];
-            $orderDirection = $request->order[0]['dir'];
+            $allowedColumns = [
+                'id',
+                'code',
+                'promo_mode',
+                'discount_type',
+                'discount_amount',
+                'start_date',
+                'end_date',
+                'usage_count',
+                'max_total_usage',
+                'status',
+            ];
+            $requestedColumn = $request->columns[$request->order[0]['column']]['data'] ?? 'id';
+            $orderColumn = in_array($requestedColumn, $allowedColumns, true) ? $requestedColumn : 'id';
+
+            $requestedDirection = strtolower((string) ($request->order[0]['dir'] ?? 'desc'));
+            $orderDirection = in_array($requestedDirection, ['asc', 'desc'], true) ? $requestedDirection : 'desc';
             $query->orderBy($orderColumn, $orderDirection);
         }
 
 
         // Handle pagination
         if ($request->has('start') && $request->has('length')) {
-            $query->skip($request->start)->take($request->length);
+            $query->skip((int) $request->start)->take((int) $request->length);
         }
 
         $promos = $query->get();

@@ -122,8 +122,12 @@ class SystemUpdateController extends Controller
 
         // Order
         if ($request->has('order')) {
-            $orderColumn = $request->columns[$request->order[0]['column']]['data'] ?? 'id';
-            $orderDirection = $request->order[0]['dir'] ?? 'desc';
+            $allowedColumns = ['id', 'version', 'package_name', 'status', 'applied_at'];
+            $requestedColumn = $request->columns[$request->order[0]['column']]['data'] ?? 'id';
+            $orderColumn = in_array($requestedColumn, $allowedColumns, true) ? $requestedColumn : 'id';
+
+            $requestedDirection = strtolower((string) ($request->order[0]['dir'] ?? 'desc'));
+            $orderDirection = in_array($requestedDirection, ['asc', 'desc'], true) ? $requestedDirection : 'desc';
             $query->orderBy($orderColumn, $orderDirection);
         } else {
             $query->orderByDesc('id');
