@@ -175,7 +175,7 @@ Route::get('brands', [BrandApiController::class, 'index']);
 
 // products
 Route::prefix('products')->name('products.')->group(function () {
-//    Route::get('/', [ProductApiController::class, 'getAllProduct']);
+    Route::get('/', [ProductApiController::class, 'getAllProduct']);
     Route::get('/search-by-keywords', [ProductApiController::class, 'searchByKeywords']);
     Route::get('/store-wise', [ProductApiController::class, 'storeWise']);
     Route::get('/{slug}', [ProductApiController::class, 'show']);

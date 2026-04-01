@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Product;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Product\GetProductsByLocationRequest;
+use App\Http\Resources\Product\ProductCatalogResource;
 use App\Http\Resources\Product\ProductListResource;
 use App\Http\Resources\Product\ProductResource;
 use App\Models\Product;
@@ -231,20 +232,80 @@ class ProductApiController extends Controller
      * Get products All Products.
      */
     #[QueryParameter('page', description: 'Page number for pagination.', type: 'int', default: 1, example: 1)]
+    #[QueryParameter('perPage', description: 'Products Per Page.', type: 'int', default: 20, example: 20)]
+    #[QueryParameter('search', description: 'Search by product title, slug, tags, and description.', type: 'string', example: 'tape')]
+    #[QueryParameter('customer_state_code', description: 'Optional customer state code for GST split (intra/inter).', type: 'string', example: 'TN')]
     public function getAllProduct(Request $request): JsonResponse
     {
-        $perPage = $request->input('per_page', 15);
-        $query = Product::with([
-            'variants.storeProductVariants',
-            'variants.attributes.attribute',
-            'variants.attributes.attributeValue',
-            'variantAttributes.attribute',
-            'variantAttributes.attributeValue'
-        ]);
+        try {
+            $validated = $request->validate([
+                'page' => 'nullable|integer|min:1',
+                'perPage' => 'nullable|integer|min:1|max:100',
+                'per_page' => 'nullable|integer|min:1|max:100',
+                'perpage' => 'nullable|integer|min:1|max:100',
+                'search' => 'nullable|string|max:255',
+                'customer_state_code' => 'nullable|string|max:10',
+            ]);
 
-        $products = $query->orderBy('title')->paginate($perPage);
-        $products->getCollection()->transform(fn($product) => new ProductListResource($product));
-        return ApiResponseType::sendJsonResponse(true, 'labels.product_fetched_successfully', $products);
+            $perPage = (int) ($validated['perPage'] ?? $validated['per_page'] ?? $validated['perpage'] ?? 20);
+            $search = trim((string) ($validated['search'] ?? ''));
+
+            $query = Product::query()
+                ->with([
+                    'category:id,title,slug',
+                    'brand:id,title,slug',
+                    'taxClasses:id,title',
+                    'taxClasses.taxRates:id,title,rate',
+                    'variants' => function ($variantQuery) {
+                        $variantQuery->with([
+                            'attributes.attribute:id,title,slug',
+                            'attributes.attributeValue:id,title,swatche_value',
+                            'storeProductVariants' => function ($spvQuery) {
+                                $spvQuery->with('store:id,name,slug,state_code,state_name');
+                            },
+                        ]);
+                    },
+                ]);
+
+            if ($search !== '') {
+                $query->where(function ($searchQuery) use ($search) {
+                    $searchQuery->where('title', 'like', "%{$search}%")
+                        ->orWhere('slug', 'like', "%{$search}%")
+                        ->orWhere('short_description', 'like', "%{$search}%")
+                        ->orWhere('description', 'like', "%{$search}%")
+                        ->orWhere('tags', 'like', "%{$search}%");
+                });
+            }
+
+            $products = $query->orderByDesc('id')->paginate($perPage);
+            $products->getCollection()->transform(fn($product) => new ProductCatalogResource($product));
+
+            return ApiResponseType::sendJsonResponse(
+                success: true,
+                message: 'labels.product_fetched_successfully',
+                data: [
+                    'hasNext' => $products->hasMorePages(),
+                    'page' => $products->currentPage(),
+                    'perPage' => $products->perPage(),
+                    'lastPage' => $products->lastPage(),
+                    'total' => $products->total(),
+                    'search' => $search,
+                    'data' => $products->items(),
+                ]
+            );
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return ApiResponseType::sendJsonResponse(
+                success: false,
+                message: 'labels.validation_error',
+                data: $e->errors()
+            );
+        } catch (\Exception $e) {
+            return ApiResponseType::sendJsonResponse(
+                success: false,
+                message: 'labels.error_fetching_products',
+                data: $e->getMessage(),
+            );
+        }
     }
 
     /**
