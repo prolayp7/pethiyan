@@ -4,6 +4,34 @@ const panel = document.getElementById('panel') ? document.getElementById('panel'
 const root = getComputedStyle(document.documentElement);
 const primaryColor = root.getPropertyValue('--tblr-primary').trim();
 
+function toSafeSameOriginUrl(url) {
+    if (!url || typeof url !== 'string') return null;
+    try {
+        const resolved = new URL(url, window.location.origin);
+        if (resolved.origin !== window.location.origin) return null;
+        if (!['http:', 'https:'].includes(resolved.protocol)) return null;
+        return resolved.toString();
+    } catch (_e) {
+        return null;
+    }
+}
+
+function setErrorMessages(errorDiv, fieldErrors) {
+    errorDiv.textContent = '';
+
+    if (Array.isArray(fieldErrors)) {
+        fieldErrors.forEach((message, index) => {
+            if (index > 0) {
+                errorDiv.appendChild(document.createElement('br'));
+            }
+            errorDiv.appendChild(document.createTextNode(String(message ?? '')));
+        });
+        return;
+    }
+
+    errorDiv.textContent = String(fieldErrors ?? '');
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('form.form-submit').forEach(function (form) {
         form.addEventListener('submit', function (e) {
@@ -59,7 +87,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (data.data && data.data.redirect_url) {
                         Toast.fire({ icon: "success", title: data.message });
                         setTimeout(function () {
-                            window.location.href = data.data.redirect_url;
+                            const safeRedirectUrl = toSafeSameOriginUrl(data.data.redirect_url);
+                            if (safeRedirectUrl) {
+                                window.location.href = safeRedirectUrl;
+                            } else {
+                                location.reload();
+                            }
                         }, 1500);
                         return;
                     }
@@ -204,7 +237,7 @@ function handleFilePondValidation(field, filepond, fieldErrors) {
         // Create error message for FilePond
         const errorDiv = document.createElement('div');
         errorDiv.className = 'invalid-feedback d-block'; // d-block to make it visible
-        errorDiv.innerHTML = Array.isArray(fieldErrors) ? fieldErrors.join('<br>') : fieldErrors;
+        setErrorMessages(errorDiv, fieldErrors);
 
         // Insert error message after FilePond wrapper
         if (filepond_wrapper.nextSibling) {
@@ -232,7 +265,7 @@ function handleStandardFieldValidation(field, fieldErrors) {
     // Create error message element
     const errorDiv = document.createElement('div');
     errorDiv.className = 'invalid-feedback';
-    errorDiv.innerHTML = Array.isArray(fieldErrors) ? fieldErrors.join('<br>') : fieldErrors;
+    setErrorMessages(errorDiv, fieldErrors);
 
     // Insert error message after the field
     if (field.nextSibling) {

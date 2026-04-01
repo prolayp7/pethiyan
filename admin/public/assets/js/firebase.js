@@ -1,6 +1,16 @@
 import {initializeApp} from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
 import {getMessaging, getToken, onMessage} from "https://www.gstatic.com/firebasejs/11.0.1/firebase-messaging.js";
 
+function toSafeHttpUrl(url) {
+    if (!url || typeof url !== 'string') return null;
+    try {
+        const resolved = new URL(url, window.location.origin);
+        return ['http:', 'https:'].includes(resolved.protocol) ? resolved.toString() : null;
+    } catch (_e) {
+        return null;
+    }
+}
+
 async function initFirebase() {
     try {
         // 🔹 Check if config is cached
@@ -56,17 +66,39 @@ async function initFirebase() {
             toastEl.setAttribute('aria-live', 'assertive');
             toastEl.setAttribute('aria-atomic', 'true');
 
-            // Toast inner HTML
-            toastEl.innerHTML = `
-        <div class="toast-header">
-            ${image ? `<img src="${image}" class="rounded me-2" alt="Notification Image" style="width:30px;height:30px;object-fit:cover;">` : ''}
-            <strong class="me-auto">${title || 'Notification'}</strong>
-            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
-        </div>
-        <div class="toast-body">
-            ${body || ''}
-        </div>
-    `;
+            const header = document.createElement('div');
+            header.className = 'toast-header';
+
+            const safeImage = toSafeHttpUrl(image);
+            if (safeImage) {
+                const imageEl = document.createElement('img');
+                imageEl.src = safeImage;
+                imageEl.className = 'rounded me-2';
+                imageEl.alt = 'Notification Image';
+                imageEl.style.width = '30px';
+                imageEl.style.height = '30px';
+                imageEl.style.objectFit = 'cover';
+                header.appendChild(imageEl);
+            }
+
+            const titleEl = document.createElement('strong');
+            titleEl.className = 'me-auto';
+            titleEl.textContent = title || 'Notification';
+            header.appendChild(titleEl);
+
+            const closeBtn = document.createElement('button');
+            closeBtn.type = 'button';
+            closeBtn.className = 'btn-close';
+            closeBtn.setAttribute('data-bs-dismiss', 'toast');
+            closeBtn.setAttribute('aria-label', 'Close');
+            header.appendChild(closeBtn);
+
+            const bodyEl = document.createElement('div');
+            bodyEl.className = 'toast-body';
+            bodyEl.textContent = body || '';
+
+            toastEl.appendChild(header);
+            toastEl.appendChild(bodyEl);
 
             toastContainer.appendChild(toastEl);
 

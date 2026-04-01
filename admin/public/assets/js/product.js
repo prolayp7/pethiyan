@@ -1908,9 +1908,26 @@ function showErrorSummary(form, errors, fallbackMessage = '') {
         return;
     }
 
-    list.innerHTML = messages.map(msg => `<li>${msg}</li>`).join('');
+    list.innerHTML = '';
+    messages.forEach((msg) => {
+        const li = document.createElement('li');
+        li.textContent = String(msg);
+        list.appendChild(li);
+    });
     summary.classList.remove('d-none');
     summary.scrollIntoView({behavior: 'smooth', block: 'start'});
+}
+
+function toSafeSameOriginUrl(url) {
+    if (!url || typeof url !== 'string') return null;
+    try {
+        const resolved = new URL(url, window.location.origin);
+        if (resolved.origin !== window.location.origin) return null;
+        if (!['http:', 'https:'].includes(resolved.protocol)) return null;
+        return resolved.toString();
+    } catch (_e) {
+        return null;
+    }
 }
 
 let productForm = document.getElementById('product-form-submit');
@@ -1957,8 +1974,9 @@ productForm?.addEventListener('submit', function (e) {
             hideErrorSummary(productForm);
             const redirectUrl = data.data && data.data.redirect_url ? data.data.redirect_url : null;
             setTimeout(function () {
-                if (redirectUrl) {
-                    window.location.href = redirectUrl;
+                const safeRedirectUrl = toSafeSameOriginUrl(redirectUrl);
+                if (safeRedirectUrl) {
+                    window.location.href = safeRedirectUrl;
                 } else {
                     location.reload();
                 }
