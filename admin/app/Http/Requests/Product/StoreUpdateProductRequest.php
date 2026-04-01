@@ -5,6 +5,7 @@ namespace App\Http\Requests\Product;
 use App\Enums\Order\OrderItemStatusEnum;
 use App\Enums\Product\ProductTypeEnum;
 use App\Enums\Product\ProductImageFitEnum;
+use App\Models\GlobalProductAttributeValue;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rules\Enum;
 use Illuminate\Support\Facades\Validator;
@@ -61,6 +62,13 @@ class StoreUpdateProductRequest extends FormRequest
             'height' => 'nullable|min:0',
             'length' => 'nullable|min:0',
             'breadth' => 'nullable|min:0',
+            'capacity' => 'nullable|min:0',
+            'capacity_unit' => 'nullable|in:ml,l,oz,g,kg',
+            'weight_unit' => 'nullable|in:g,kg,ml,oz,lb',
+            'height_unit' => 'nullable|in:mm,cm,inch,m',
+            'breadth_unit' => 'nullable|in:mm,cm,inch,m',
+            'length_unit' => 'nullable|in:mm,cm,inch,m',
+            'color_value_id' => 'nullable|integer|exists:global_product_attribute_values,id',
             'barcode' => 'required_if:type,simple|nullable|string',
         ];
     }
@@ -114,8 +122,23 @@ class StoreUpdateProductRequest extends FormRequest
                 $this->validateVariantProduct($validator, $pricingArr);
             } else {
                 $this->validateSimpleProduct($validator, $pricingArr);
+                $this->validateSimpleColorSelection($validator);
             }
         });
+    }
+
+    protected function validateSimpleColorSelection($validator): void
+    {
+        $colorValueId = $this->input('color_value_id');
+        if (empty($colorValueId)) {
+            return;
+        }
+
+        $colorValue = GlobalProductAttributeValue::with('attribute')->find($colorValueId);
+        $attributeTitle = strtolower((string)($colorValue?->attribute?->title ?? ''));
+        if (!$colorValue || $attributeTitle !== 'color') {
+            $validator->errors()->add('color_value_id', 'Selected color is invalid.');
+        }
     }
 
     /**

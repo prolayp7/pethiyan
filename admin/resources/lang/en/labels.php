@@ -1526,6 +1526,8 @@ return [
     'edit_store' => 'Edit Store',
     'category_id_required' => 'Category is required.',
     'failed_to_update_product' => 'Failed to update product.',
+    'capacity' => 'Capacity',
+    'select_option' => 'Select Option',
 
     // Language Labels
     'languages' => [

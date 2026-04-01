@@ -1266,7 +1266,7 @@ function setGstCellText(row, selector, value) {
     }
 }
 
-function recalculateVariantGstRow(row) {
+function recalculateGstRow(row) {
     if (!row) return;
 
     const priceInput = row.querySelector('.store-price');
@@ -1308,9 +1308,23 @@ function recalculateVariantGstRow(row) {
     setGstCellText(row, '.gst-total-cost', formatAmount(computed.totalCost));
 }
 
+function recalculateVariantGstRow(row) {
+    recalculateGstRow(row);
+}
+
+function recalculateSimpleGstRow(row) {
+    recalculateGstRow(row);
+}
+
 function recalculateAllVariantGstRows() {
     document.querySelectorAll('#storePricingAccordion .variant-pricing-row').forEach(row => {
         recalculateVariantGstRow(row);
+    });
+}
+
+function recalculateAllSimpleGstRows() {
+    document.querySelectorAll('#simplePricingAccordion .simple-pricing-row').forEach(row => {
+        recalculateSimpleGstRow(row);
     });
 }
 
@@ -1333,8 +1347,35 @@ function bindVariantGstPreviewEvents() {
 
     const customerStateSelect = document.getElementById('customer-state-code');
     if (customerStateSelect && !customerStateSelect.dataset.gstEventsBound) {
-        customerStateSelect.addEventListener('change', recalculateAllVariantGstRows);
+        customerStateSelect.addEventListener('change', () => {
+            recalculateAllVariantGstRows();
+            recalculateAllSimpleGstRows();
+        });
         customerStateSelect.dataset.gstEventsBound = '1';
+    }
+}
+
+function bindSimpleGstPreviewEvents() {
+    const pricingContainer = document.getElementById('simplePricingAccordion');
+    if (pricingContainer && !pricingContainer.dataset.gstEventsBound) {
+        pricingContainer.addEventListener('input', function (event) {
+            if (event.target && event.target.classList.contains('store-price')) {
+                recalculateSimpleGstRow(event.target.closest('.simple-pricing-row'));
+            }
+        });
+        pricingContainer.dataset.gstEventsBound = '1';
+    }
+
+    const gstRateSelect = document.querySelector('select[name="gst_rate"]');
+    if (gstRateSelect && !gstRateSelect.dataset.simpleGstEventsBound) {
+        gstRateSelect.addEventListener('change', recalculateAllSimpleGstRows);
+        gstRateSelect.dataset.simpleGstEventsBound = '1';
+    }
+
+    const customerStateSelect = document.getElementById('customer-state-code');
+    if (customerStateSelect && !customerStateSelect.dataset.simpleGstEventsBound) {
+        customerStateSelect.addEventListener('change', recalculateAllSimpleGstRows);
+        customerStateSelect.dataset.simpleGstEventsBound = '1';
     }
 }
 
@@ -1517,10 +1558,16 @@ function initializeSimplePricing() {
                                             <th>Price</th>
                                             <th>Stock</th>
                                             <th>SKU</th>
+                                            <th>Supply</th>
+                                            <th>CGST</th>
+                                            <th>SGST</th>
+                                            <th>IGST</th>
+                                            <th>Total GST</th>
+                                            <th>Total Cost</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <tr>
+                                        <tr class="simple-pricing-row" data-store-id="${store.id}" data-store-state-code="${store.state_code || ''}" data-store-gst-code="${store.gst_code || ''}">
                                             <td>
                                                 <div class="input-group input-group-sm">
                                                     <span class="input-group-text">${currencySymbol}</span>
@@ -1533,6 +1580,14 @@ function initializeSimplePricing() {
                                             <td>
                                                 <input type="text" class="form-control form-control-sm store-sku" name="store_pricing[${store.id}][sku]" value="${storeSku}">
                                             </td>
+                                            <td>
+                                                <span class="badge text-bg-light gst-supply-type">-</span>
+                                            </td>
+                                            <td><span class="gst-cgst-amount">-</span></td>
+                                            <td><span class="gst-sgst-amount">-</span></td>
+                                            <td><span class="gst-igst-amount">-</span></td>
+                                            <td><span class="gst-tax-amount">-</span></td>
+                                            <td><span class="fw-medium gst-total-cost">-</span></td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -1557,6 +1612,9 @@ function initializeSimplePricing() {
                 });
             });
         }
+
+        bindSimpleGstPreviewEvents();
+        recalculateAllSimpleGstRows();
     });
 }
 

@@ -10,6 +10,7 @@ use App\Events\Product\ProductAfterUpdate;
 use App\Events\Product\ProductStatusAfterUpdate;
 use App\Http\Resources\User\ReviewResource;
 use App\Models\Category;
+use App\Models\GlobalProductAttribute;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\ProductVariantAttribute;
@@ -309,16 +310,16 @@ class ProductService
             'product_id' => $product->id,
             'title' => $product->title,
             'slug' => $product->slug,
-            'capacity' => null,
-            'capacity_unit' => 'ml',
+            'capacity' => $this->normalizeDimensionValue($request['capacity'] ?? null),
+            'capacity_unit' => $this->normalizeUnitValue($request['capacity_unit'] ?? null, 'ml'),
             'weight' => $this->normalizeDimensionValue($request['weight'] ?? null),
-            'weight_unit' => 'kg',
+            'weight_unit' => $this->normalizeUnitValue($request['weight_unit'] ?? null, 'kg'),
             'height' => $this->normalizeDimensionValue($request['height'] ?? null),
-            'height_unit' => 'cm',
+            'height_unit' => $this->normalizeUnitValue($request['height_unit'] ?? null, 'cm'),
             'breadth' => $this->normalizeDimensionValue($request['breadth'] ?? null),
-            'breadth_unit' => 'cm',
+            'breadth_unit' => $this->normalizeUnitValue($request['breadth_unit'] ?? null, 'cm'),
             'length' => $this->normalizeDimensionValue($request['length'] ?? null),
-            'length_unit' => 'cm',
+            'length_unit' => $this->normalizeUnitValue($request['length_unit'] ?? null, 'cm'),
             'barcode' => !empty($request['barcode']) ? $request['barcode'] : null,
             'availability' => 1,
             'is_default' => true,
@@ -329,6 +330,9 @@ class ProductService
         } else {
             $variant = ProductVariant::create($variantData);
         }
+
+        $this->syncSimpleVariantColorAttribute($product, $variant, $request);
+
         if (!empty($pricingData['store_pricing'])) {
             // Delete existing store pricing if updating
             if ($mode === 'update') {
@@ -338,6 +342,53 @@ class ProductService
             // Create new store pricing
             $this->createStoreProductVariants($variant->id, $pricingData['store_pricing']);
         }
+    }
+
+    private function syncSimpleVariantColorAttribute(Product $product, ProductVariant $variant, $request): void
+    {
+        $selectedColorValueId = $request['color_value_id'] ?? null;
+        $selectedColorValueId = !empty($selectedColorValueId) ? (int)$selectedColorValueId : null;
+
+        $colorAttribute = GlobalProductAttribute::where('seller_id', $product->seller_id)
+            ->whereRaw('LOWER(title) = ?', ['color'])
+            ->first();
+
+        if (!$colorAttribute) {
+            return;
+        }
+
+        $existingColorAttr = ProductVariantAttribute::where('product_variant_id', $variant->id)
+            ->where('global_attribute_id', $colorAttribute->id)
+            ->first();
+
+        if (!$selectedColorValueId) {
+            if ($existingColorAttr) {
+                $existingColorAttr->forceDelete();
+            }
+            return;
+        }
+
+        $isValidColorValue = $colorAttribute->values()
+            ->where('id', $selectedColorValueId)
+            ->exists();
+
+        if (!$isValidColorValue) {
+            throw new \InvalidArgumentException('Selected color is not valid for this seller.');
+        }
+
+        if ($existingColorAttr) {
+            $existingColorAttr->update([
+                'global_attribute_value_id' => $selectedColorValueId,
+            ]);
+            return;
+        }
+
+        ProductVariantAttribute::create([
+            'product_id' => $product->id,
+            'product_variant_id' => $variant->id,
+            'global_attribute_id' => $colorAttribute->id,
+            'global_attribute_value_id' => $selectedColorValueId,
+        ]);
     }
 
     private function createVariantAttributes(int $productId, int $variantId, array $attributes): void

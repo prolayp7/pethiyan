@@ -57,34 +57,42 @@ class StoreProductVariant extends Model
             ->where('store_product_variants.id', $this->id)->first();
     }
 
-    public function getPriceAttribute($value): ?int
+    public function getPriceAttribute($value): ?float
     {
         return $this->getTaxAdjustedPrice($value);
     }
 
-    public function getSpecialPriceAttribute($value): ?int
+    public function getSpecialPriceAttribute($value): ?float
     {
         return $this->getTaxAdjustedPrice($value);
     }
 
-    public function getPriceExcludeTaxAttribute(): int
+    public function getPriceExcludeTaxAttribute(): ?float
     {
-        return $this->attributes['price'];
-    }
-    public function getSpecialPriceExcludeTaxAttribute(): int
-    {
-        return $this->attributes['special_price'];
+        if (!array_key_exists('price', $this->attributes) || $this->attributes['price'] === null || $this->attributes['price'] === '') {
+            return null;
+        }
+
+        return (float) $this->attributes['price'];
     }
 
-    public static function scopeTaxPercentage($basePrice, $priceWithTax): int
+    public function getSpecialPriceExcludeTaxAttribute(): ?float
+    {
+        if (!array_key_exists('special_price', $this->attributes) || $this->attributes['special_price'] === null || $this->attributes['special_price'] === '') {
+            return null;
+        }
+
+        return (float) $this->attributes['special_price'];
+    }
+
+    public static function scopeTaxPercentage($basePrice, $priceWithTax): float
     {
         if ($basePrice == 0) {
-            return 0; // Avoid division by zero
+            return 0.0; // Avoid division by zero
         }
 
         $taxPercentage = (($priceWithTax - $basePrice) / $basePrice) * 100;
 
-        return round($taxPercentage, 2); // Round to 2 decimal places
+        return (float) round($taxPercentage, 2); // Round to 2 decimal places
     }
 }
-
