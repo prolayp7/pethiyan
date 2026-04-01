@@ -28,3 +28,67 @@ Homestead.json
 .env.production
 .phpactor.json
 auth.json
+# ------------------------------------------------------------
+# Laravel (admin)
+# ------------------------------------------------------------
+admin/.env
+admin/.env.*
+!admin/.env.example
+admin/vendor/
+admin/node_modules/
+admin/public/build/
+admin/public/hot
+admin/storage/*.key
+admin/storage/logs/
+admin/storage/framework/cache/
+admin/storage/framework/sessions/
+admin/storage/framework/views/
+admin/bootstrap/cache/*.php
+admin/.phpunit.result.cache
+
+# ------------------------------------------------------------
+# Next.js (frontend)
+# ------------------------------------------------------------
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/.turbo/
+frontend/.vercel/
+frontend/coverage/
+frontend/.eslintcache
+frontend/tsconfig.tsbuildinfo
+frontend/next-env.d.ts
+
+# ------------------------------------------------------------
+# Project-wide generated/system files
+# ------------------------------------------------------------
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
+*.swp
+
+# ------------------------------------------------------------
+# Requested ignores
+# ------------------------------------------------------------
+.claude
+.claude/
+.codex
+.codex/
+sample_data/
+
+*.xlsx
+*.txt
+*.csv
+*.pdf
+
+# Ignore all markdown files except README/REAME
+*.md
+**/*.md
+!README.md
+!REAME.md
+!**/README.md
+!**/REAME.md

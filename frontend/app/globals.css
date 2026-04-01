@@ -1,0 +1,295 @@
+@import "tailwindcss";
+
+/* Global cursor — pointer on all interactive elements */
+a, button, [role="button"], select, label[for],
+[role="menuitem"], [role="option"], [role="tab"],
+[role="link"], summary {
+  cursor: pointer;
+}
+
+/* =============================================
+   DESIGN TOKENS — Pethiyan Brand System
+   ============================================= */
+:root {
+  /* Pethiyan Brand Colors (derived from logo) */
+  --color-primary: #1f4f8a;
+  --color-primary-dark: #0f2f5f;
+  --color-primary-light: #d6e4f7;
+  --color-secondary: #0f2f5f;
+  --color-accent: #4caf50;
+  --color-accent-dark: #388e3c;
+
+  /* Neutrals */
+  --background: #ffffff;
+  --foreground: #0f172a;
+  --color-muted: #f0f4f8;
+  --color-border: #e2e8f0;
+
+  /* Font */
+  --font-sans: var(--font-inter), system-ui, -apple-system, sans-serif;
+  --font-mono: var(--font-geist-mono), monospace;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+}
+
+/* =============================================
+   BASE STYLES
+   ============================================= */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: #ffffff;
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Safe area for mobile bottom nav */
+.safe-area-pb {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* =============================================
+   OFFER TICKER ANIMATION
+   ============================================= */
+@keyframes ticker-scroll {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+@utility animate-ticker {
+  animation: ticker-scroll 30s linear infinite;
+}
+
+/* =============================================
+   RADIX UI ANIMATION KEYFRAMES
+   ============================================= */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes slide-in-from-right {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes slide-out-to-right {
+  from { transform: translateX(0); }
+  to { transform: translateX(100%); }
+}
+
+@keyframes slide-in-from-left {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes slide-out-to-left {
+  from { transform: translateX(0); }
+  to { transform: translateX(-100%); }
+}
+
+@keyframes slide-in-from-top {
+  from { transform: translateY(-100%); }
+  to { transform: translateY(0); }
+}
+
+@keyframes slide-out-to-top {
+  from { transform: translateY(0); }
+  to { transform: translateY(-100%); }
+}
+
+@keyframes slide-in-from-bottom-2 {
+  from { transform: translateY(8px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes zoom-in {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+@keyframes zoom-out {
+  from { transform: scale(1); opacity: 1; }
+  to { transform: scale(0.95); opacity: 0; }
+}
+
+/* Tailwind v4 animation utilities */
+@utility animate-in {
+  animation-fill-mode: both;
+}
+
+@utility animate-out {
+  animation-fill-mode: both;
+}
+
+@utility fade-in-0 {
+  animation-name: fade-in;
+  animation-duration: 200ms;
+}
+
+@utility fade-out-0 {
+  animation-name: fade-out;
+  animation-duration: 150ms;
+}
+
+@utility slide-in-from-right {
+  animation-name: slide-in-from-right;
+  animation-duration: 300ms;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@utility slide-out-to-right {
+  animation-name: slide-out-to-right;
+  animation-duration: 300ms;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@utility slide-in-from-left {
+  animation-name: slide-in-from-left;
+  animation-duration: 300ms;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@utility slide-out-to-left {
+  animation-name: slide-out-to-left;
+  animation-duration: 300ms;
+}
+
+@utility slide-in-from-top {
+  animation-name: slide-in-from-top;
+  animation-duration: 300ms;
+}
+
+@utility slide-out-to-top {
+  animation-name: slide-out-to-top;
+  animation-duration: 300ms;
+}
+
+@utility slide-in-from-top-2 {
+  animation-name: slide-in-from-bottom-2;
+  animation-duration: 200ms;
+}
+
+@utility zoom-in-95 {
+  animation-name: zoom-in;
+  animation-duration: 200ms;
+}
+
+@utility zoom-out-95 {
+  animation-name: zoom-out;
+  animation-duration: 150ms;
+}
+
+/* =============================================
+   HERO CAROUSEL — progress bar
+   ============================================= */
+@keyframes progress-bar {
+  from { width: 0%; }
+  to   { width: 100%; }
+}
+
+/* =============================================
+   WATERMARK HOVER GLOW — Footer brand band
+   .watermark-band:hover reveals logo-blue glow
+   ============================================= */
+.watermark-text {
+  color: rgba(255, 255, 255, 0.07);
+  transition:
+    color 0.9s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+    text-shadow 0.9s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.watermark-band:hover .watermark-text {
+  color: rgba(31, 79, 138, 0.22) !important;
+  text-shadow:
+    0 0 40px  rgba(31, 79, 138, 0.35),
+    0 0 100px rgba(31, 79, 138, 0.2),
+    0 0 200px rgba(31, 79, 138, 0.1),
+    0 0 400px rgba(31, 79, 138, 0.05);
+}
+
+/* =============================================
+   CORE WEB VITALS — CLS prevention
+   ============================================= */
+
+/* Prevent layout shift for images without explicit dimensions */
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Stable dimensions for avatar initials boxes */
+.avatar-initials {
+  contain: layout style;
+}
+
+/* =============================================
+   ACCESSIBILITY — Reduce motion
+   ============================================= */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* Keep essential spinners but very fast */
+  .animate-spin {
+    animation-duration: 1s !important;
+  }
+}
+
+/* =============================================
+   PERFORMANCE — Content visibility
+   ============================================= */
+
+/* Use on non-critical below-fold sections */
+.cv-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 400px;
+}
+
+/* =============================================
+   CUSTOM SCROLLBAR
+   ============================================= */
+::-webkit-scrollbar {
+  width: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #e2e8f0;
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #cbd5e1;
+}

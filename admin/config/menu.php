@@ -1,0 +1,520 @@
+<?php
+
+return [
+
+    'admin' => [
+
+        // ─── Overview ────────────────────────────────────────────────────
+        'dashboard' => [
+            'icon'   => 'ti-home',
+            'route'  => 'admin.dashboard',
+            'title'  => 'labels.dashboard',
+            'active' => 'dashboard',
+        ],
+        'reports' => [
+            'icon'   => 'ti-chart-bar',
+            'title'  => 'Reports',
+            'active' => 'reports',
+            'route'  => [
+                'sales_report' => [
+                    'sub_active' => 'reports',
+                    'sub_route'  => 'admin.reports.sales',
+                    'sub_title'  => 'Sales Report',
+                ],
+                'orders_report' => [
+                    'sub_active' => 'reports',
+                    'sub_route'  => 'admin.reports.orders',
+                    'sub_title'  => 'Orders Report',
+                ],
+                'products_report' => [
+                    'sub_active' => 'reports',
+                    'sub_route'  => 'admin.reports.products',
+                    'sub_title'  => 'Products Report',
+                ],
+                'customers_report' => [
+                    'sub_active' => 'reports',
+                    'sub_route'  => 'admin.reports.customers',
+                    'sub_title'  => 'Customers Report',
+                ],
+            ],
+        ],
+
+        // ─── Catalog ─────────────────────────────────────────────────────
+        'inventory' => [
+            'icon'   => 'ti-packages',
+            'route'  => 'admin.inventory.index',
+            'title'  => 'Inventory',
+            'active' => 'inventory',
+        ],
+        'categories' => [
+            'icon'       => 'ti-category-2',
+            'route'      => 'admin.categories.index',
+            'title'      => 'labels.categories',
+            'active'     => 'categories',
+            'permission' => 'category.view',
+        ],
+        'brands' => [
+            'icon'       => 'ti-sparkles',
+            'route'      => 'admin.brands.index',
+            'title'      => 'labels.brands',
+            'active'     => 'brands',
+            'permission' => 'brand.view',
+        ],
+        'products' => [
+            'icon'   => 'ti-cube-spark',
+            'title'  => 'labels.products',
+            'active' => 'products',
+            'route'  => [
+                'products' => [
+                    'sub_active' => 'products',
+                    'sub_route'  => 'admin.products.index',
+                    'sub_title'  => 'labels.products',
+                    'permission' => 'product.view',
+                ],
+                'pending_approval_products' => [
+                    'sub_active'  => 'pending_approval_products',
+                    'sub_route'   => 'admin.products.index',
+                    'route_param' => ['verification_status' => 'pending_verification'],
+                    'sub_title'   => 'labels.pending_approval_products',
+                    'permission'  => 'product.view',
+                ],
+                'product_faqs' => [
+                    'sub_active' => 'product_faqs',
+                    'sub_route'  => 'admin.product_faqs.index',
+                    'sub_title'  => 'labels.product_faqs',
+                    'permission' => 'product_faqs.view',
+                ],
+            ],
+        ],
+        'tax_rates' => [
+            'icon'       => 'ti-square-rounded-percentage',
+            'route'      => 'admin.tax-rates.index',
+            'title'      => 'labels.tax_rates',
+            'active'     => 'tax_rates',
+            'permission' => 'tax_class.view',
+        ],
+
+        // ─── Sales ───────────────────────────────────────────────────────
+        'orders' => [
+            'icon'       => 'ti-package',
+            'route'      => 'admin.orders.index',
+            'title'      => 'labels.orders',
+            'active'     => 'orders',
+            'permission' => 'orders.view',
+        ],
+        'promos' => [
+            'icon'       => 'ti-ticket',
+            'route'      => 'admin.promos.index',
+            'title'      => 'labels.promos',
+            'active'     => 'promos',
+            'permission' => 'promo.view',
+        ],
+
+        // ─── Customers ───────────────────────────────────────────────────
+        'customers' => [
+            'icon'       => 'ti-users',
+            'route'      => 'admin.customers.index',
+            'title'      => 'labels.customers',
+            'active'     => 'customers',
+            'permission' => 'customer.view',
+        ],
+
+        // ─── Store ───────────────────────────────────────────────────────
+        'stores' => [
+            'icon'       => 'ti-building-warehouse',
+            'route'      => 'admin.sellers.store.index',
+            'title'      => 'labels.stores',
+            'active'     => 'stores',
+            'permission' => 'store.view',
+        ],
+
+        // ─── Content & Marketing ─────────────────────────────────────────
+        'banners' => [
+            'icon'       => 'ti-photo',
+            'route'      => 'admin.banners.index',
+            'title'      => 'labels.banners',
+            'active'     => 'banners',
+            'permission' => 'banner.view',
+        ],
+        'hero_section' => [
+            'icon'   => 'ti-layout-navbar',
+            'route'  => 'admin.hero-section.index',
+            'title'  => 'Hero Section',
+            'active' => 'hero_section',
+        ],
+        'featured_section' => [
+            'icon'   => 'ti-star',
+            'title'  => 'labels.featured_section',
+            'active' => 'featured_section',
+            'route'  => [
+                'featured_section' => [
+                    'sub_active' => 'featured_section',
+                    'sub_route'  => 'admin.featured-sections.index',
+                    'sub_title'  => 'labels.featured_section',
+                    'permission' => 'featured_section.view',
+                ],
+                'sort_featured_section' => [
+                    'sub_active' => 'sort_featured_section',
+                    'sub_route'  => 'admin.featured-sections.sort',
+                    'sub_title'  => 'labels.sort_featured_section',
+                    'permission' => 'featured_section.sorting_view',
+                ],
+            ],
+        ],
+        'menus' => [
+            'icon'   => 'ti-menu-2',
+            'title'  => 'labels.menus',
+            'active' => 'menus',
+            'route'  => [
+                'all_menus' => [
+                    'sub_active' => 'menus',
+                    'sub_route'  => 'admin.menus.index',
+                    'sub_title'  => 'labels.all_menus',
+                ],
+            ],
+        ],
+        'gift_cards' => [
+            'icon'   => 'ti-gift',
+            'title'  => 'Gift Cards',
+            'active' => 'gift_cards',
+            'route'  => [
+                'all_gift_cards' => [
+                    'sub_active' => 'gift_cards',
+                    'sub_route'  => 'admin.gift-cards.index',
+                    'sub_title'  => 'All Gift Cards',
+                ],
+            ],
+        ],
+        'support_tickets' => [
+            'icon'   => 'ti-message-circle',
+            'title'  => 'Support Tickets',
+            'active' => 'support_tickets',
+            'route'  => [
+                'all_tickets' => [
+                    'sub_active' => 'support_tickets',
+                    'sub_route'  => 'admin.support-tickets.index',
+                    'sub_title'  => 'All Tickets',
+                ],
+            ],
+        ],
+        'faqs' => [
+            'icon'       => 'ti-help-circle',
+            'route'      => 'admin.faqs.index',
+            'title'      => 'labels.faqs',
+            'active'     => 'faqs',
+            'permission' => 'faq.view',
+        ],
+        'notifications' => [
+            'icon'       => 'ti-bell-ringing',
+            'route'      => 'admin.notifications.index',
+            'title'      => 'labels.notifications',
+            'active'     => 'notifications',
+            'permission' => 'notification.view',
+        ],
+
+        // ─── Administration ──────────────────────────────────────────────
+        'roles_permissions' => [
+            'icon'   => 'ti-users-group',
+            'title'  => 'labels.roles_permissions',
+            'active' => 'roles_permissions',
+            'route'  => [
+                'roles' => [
+                    'sub_active' => 'roles',
+                    'sub_route'  => 'admin.roles.index',
+                    'sub_title'  => 'labels.roles',
+                    'permission' => 'role.view',
+                ],
+                'system_users' => [
+                    'sub_active' => 'system_users',
+                    'sub_route'  => 'admin.system-users.index',
+                    'sub_title'  => 'labels.system_users',
+                    'permission' => 'system_user.view',
+                ],
+            ],
+        ],
+        'settings' => [
+            'icon'   => 'ti-settings',
+            'title'  => 'labels.settings',
+            'active' => 'settings',
+            'route'  => [
+                'system' => [
+                    'sub_active'  => 'system',
+                    'sub_route'   => 'admin.settings.show',
+                    'route_param' => ['setting' => 'system'],
+                    'sub_title'   => 'labels.menu_system',
+                    'permission'  => 'setting.system.view',
+                ],
+                'web' => [
+                    'sub_active'  => 'web',
+                    'sub_route'   => 'admin.settings.show',
+                    'route_param' => ['setting' => 'web'],
+                    'sub_title'   => 'labels.menu_web',
+                    'permission'  => 'setting.web.view',
+                ],
+                // 'app' => [
+                //     'sub_active'  => 'app',
+                //     'sub_route'   => 'admin.settings.show',
+                //     'route_param' => ['setting' => 'app'],
+                //     'sub_title'   => 'labels.menu_app',
+                //     'permission'  => 'setting.app.view',
+                // ],
+                // 'home_general_settings' => [
+                //     'sub_active'  => 'home_general_settings',
+                //     'sub_route'   => 'admin.settings.show',
+                //     'route_param' => ['setting' => 'home_general_settings'],
+                //     'sub_title'   => 'labels.home_general_settings',
+                //     'permission'  => 'setting.home_general_settings.view',
+                // ],
+                'storage' => [
+                    'sub_active'  => 'storage',
+                    'sub_route'   => 'admin.settings.show',
+                    'route_param' => ['setting' => 'storage'],
+                    'sub_title'   => 'labels.menu_storage',
+                    'permission'  => 'setting.storage.view',
+                ],
+                'authentication' => [
+                    'sub_active'  => 'authentication',
+                    'sub_route'   => 'admin.settings.show',
+                    'route_param' => ['setting' => 'authentication'],
+                    'sub_title'   => 'labels.menu_authentication',
+                    'permission'  => 'setting.authentication.view',
+                ],
+                'email' => [
+                    'sub_active'  => 'email',
+                    'sub_route'   => 'admin.settings.show',
+                    'route_param' => ['setting' => 'email'],
+                    'sub_title'   => 'labels.email',
+                    'permission'  => 'setting.email.view',
+                ],
+                'payment' => [
+                    'sub_active'  => 'payment',
+                    'sub_route'   => 'admin.settings.show',
+                    'route_param' => ['setting' => 'payment'],
+                    'sub_title'   => 'labels.menu_payment',
+                    'permission'  => 'setting.payment.view',
+                ],
+                'notification' => [
+                    'sub_active'  => 'notification',
+                    'sub_route'   => 'admin.settings.show',
+                    'route_param' => ['setting' => 'notification'],
+                    'sub_title'   => 'labels.menu_notification',
+                    'permission'  => 'setting.notification.view',
+                ],
+                // 'delivery_boy' => [
+                //     'sub_active'  => 'delivery_boy',
+                //     'sub_route'   => 'admin.settings.show',
+                //     'route_param' => ['setting' => 'delivery_boy'],
+                //     'sub_title'   => 'labels.delivery_boy',
+                //     'permission'  => 'setting.delivery_boy.view',
+                // ],
+                'sms' => [
+                    'sub_active'  => 'sms',
+                    'sub_route'   => 'admin.settings.show',
+                    'route_param' => ['setting' => 'sms'],
+                    'sub_title'   => 'labels.sms_settings',
+                    'permission'  => 'setting.sms.view',
+                ],
+                'gst' => [
+                    'sub_active'  => 'gst',
+                    'sub_route'   => 'admin.settings.show',
+                    'route_param' => ['setting' => 'gst'],
+                    'sub_title'   => 'labels.gst_settings',
+                    'permission'  => 'setting.gst.view',
+                ],
+            ],
+        ],
+        'state_shipping_rates' => [
+            'icon'       => 'ti-truck-delivery',
+            'route'      => 'admin.state-shipping-rates.index',
+            'title'      => 'labels.state_shipping_rates',
+            'active'     => 'state_shipping_rates',
+            'permission' => 'setting.system.view',
+        ],
+        'pin_service' => [
+            'icon'       => 'ti-map-pin',
+            'route'      => 'admin.pin-service.index',
+            'title'      => 'Pin Service',
+            'active'     => 'pin_service',
+            'permission' => 'setting.system.view',
+        ],
+        // 'system_updates' => [
+        //     'icon' => 'ti-package',
+        //     'route' => 'admin.system-updates.index',
+        //     'title' => 'labels.system_updates',
+        //     'active' => 'system_updates',
+        //     'permission' => 'setting.system.view',
+        // ],
+
+        // ─── Account ─────────────────────────────────────────────────────
+        'logout' => [
+            'icon'  => 'ti-logout-2',
+            'route' => 'admin.logout',
+            'title' => 'labels.logout',
+        ],
+    ],
+
+    'delivery-partner' => [
+        'dashboard' => [
+            'icon' => 'ti-home',
+            'route' => 'delivery-partner.dashboard',
+            'title' => 'labels.delivery_partner_dashboard',
+        ],
+    ],
+
+    'seller' => [
+        'dashboard' => [
+            'icon' => 'ti-home',
+            'route' => 'seller.dashboard',
+            'title' => 'labels.seller_dashboard',
+            'active' => 'dashboard',
+        ],
+        'wallet' => [
+            'icon' => 'ti-wallet',
+            'title' => 'labels.wallet',
+            'active' => 'wallet',
+            'route' => [
+                'balance' => [
+                    'sub_active' => 'wallet_balance',
+                    'sub_route' => 'seller.wallet.index',
+                    'sub_title' => 'labels.wallet_balance',
+                    'permission' => 'wallet.view'
+
+                ],
+                'withdrawals' => [
+                    'sub_active' => 'withdrawals',
+                    'sub_route' => 'seller.withdrawals.index',
+                    'sub_title' => 'labels.withdrawals',
+                    'permission' => 'withdrawal.view'
+                ],
+                'withdrawal_history' => [
+                    'sub_active' => 'withdrawal_history',
+                    'sub_route' => 'seller.withdrawals.history',
+                    'sub_title' => 'labels.withdrawal_history',
+                    'permission' => 'withdrawal.view'
+                ],
+            ],
+        ],
+        'earnings' => [
+            'icon' => 'ti-currency-dollar',
+            'route' => 'seller.commissions.index',
+            'title' => 'labels.earnings',
+            'active' => 'earnings',
+            'permission' => 'earning.view'
+        ],
+        'orders' => [
+            'icon' => 'ti-package',
+            'route' => 'seller.orders.index',
+            'title' => 'labels.seller_orders',
+            'active' => 'orders',
+            'permission' => 'order.view'
+        ],
+        'return_orders' => [
+            'icon' => 'ti-truck-return',
+            'title' => 'labels.return_orders',
+            'active' => 'return_orders',
+            'route' => [
+                'return_requests' => [
+                    'sub_active' => 'return_requests',
+                    'sub_route' => 'seller.returns.index',
+                    'sub_title' => 'labels.return_requests',
+                    'permission' => 'return.view'
+                ],
+            ],
+        ],
+        'categories' => [
+            'icon' => 'ti-category-2',
+            'route' => 'seller.categories.index',
+            'title' => 'labels.seller_categories',
+            'active' => 'categories',
+            'permission' => 'category.view'
+        ],
+        'brands' => [
+            'icon' => 'ti-sparkles',
+            'route' => 'seller.brands.index',
+            'title' => 'labels.seller_brands',
+            'active' => 'brands',
+            'permission' => 'brand.view'
+        ],
+        'attributes' => [
+            'icon' => 'ti-tag-starred',
+            'route' => 'seller.attributes.index',
+            'title' => 'labels.attributes',
+            'active' => 'attributes',
+            'permission' => 'attribute.view'
+        ],
+        'products' => [
+            'icon' => 'ti-cube-spark',
+            'title' => 'labels.manage_products',
+            'active' => 'products',
+            'route' => [
+                'products' => [
+                    'sub_active' => 'products',
+                    'sub_route' => 'seller.products.index',
+                    'sub_title' => 'labels.seller_products',
+                    'permission' => 'product.view'
+
+                ],
+                'add_products' => [
+                    'sub_active' => 'add_products',
+                    'sub_route' => 'seller.products.create',
+                    'sub_title' => 'labels.add_products',
+                    'permission' => 'product.create'
+
+                ],
+                'product_faqs' => [
+                    'sub_active' => 'product_faqs',
+                    'sub_route' => 'seller.product_faqs.index',
+                    'sub_title' => 'labels.seller_product_faqs',
+                    'permission' => 'product_faq.view'
+                ],
+            ],
+        ],
+        'tax_rates' => [
+            'icon' => 'ti-square-rounded-percentage',
+            'route' => 'seller.tax-rates.index',
+            'title' => 'labels.seller_tax_rates',
+            'active' => 'tax_rates',
+            'permission' => 'tax_rate.view'
+        ],
+        'stores' => [
+            'icon' => 'ti-building-warehouse',
+            'title' => 'labels.seller_stores',
+            'active' => 'stores',
+            'route' => 'seller.stores.index',
+            'permission' => 'store.view'
+        ],
+        'notifications' => [
+            'icon' => 'ti-bell-ringing',
+            'route' => 'seller.notifications.index',
+            'title' => 'labels.seller_notifications',
+            'active' => 'notifications',
+            'permission' => 'notification.view'
+        ],
+        'roles_permissions' => [
+            'icon' => 'ti-users-group',
+            'title' => 'labels.seller_roles_permissions',
+            'active' => 'roles_permissions',
+            'route' => [
+                'roles' => [
+                    'sub_active' => 'roles',
+                    'sub_route' => 'seller.roles.index',
+                    'sub_title' => 'labels.seller_roles',
+                    'permission' => 'role.view'
+
+                ],
+                'system_users' => [
+                    'sub_active' => 'system_users',
+                    'sub_route' => 'seller.system-users.index',
+                    'sub_title' => 'labels.seller_system_users',
+                    'permission' => 'system_user.view'
+
+                ]
+            ],
+        ],
+        'logout' => [
+            'icon' => 'ti-logout-2',
+            'route' => 'seller.logout',
+            'title' => 'labels.seller_logout',
+        ],
+    ]
+];

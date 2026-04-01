@@ -1,0 +1,161 @@
+import type { Metadata, Viewport } from "next";
+import { Inter } from "next/font/google";
+import "./globals.css";
+import { CartProvider } from "@/context/CartContext";
+import { AuthProvider } from "@/context/AuthContext";
+import { WishlistProvider } from "@/context/WishlistContext";
+import CartDrawer from "@/components/ui/CartDrawer";
+import TopAnnouncementBar from "@/components/headers/TopAnnouncementBar";
+import OfferTicker from "@/components/headers/OfferTicker";
+import MainHeader from "@/components/headers/MainHeader1";
+import NavigationMenu from "@/components/headers/NavigationMenu6";
+import MobileBottomNav from "@/components/ui/MobileBottomNav";
+import ScrollToTop from "@/components/ui/ScrollToTop";
+import Footer from "@/components/layout/Footercopy7";
+import { organizationSchema, websiteSchema, jsonLd } from "@/lib/structured-data";
+import { Toaster } from "react-hot-toast";
+
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://pethiyan.com";
+
+const inter = Inter({
+  variable: "--font-inter",
+  subsets: ["latin"],
+  display: "swap",
+  weight: ["400", "500", "600", "700", "800"],
+});
+
+export const viewport: Viewport = {
+  themeColor: "#1f4f8a",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+};
+
+export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: "Pethiyan — The Power of Perfect Packaging",
+    template: "%s | Pethiyan",
+  },
+  description:
+    "High-quality packaging products — pouches, jars, delivery boxes and custom packaging for modern brands. Shop online with GST invoice, fast shipping across India.",
+  keywords: [
+    "packaging",
+    "pouches",
+    "bags",
+    "custom packaging",
+    "ziplock bags",
+    "standup pouches",
+    "packaging products india",
+    "wholesale packaging",
+    "jars",
+    "delivery boxes",
+  ],
+  authors: [{ name: "Pethiyan" }],
+  creator: "Pethiyan",
+  publisher: "Pethiyan",
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true },
+  },
+  openGraph: {
+    type: "website",
+    locale: "en_IN",
+    url: SITE_URL,
+    siteName: "Pethiyan",
+    title: "Pethiyan — The Power of Perfect Packaging",
+    description:
+      "High-quality packaging products — pouches, jars, delivery boxes and custom packaging for modern brands.",
+    images: [
+      {
+        url: "/opengraph-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Pethiyan — The Power of Perfect Packaging",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Pethiyan — The Power of Perfect Packaging",
+    description:
+      "High-quality packaging products — pouches, jars, delivery boxes and custom packaging for modern brands.",
+    images: ["/opengraph-image.png"],
+  },
+  alternates: {
+    canonical: SITE_URL,
+  },
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  const orgSchema = organizationSchema();
+  const siteSchema = websiteSchema();
+
+  return (
+    <html lang="en" className={inter.variable} suppressHydrationWarning>
+      <head>
+        <script {...jsonLd(orgSchema)} key="org-schema" />
+        <script {...jsonLd(siteSchema)} key="site-schema" />
+      </head>
+      <body className="antialiased bg-background text-foreground font-sans">
+        <AuthProvider>
+          <WishlistProvider>
+            <CartProvider>
+              {/* Non-sticky top bars */}
+              <TopAnnouncementBar />
+              <OfferTicker />
+
+              {/* Sticky header: MainHeader + CategoryNav */}
+              <div className="sticky top-0 z-40">
+                <div className="relative z-20">
+                  <MainHeader />
+                </div>
+                <div className="relative z-10">
+                  <NavigationMenu />
+                </div>
+              </div>
+
+              {/* Page Content */}
+              <main id="main-content" tabIndex={-1}>
+                {children}
+              </main>
+
+              {/* Footer */}
+              <Footer />
+
+              {/* Mobile Bottom Navigation */}
+              <MobileBottomNav />
+
+              {/* Cart Drawer (portal) */}
+              <CartDrawer />
+
+              {/* Floating scroll-to-top */}
+              <ScrollToTop />
+
+              {/* Toast notifications */}
+              <Toaster
+                position="top-right"
+                toastOptions={{
+                  duration: 3000,
+                  style: {
+                    borderRadius: "12px",
+                    fontSize: "13px",
+                    fontWeight: 600,
+                    boxShadow: "0 4px 24px rgba(0,0,0,0.10)",
+                  },
+                  success: { iconTheme: { primary: "#22c55e", secondary: "#fff" } },
+                  error:   { iconTheme: { primary: "#ef4444", secondary: "#fff" } },
+                }}
+              />
+            </CartProvider>
+          </WishlistProvider>
+        </AuthProvider>
+      </body>
+    </html>
+  );
+}
