@@ -32,6 +32,37 @@ function setErrorMessages(errorDiv, fieldErrors) {
     errorDiv.textContent = String(fieldErrors ?? '');
 }
 
+// Backward-compatibility: convert old cached logout GET links to secure POST.
+document.addEventListener('click', function (event) {
+    const link = event.target.closest('a[href]');
+    if (!link) return;
+
+    let resolved;
+    try {
+        resolved = new URL(link.getAttribute('href'), window.location.origin);
+    } catch (_e) {
+        return;
+    }
+
+    if (resolved.origin !== window.location.origin) return;
+    if (!resolved.pathname.match(/^\/(admin|seller)\/logout\/?$/)) return;
+
+    event.preventDefault();
+
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = resolved.toString();
+
+    const csrf = document.createElement('input');
+    csrf.type = 'hidden';
+    csrf.name = '_token';
+    csrf.value = csrfToken;
+    form.appendChild(csrf);
+
+    document.body.appendChild(form);
+    form.submit();
+});
+
 document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('form.form-submit').forEach(function (form) {
         form.addEventListener('submit', function (e) {
