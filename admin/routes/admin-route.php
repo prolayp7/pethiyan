@@ -42,10 +42,10 @@ use App\Http\Controllers\Admin\HeroSectionController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('admin')->name('admin.')->group(function () {
-    Route::middleware(['guest'])->group(function () {
+    Route::middleware(['guest:admin'])->group(function () {
         Route::get('/', [AuthController::class, 'loginAdmin'])->name('login');
         Route::get('login', [AuthController::class, 'loginAdmin'])->name('login');
-        Route::post('login', [AuthController::class, 'login'])->name('login.post');
+        Route::post('login', [AuthController::class, 'login'])->middleware('throttle:5,1')->name('login.post');
 
         // Password Reset Routes
         Route::get('forgot-password', [PasswordResetController::class, 'showForgotPasswordForm'])->name('password.request');
@@ -54,8 +54,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('reset-password', [PasswordResetController::class, 'resetPassword'])->name('password.update');
     });
 
-    Route::middleware(['auth', 'validate.admin'])->group(function () {
-        Route::get('logout', [AuthController::class, 'logout'])->name('logout');
+    Route::middleware(['auth:admin', 'validate.admin'])->group(function () {
+        Route::post('logout', [AuthController::class, 'logout'])->name('logout');
         Route::get('/', [DashboardController::class, 'index'])->name('index');
         Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
         Route::get('dashboard/chart-data', [DashboardController::class, 'getChartData'])->name('dashboard.chart-data');

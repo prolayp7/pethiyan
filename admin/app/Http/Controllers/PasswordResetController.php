@@ -36,35 +36,13 @@ class PasswordResetController extends Controller
         // Find the user by email
         $user = User::where('email', $request->email)->first();
 
-        if (!$user) {
-            if ($request->expectsJson()) {
-                return ApiResponseType::sendJsonResponse(
-                    false,
-                    __('passwords.user'),
-                    []
-                );
-            }
-            return back()->withErrors(['email' => __('passwords.user')]);
+        // Prevent account enumeration: always return a success-style response,
+        // but only send the reset link for valid users of the active panel.
+        if ($user && $this->validateUserPanel($user)) {
+            $token = app('auth.password.broker')->createToken($user);
+            $notificationClass = $this->getNotificationClass();
+            $user->notify(new $notificationClass($token));
         }
-
-        // Check if user belongs to the current panel
-        if (!$this->validateUserPanel($user)) {
-            if ($request->expectsJson()) {
-                return ApiResponseType::sendJsonResponse(
-                    false,
-                    $this->getInvalidUserMessage(),
-                    []
-                );
-            }
-            return back()->withErrors(['email' => $this->getInvalidUserMessage()]);
-        }
-
-        // Generate a password reset token
-        $token = app('auth.password.broker')->createToken($user);
-
-        // Send the panel-specific password reset notification
-        $notificationClass = $this->getNotificationClass();
-        $user->notify(new $notificationClass($token));
 
         if ($request->expectsJson()) {
             return ApiResponseType::sendJsonResponse(

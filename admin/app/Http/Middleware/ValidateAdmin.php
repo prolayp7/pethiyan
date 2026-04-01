@@ -20,7 +20,7 @@ class ValidateAdmin
      */
     public function handle(Request $request, Closure $next): Response
     {
-        $user = Auth::user();
+        $user = Auth::guard('admin')->user();
 
         // Check if user is authenticated
         if (!$user) {
@@ -32,7 +32,9 @@ class ValidateAdmin
         }
 
         // If user doesn't have admin access, log them out and redirect to login
-        Auth::logout();
+        Auth::guard('admin')->logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
         return redirect()->route('admin.login')->with('error', 'You do not have permission to access the admin panel.');
     }
 }

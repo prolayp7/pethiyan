@@ -21,7 +21,7 @@ class ValidateSeller
      */
     public function handle(Request $request, Closure $next): Response
     {
-        $user = Auth::user();
+        $user = Auth::guard('seller')->user();
 
         // Check if user is authenticated
         if (!$user) {
@@ -56,7 +56,9 @@ class ValidateSeller
                         ]
                     ], 403);
                 }
-                Auth::logout();
+                Auth::guard('seller')->logout();
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
                 return redirect()->route('seller.login')->with('error', $message);
             }
 
@@ -64,7 +66,9 @@ class ValidateSeller
         }
 
         // If user doesn't have admin access, log them out and redirect to login
-        Auth::logout();
+        Auth::guard('seller')->logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
         return redirect()->route('seller.login')->with('error', 'You do not have permission to access the admin panel.');
     }
 }

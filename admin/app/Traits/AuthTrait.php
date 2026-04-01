@@ -24,6 +24,20 @@ use Illuminate\Validation\ValidationException;
 
 trait AuthTrait
 {
+    private function resolveSessionGuard(): string
+    {
+        if (property_exists($this, 'role')) {
+            if ($this->role === 'admin') {
+                return 'admin';
+            }
+            if ($this->role === 'seller') {
+                return 'seller';
+            }
+        }
+
+        return config('auth.defaults.guard', 'web');
+    }
+
     public function login(Request $request): JsonResponse
     {
         try {
@@ -96,7 +110,8 @@ trait AuthTrait
                 }
             }
 
-            if (!FacadesAuth::attempt($credentials)) {
+            $guard = $this->resolveSessionGuard();
+            if (!FacadesAuth::guard($guard)->attempt($credentials)) {
                 return response()->json([
                     'success' => false,
                     'message' => __('labels.invalid_credentials'),
@@ -104,10 +119,15 @@ trait AuthTrait
                 ]);
             }
 
-            $user = $request->user();
+            // Prevent session fixation after successful authentication.
+            $request->session()->regenerate();
+            $user = FacadesAuth::guard($guard)->user();
 
             // Verification gate: the identifier used to log in must be verified
             if ($identifierField === 'email' && is_null($user->email_verified_at)) {
+                FacadesAuth::guard($guard)->logout();
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
                 return response()->json([
                     'success' => false,
                     'message' => __('labels.email_not_verified'),
@@ -116,6 +136,9 @@ trait AuthTrait
             }
 
             if ($identifierField === 'mobile' && is_null($user->mobile_verified_at)) {
+                FacadesAuth::guard($guard)->logout();
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
                 return response()->json([
                     'success' => false,
                     'message' => __('labels.mobile_not_verified'),

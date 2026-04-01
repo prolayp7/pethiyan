@@ -26,9 +26,9 @@ use App\Http\Controllers\TaxRateController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('seller')->name('seller.')->group(function () {
-    Route::middleware(['guest'])->group(function () {
+    Route::middleware(['guest:seller'])->group(function () {
         Route::get('login', [AuthController::class, 'loginSeller'])->name('login');
-        Route::post('login', [AuthController::class, 'login'])->name('login.post');
+        Route::post('login', [AuthController::class, 'login'])->middleware('throttle:5,1')->name('login.post');
         Route::get('/', function () {
             return view('seller.auth.login');
         })->name('login.index');
@@ -40,10 +40,10 @@ Route::prefix('seller')->name('seller.')->group(function () {
         Route::post('reset-password', [PasswordResetController::class, 'resetPassword'])->name('password.update');
     });
 
-    Route::middleware(['auth', 'validate.seller'])->group(function () {
+    Route::middleware(['auth:seller', 'validate.seller'])->group(function () {
         Route::get('/', [DashboardController::class, 'index'])->name('index');
 
-        Route::get('logout', [AuthController::class, 'logout'])->name('logout');
+        Route::post('logout', [AuthController::class, 'logout'])->name('logout');
         Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
         Route::get('dashboard/chart-data', [DashboardController::class, 'getChartData'])->name('dashboard.chart-data');
         Route::get('dashboard/data', [DashboardController::class, 'getDashboardData'])->name('dashboard.data');

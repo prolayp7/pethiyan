@@ -200,9 +200,12 @@
                                 <i class="ti ti-user me-2 fs-2"></i>{{ __('labels.profile') }}
                             </a>
                             <div class="dropdown-divider"></div>
-                            <a href="{{ route(request()->segment(1).'.logout') }}" class="dropdown-item">
-                                <i class="ti ti-logout me-2 fs-2"></i>{{ __('labels.logout') }}
-                            </a>
+                            <form method="POST" action="{{ route(request()->segment(1).'.logout') }}">
+                                @csrf
+                                <button type="submit" class="dropdown-item">
+                                    <i class="ti ti-logout me-2 fs-2"></i>{{ __('labels.logout') }}
+                                </button>
+                            </form>
                         </div>
                     </div>
                 </div>

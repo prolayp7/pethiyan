@@ -21,8 +21,9 @@ class AuthController extends Controller
     public function logout(Request $request)
     {
         try {
-            Auth::logout(); // Log the user out
+            Auth::guard('seller')->logout(); // Log the user out
             $request->session()->invalidate(); // Invalidate the session
+            $request->session()->regenerateToken();
             return redirect(route('seller.login'));
 
         } catch (\Exception $e) {
