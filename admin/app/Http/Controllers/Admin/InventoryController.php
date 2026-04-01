@@ -35,7 +35,8 @@ class InventoryController extends Controller
     {
         $query = StoreProductVariant::with([
             'productVariant.product',
-            'productVariant.attributeValues.attribute',
+            'productVariant.attributes.attribute',
+            'productVariant.attributes.attributeValue',
             'store',
         ])->withoutGlobalScopes();
 
@@ -71,8 +72,18 @@ class InventoryController extends Controller
             $product = $spv->productVariant?->product;
             $variant = $spv->productVariant;
 
-            $variantLabel = $variant?->attributeValues
-                ?->map(fn($av) => $av->attribute?->name . ': ' . $av->value)
+            $variantLabel = $variant?->attributes
+                ?->map(function ($attrRow) {
+                    $attributeName = $attrRow->attribute?->title;
+                    $attributeValue = $attrRow->attributeValue?->title;
+
+                    if (!$attributeName && !$attributeValue) {
+                        return null;
+                    }
+
+                    return trim(($attributeName ?? '—') . ': ' . ($attributeValue ?? '—'));
+                })
+                ->filter()
                 ->join(', ') ?? '—';
 
             $stockClass = match (true) {
