@@ -4,8 +4,8 @@ namespace App\Policies;
 
 use App\Enums\AdminPermissionEnum;
 use App\Enums\SettingTypeEnum;
+use App\Models\AdminUser;
 use App\Models\Setting;
-use App\Models\User;
 use App\Traits\ChecksPermissions;
 use Illuminate\Auth\Access\Response;
 
@@ -15,7 +15,7 @@ class SettingPolicy
     /**
      * Determine whether the user can view any models.
      */
-    public function viewAny(User $user): bool
+    public function viewAny(AdminUser $user): bool
     {
         // Allow if user has view permission for any settings module
         $viewPerms = array_map(
@@ -28,7 +28,7 @@ class SettingPolicy
     /**
      * Determine whether the user can view the model.
      */
-    public function view(User $user, Setting $setting): bool
+    public function view(AdminUser $user, Setting $setting): bool
     {
         $type = is_string($setting->variable) ? $setting->variable : (string)$setting->variable;
         return $this->hasPermission($this->permissionFor($type, 'view'));
@@ -37,7 +37,7 @@ class SettingPolicy
     /**
      * Determine whether the user can create models.
      */
-    public function create(User $user): bool
+    public function create(AdminUser $user): bool
     {
         return false;
     }
@@ -45,7 +45,7 @@ class SettingPolicy
     /**
      * Determine whether the user can update the model.
      */
-    public function update(User $user): bool
+    public function update(AdminUser $user): bool
     {
         // Kept for backward compatibility but no longer used directly
         return false;
@@ -54,7 +54,7 @@ class SettingPolicy
     /**
      * Module-wise view authorization using the type string.
      */
-    public function viewSetting(User $user, string $type): bool
+    public function viewSetting(AdminUser $user, string $type): bool
     {
         return $this->hasPermission($this->permissionFor($type, 'view'));
     }
@@ -62,7 +62,7 @@ class SettingPolicy
     /**
      * Module-wise update authorization using the type string.
      */
-    public function updateSetting(User $user, string $type): bool
+    public function updateSetting(AdminUser $user, string $type): bool
     {
         return $this->hasPermission($this->permissionFor($type, 'edit'));
     }
@@ -85,7 +85,7 @@ class SettingPolicy
     /**
      * Determine whether the user can delete the model.
      */
-    public function delete(User $user, Setting $setting): bool
+    public function delete(AdminUser $user, Setting $setting): bool
     {
         return false;
     }
@@ -93,7 +93,7 @@ class SettingPolicy
     /**
      * Determine whether the user can restore the model.
      */
-    public function restore(User $user, Setting $setting): bool
+    public function restore(AdminUser $user, Setting $setting): bool
     {
         return false;
     }
@@ -101,7 +101,7 @@ class SettingPolicy
     /**
      * Determine whether the user can permanently delete the model.
      */
-    public function forceDelete(User $user, Setting $setting): bool
+    public function forceDelete(AdminUser $user, Setting $setting): bool
     {
         return false;
     }

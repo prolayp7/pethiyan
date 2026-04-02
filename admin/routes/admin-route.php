@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\SystemUpdateController;
 use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\AdminTotpController;
 use App\Http\Controllers\Admin\DeliveryBoyCashCollectionController;
 use App\Http\Controllers\Admin\DeliveryBoyEarningController;
 use App\Http\Controllers\Admin\DeliveryBoyWithdrawalController;
@@ -67,6 +68,15 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/edit', [ProfileController::class, 'edit'])->name('edit');
             Route::post('/update', [ProfileController::class, 'update'])->name('update');
             Route::post('/password-update', [ProfileController::class, 'changePassword'])->name('password.update');
+        });
+
+        // admin totp
+        Route::prefix('security/totp')->name('security.totp.')->group(function () {
+            Route::get('/status', [AdminTotpController::class, 'status'])->name('status');
+            Route::post('/setup', [AdminTotpController::class, 'setup'])->name('setup');
+            Route::post('/enable', [AdminTotpController::class, 'enable'])->name('enable');
+            Route::post('/disable', [AdminTotpController::class, 'disable'])->name('disable');
+            Route::post('/recovery-codes', [AdminTotpController::class, 'regenerateRecoveryCodes'])->name('recovery-codes');
         });
 
         // settings

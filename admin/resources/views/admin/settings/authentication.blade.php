@@ -15,6 +15,9 @@
         ['title' => __('labels.settings'), 'url' => route('admin.settings.index')],
         ['title' => __('labels.authentication_settings'), 'url' => null],
     ];
+    $adminUser = auth('admin')->user();
+    $adminTotpEnabled = $adminUser && method_exists($adminUser, 'isTotpEnabled') ? $adminUser->isTotpEnabled() : false;
+    $adminTotpEnabledAt = $adminUser?->totp_enabled_at;
 @endphp
 
 @section('admin-content')
@@ -37,6 +40,7 @@
                             <a class="nav-link" href="#pills-google-keys">{{ __('labels.google_keys') }}</a>
                             <a class="nav-link" href="#pills-firebase">{{ __('labels.firebase') }}</a>
                             <a class="nav-link" href="#pills-social-login">{{ __('labels.social_login') }}</a>
+                            <a class="nav-link" href="#pills-admin-totp">Admin TOTP</a>
                         </nav>
                     </div>
                 </div>
@@ -438,6 +442,99 @@
                                 </div>
                             </form>
                         </div>
+                        <div class="col-12">
+                            <div class="card mb-4" id="pills-admin-totp">
+                                <div class="card-header">
+                                    <h4 class="card-title">Google Authenticator (TOTP)</h4>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <span class="badge {{ $adminTotpEnabled ? 'bg-green' : 'bg-secondary' }}" id="totp-status-badge">{{ $adminTotpEnabled ? 'Enabled' : 'Disabled' }}</span>
+                                        <small class="text-muted d-block mt-1" id="totp-enabled-at">{{ $adminTotpEnabledAt ? 'Enabled at: ' . $adminTotpEnabledAt : '' }}</small>
+                                    </div>
+
+                                    <div id="totp-setup-block" class="border rounded p-3 mb-3 {{ $adminTotpEnabled ? 'd-none' : '' }}">
+                                        <div class="d-flex align-items-center justify-content-between mb-3">
+                                            <h5 class="mb-0">Setup</h5>
+                                            <button type="button" class="btn btn-primary btn-sm" id="totp-start-setup-btn">Start Setup</button>
+                                        </div>
+                                        <p class="text-muted mb-3">Scan QR with Google Authenticator, then enable with one code.</p>
+                                        <div id="totp-setup-data" class="d-none">
+                                            <div class="row g-3 align-items-center">
+                                                <div class="col-md-4">
+                                                    <img id="totp-qr-image" src="" alt="TOTP QR" class="img-fluid border rounded">
+                                                </div>
+                                                <div class="col-md-8">
+                                                    <label class="form-label">Manual Secret</label>
+                                                    <input type="text" class="form-control" id="totp-manual-secret" readonly>
+                                                    <small class="text-muted">Use this if QR scan does not work.</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <form id="totp-enable-form" class="mt-3 d-none">
+                                            <div class="row g-3">
+                                                <div class="col-md-6">
+                                                    <label class="form-label required">Current Password</label>
+                                                    <input type="password" class="form-control" name="password" required autocomplete="current-password">
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label class="form-label required">Authenticator Code</label>
+                                                    <input type="text" class="form-control" name="totp_code" maxlength="6" required placeholder="123456">
+                                                </div>
+                                            </div>
+                                            <div class="mt-3 text-end">
+                                                <button type="submit" class="btn btn-success">Enable TOTP</button>
+                                            </div>
+                                        </form>
+                                    </div>
+
+                                    <div id="totp-manage-block" class="border rounded p-3 {{ $adminTotpEnabled ? '' : 'd-none' }}">
+                                        <h5 class="mb-3">Manage</h5>
+                                        <form id="totp-disable-form" class="mb-3">
+                                            <div class="row g-3">
+                                                <div class="col-md-4">
+                                                    <label class="form-label required">Current Password</label>
+                                                    <input type="password" class="form-control" name="password" required autocomplete="current-password">
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <label class="form-label">Authenticator Code</label>
+                                                    <input type="text" class="form-control" name="totp_code" maxlength="6" placeholder="123456">
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <label class="form-label">Or Recovery Code</label>
+                                                    <input type="text" class="form-control" name="recovery_code" placeholder="AAAA-BBBB">
+                                                </div>
+                                            </div>
+                                            <div class="mt-3 text-end">
+                                                <button type="submit" class="btn btn-danger">Disable TOTP</button>
+                                            </div>
+                                        </form>
+
+                                        <form id="totp-regenerate-form">
+                                            <div class="row g-3">
+                                                <div class="col-md-6">
+                                                    <label class="form-label required">Current Password</label>
+                                                    <input type="password" class="form-control" name="password" required autocomplete="current-password">
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label class="form-label required">Authenticator Code</label>
+                                                    <input type="text" class="form-control" name="totp_code" maxlength="6" required placeholder="123456">
+                                                </div>
+                                            </div>
+                                            <div class="mt-3 text-end">
+                                                <button type="submit" class="btn btn-warning">Regenerate Recovery Codes</button>
+                                            </div>
+                                        </form>
+                                    </div>
+
+                                    <div id="totp-recovery-codes-wrapper" class="mt-3 d-none">
+                                        <label class="form-label">Recovery Codes</label>
+                                        <ul class="list-group" id="totp-recovery-codes-list"></ul>
+                                        <small class="text-danger d-block mt-2">Save these codes now. They may not be shown again.</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -471,15 +568,15 @@
             container.appendChild(fieldDiv);
         }
 
-        document.getElementById('addHeaderField').addEventListener('click', () => {
+        document.getElementById('addHeaderField')?.addEventListener('click', () => {
             addField('headerFields', 'customSmsHeaderKey', 'customSmsHeaderValue', '{{ __('labels.custom_sms_header_key_placeholder') }}', '{{ __('labels.custom_sms_header_value_placeholder') }}');
         });
 
-        document.getElementById('addParamsField').addEventListener('click', () => {
+        document.getElementById('addParamsField')?.addEventListener('click', () => {
             addField('paramsFields', 'customSmsParamsKey', 'customSmsParamsValue', '{{ __('labels.custom_sms_params_key_placeholder') }}', '{{ __('labels.custom_sms_params_value_placeholder') }}');
         });
 
-        document.getElementById('addBodyField').addEventListener('click', () => {
+        document.getElementById('addBodyField')?.addEventListener('click', () => {
             addField('bodyFields', 'customSmsBodyKey', 'customSmsBodyValue', '{{ __('labels.custom_sms_body_key_placeholder') }}', '{{ __('labels.custom_sms_body_value_placeholder') }}');
         });
 
@@ -501,9 +598,151 @@
             firebaseFields.style.display = firebaseToggle.checked ? 'block' : 'none';
         };
 
-        customSmsToggle.addEventListener('change', toggleCustomSmsFields);
-        firebaseToggle.addEventListener('change', toggleFirebaseFields);
-        toggleCustomSmsFields();
-        toggleFirebaseFields();
+        customSmsToggle?.addEventListener('change', toggleCustomSmsFields);
+        firebaseToggle?.addEventListener('change', toggleFirebaseFields);
+        if (customSmsToggle && customSmsFields) {
+            toggleCustomSmsFields();
+        }
+        if (firebaseToggle && firebaseFields) {
+            toggleFirebaseFields();
+        }
+
+        const totpStatusBadge = document.getElementById('totp-status-badge');
+        const totpEnabledAt = document.getElementById('totp-enabled-at');
+        const totpSetupBlock = document.getElementById('totp-setup-block');
+        const totpSetupData = document.getElementById('totp-setup-data');
+        const totpEnableForm = document.getElementById('totp-enable-form');
+        const totpManageBlock = document.getElementById('totp-manage-block');
+        const totpStartSetupBtn = document.getElementById('totp-start-setup-btn');
+        const totpQrImage = document.getElementById('totp-qr-image');
+        const totpManualSecret = document.getElementById('totp-manual-secret');
+        const totpRecoveryCodesWrapper = document.getElementById('totp-recovery-codes-wrapper');
+        const totpRecoveryCodesList = document.getElementById('totp-recovery-codes-list');
+        const totpDisableForm = document.getElementById('totp-disable-form');
+        const totpRegenerateForm = document.getElementById('totp-regenerate-form');
+
+        const showRecoveryCodes = (codes) => {
+            totpRecoveryCodesList.innerHTML = '';
+            if (!Array.isArray(codes) || !codes.length) {
+                totpRecoveryCodesWrapper.classList.add('d-none');
+                return;
+            }
+
+            codes.forEach((code) => {
+                const li = document.createElement('li');
+                li.className = 'list-group-item font-monospace';
+                li.textContent = String(code);
+                totpRecoveryCodesList.appendChild(li);
+            });
+            totpRecoveryCodesWrapper.classList.remove('d-none');
+        };
+
+        const setTotpUi = (enabled, enabledAt = null) => {
+            if (enabled) {
+                totpStatusBadge.className = 'badge bg-green';
+                totpStatusBadge.textContent = 'Enabled';
+                totpSetupBlock.classList.add('d-none');
+                totpManageBlock.classList.remove('d-none');
+            } else {
+                totpStatusBadge.className = 'badge bg-secondary';
+                totpStatusBadge.textContent = 'Disabled';
+                totpSetupBlock.classList.remove('d-none');
+                totpManageBlock.classList.add('d-none');
+                totpSetupData.classList.add('d-none');
+                totpEnableForm.classList.add('d-none');
+            }
+            totpEnabledAt.textContent = enabledAt ? `Enabled at: ${enabledAt}` : '';
+        };
+
+        const handleApiError = (error) => {
+            const message = error?.response?.data?.message || 'Request failed. Please try again.';
+            Toast.fire({icon: 'error', title: message});
+        };
+
+        const fetchTotpStatus = () => {
+            return axios.get("{{ route('admin.security.totp.status') }}", {
+                headers: {'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json'}
+            }).then((response) => {
+                const data = response?.data?.data || {};
+                setTotpUi(Boolean(data.enabled), data.enabled_at ?? null);
+            }).catch((error) => {
+                totpStatusBadge.className = 'badge bg-red';
+                totpStatusBadge.textContent = 'Status unavailable';
+                handleApiError(error);
+            });
+        };
+
+        totpStartSetupBtn?.addEventListener('click', () => {
+            totpStartSetupBtn.disabled = true;
+            axios.post("{{ route('admin.security.totp.setup') }}", {}, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                }
+            }).then((response) => {
+                const data = response?.data?.data || {};
+                totpQrImage.src = data.qr_url || '';
+                totpManualSecret.value = data.secret || '';
+                totpSetupData.classList.remove('d-none');
+                totpEnableForm.classList.remove('d-none');
+                Toast.fire({icon: 'success', title: response?.data?.message || 'TOTP setup started.'});
+            }).catch(handleApiError)
+                .finally(() => {
+                    totpStartSetupBtn.disabled = false;
+                });
+        });
+
+        totpEnableForm?.addEventListener('submit', (event) => {
+            event.preventDefault();
+            const submitBtn = totpEnableForm.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;
+            axios.post("{{ route('admin.security.totp.enable') }}", new FormData(totpEnableForm), {
+                headers: {'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json'}
+            }).then((response) => {
+                showRecoveryCodes(response?.data?.data?.recovery_codes ?? []);
+                Toast.fire({icon: 'success', title: response?.data?.message || 'TOTP enabled.'});
+                totpEnableForm.reset();
+                fetchTotpStatus();
+            }).catch(handleApiError)
+                .finally(() => {
+                    submitBtn.disabled = false;
+                });
+        });
+
+        totpDisableForm?.addEventListener('submit', (event) => {
+            event.preventDefault();
+            const submitBtn = totpDisableForm.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;
+            axios.post("{{ route('admin.security.totp.disable') }}", new FormData(totpDisableForm), {
+                headers: {'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json'}
+            }).then((response) => {
+                Toast.fire({icon: 'success', title: response?.data?.message || 'TOTP disabled.'});
+                totpDisableForm.reset();
+                showRecoveryCodes([]);
+                fetchTotpStatus();
+            }).catch(handleApiError)
+                .finally(() => {
+                    submitBtn.disabled = false;
+                });
+        });
+
+        totpRegenerateForm?.addEventListener('submit', (event) => {
+            event.preventDefault();
+            const submitBtn = totpRegenerateForm.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;
+            axios.post("{{ route('admin.security.totp.recovery-codes') }}", new FormData(totpRegenerateForm), {
+                headers: {'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json'}
+            }).then((response) => {
+                showRecoveryCodes(response?.data?.data?.recovery_codes ?? []);
+                Toast.fire({icon: 'success', title: response?.data?.message || 'Recovery codes regenerated.'});
+                totpRegenerateForm.reset();
+            }).catch(handleApiError)
+                .finally(() => {
+                    submitBtn.disabled = false;
+                });
+        });
+
+        fetchTotpStatus();
     </script>
 @endsection

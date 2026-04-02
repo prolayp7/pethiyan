@@ -82,6 +82,24 @@
                                     <span class="form-check-label">Remember me on this device</span>
                                 </label>
                             </div>
+                            <input type="hidden" name="challenge_token" id="challenge_token" value="">
+                            <div id="admin-totp-step" class="d-none">
+                                <hr>
+                                <div class="mb-2">
+                                    <label class="form-label">Authenticator Code</label>
+                                    <input type="text" class="form-control" name="totp_code" id="totp_code"
+                                           placeholder="Enter 6-digit code" inputmode="numeric" autocomplete="one-time-code"/>
+                                    <small class="text-muted">Open Google Authenticator and enter the current code.</small>
+                                </div>
+                                <div class="mb-2">
+                                    <a href="#" id="toggle-recovery-code">Use recovery code instead</a>
+                                </div>
+                                <div class="mb-2 d-none" id="recovery-code-wrapper">
+                                    <label class="form-label">Recovery Code</label>
+                                    <input type="text" class="form-control" name="recovery_code" id="recovery_code"
+                                           placeholder="Enter one-time recovery code"/>
+                                </div>
+                            </div>
                             <div class="form-footer">
                                 <button type="submit" class="btn btn-primary w-100">Sign in</button>
                             </div>
@@ -129,6 +147,12 @@
         if (token) {
             document.querySelector('input[name="fcm_token"]').value = token;
         }
+        const recoveryToggle = document.getElementById('toggle-recovery-code');
+        recoveryToggle?.addEventListener('click', function (e) {
+            e.preventDefault();
+            const wrapper = document.getElementById('recovery-code-wrapper');
+            wrapper?.classList.toggle('d-none');
+        });
         document.addEventListener('click', function (e) {
             const btn = e.target.closest('.copy-cred');
             if (!btn) return;
