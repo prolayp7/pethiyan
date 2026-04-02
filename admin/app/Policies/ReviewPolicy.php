@@ -3,6 +3,7 @@
 namespace App\Policies;
 
 use App\Models\Review;
+use App\Models\AdminUser;
 use App\Models\User;
 
 class ReviewPolicy
@@ -10,7 +11,7 @@ class ReviewPolicy
     /**
      * Determine if the given review can be updated by the user.
      */
-    public function update(User $user, Review $review): bool
+    public function update(User|AdminUser $user, Review $review): bool
     {
         // ✅ Only the user who created the review can update it
         return $user->id === $review->user_id;
@@ -19,7 +20,7 @@ class ReviewPolicy
     /**
      * Determine if the given review can be deleted by the user.
      */
-    public function delete(User $user, Review $review): bool
+    public function delete(User|AdminUser $user, Review $review): bool
     {
         // ✅ Only the user who created the review can delete it
         return $user->id === $review->user_id;

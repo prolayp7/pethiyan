@@ -5,6 +5,7 @@ namespace App\Policies;
 use App\Enums\DefaultSystemRolesEnum;
 use App\Enums\SellerPermissionEnum;
 use App\Models\GlobalProductAttribute;
+use App\Models\AdminUser;
 use App\Models\User;
 use App\Traits\ChecksPermissions;
 
@@ -15,7 +16,7 @@ class GlobalAttributePolicy
     /**
      * Determine whether the user can view any models.
      */
-    public function viewAny(User $user): bool
+    public function viewAny(User|AdminUser $user): bool
     {
         try {
             // Only sellers with a valid seller record can create product FAQs
@@ -40,7 +41,7 @@ class GlobalAttributePolicy
     /**
      * Determine whether the user can view the model.
      */
-    public function view(User $user, GlobalProductAttribute $attribute): bool
+    public function view(User|AdminUser $user, GlobalProductAttribute $attribute): bool
     {
         return false;
     }
@@ -48,7 +49,7 @@ class GlobalAttributePolicy
     /**
      * Determine whether the user can create models.
      */
-    public function create(User $user): bool
+    public function create(User|AdminUser $user): bool
     {
         try {
             // Only sellers with a valid seller record can create product FAQs
@@ -73,7 +74,7 @@ class GlobalAttributePolicy
     /**
      * Determine whether the user can update the model.
      */
-    public function update(User $user, GlobalProductAttribute $attribute): bool
+    public function update(User|AdminUser $user, GlobalProductAttribute $attribute): bool
     {
         try {
             // Only the seller who owns the product can update it
@@ -102,7 +103,7 @@ class GlobalAttributePolicy
     /**
      * Determine whether the user can delete the model.
      */
-    public function delete(User $user, GlobalProductAttribute $attribute): bool
+    public function delete(User|AdminUser $user, GlobalProductAttribute $attribute): bool
     {
         try {
             // Only the seller who owns the product can update it
@@ -131,7 +132,7 @@ class GlobalAttributePolicy
     /**
      * Determine whether the user can restore the model.
      */
-    public function restore(User $user, GlobalProductAttribute $attribute): bool
+    public function restore(User|AdminUser $user, GlobalProductAttribute $attribute): bool
     {
         return false;
     }
@@ -139,7 +140,7 @@ class GlobalAttributePolicy
     /**
      * Determine whether the user can permanently delete the model.
      */
-    public function forceDelete(User $user, GlobalProductAttribute $attribute): bool
+    public function forceDelete(User|AdminUser $user, GlobalProductAttribute $attribute): bool
     {
         return false;
     }

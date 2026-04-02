@@ -6,6 +6,7 @@ use App\Enums\AdminPermissionEnum;
 use App\Enums\DefaultSystemRolesEnum;
 use App\Enums\SellerPermissionEnum;
 use App\Models\Category;
+use App\Models\AdminUser;
 use App\Models\User;
 use App\Traits\ChecksPermissions;
 
@@ -16,7 +17,7 @@ class CategoryPolicy
     /**
      * Determine whether the user can view any models.
      */
-    public function viewAny(User $user): bool
+    public function viewAny(User|AdminUser $user): bool
     {
         // Only the seller who owns the order can view it
         if ($user->seller() === null) {
@@ -37,7 +38,7 @@ class CategoryPolicy
     /**
      * Determine whether the user can view the model.
      */
-    public function view(User $user, Category $category): bool
+    public function view(User|AdminUser $user, Category $category): bool
     {
         return false;
     }
@@ -45,7 +46,7 @@ class CategoryPolicy
     /**
      * Determine whether the user can create models.
      */
-    public function create(User $user): bool
+    public function create(User|AdminUser $user): bool
     {
         try {
             return $this->hasPermission(AdminPermissionEnum::CATEGORY_CREATE());
@@ -58,7 +59,7 @@ class CategoryPolicy
     /**
      * Determine whether the user can update the model.
      */
-    public function update(User $user, Category $category): bool
+    public function update(User|AdminUser $user, Category $category): bool
     {
         try {
             return $this->hasPermission(AdminPermissionEnum::CATEGORY_EDIT());
@@ -71,7 +72,7 @@ class CategoryPolicy
     /**
      * Determine whether the user can delete the model.
      */
-    public function delete(User $user, Category $category): bool
+    public function delete(User|AdminUser $user, Category $category): bool
     {
         try {
             return $this->hasPermission(AdminPermissionEnum::CATEGORY_DELETE());
@@ -83,7 +84,7 @@ class CategoryPolicy
     /**
      * Determine whether the user can restore the model.
      */
-    public function restore(User $user, Category $category): bool
+    public function restore(User|AdminUser $user, Category $category): bool
     {
         return false;
     }
@@ -91,7 +92,7 @@ class CategoryPolicy
     /**
      * Determine whether the user can permanently delete the model.
      */
-    public function forceDelete(User $user, Category $category): bool
+    public function forceDelete(User|AdminUser $user, Category $category): bool
     {
         return false;
     }

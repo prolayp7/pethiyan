@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Enums\AdminPermissionEnum;
 use App\Models\DeliveryZone;
+use App\Models\AdminUser;
 use App\Models\User;
 use App\Traits\ChecksPermissions;
 use Illuminate\Auth\Access\Response;
@@ -14,7 +15,7 @@ class DeliveryZonePolicy
     /**
      * Determine whether the user can view any models.
      */
-    public function viewAny(User $user): bool
+    public function viewAny(User|AdminUser $user): bool
     {
         try {
             return $this->hasPermission(AdminPermissionEnum::DELIVERY_ZONE_VIEW());
@@ -26,7 +27,7 @@ class DeliveryZonePolicy
     /**
      * Determine whether the user can view the model.
      */
-    public function view(User $user, DeliveryZone $deliveryZone): bool
+    public function view(User|AdminUser $user, DeliveryZone $deliveryZone): bool
     {
         try {
             return $this->hasPermission(AdminPermissionEnum::DELIVERY_ZONE_VIEW());
@@ -38,7 +39,7 @@ class DeliveryZonePolicy
     /**
      * Determine whether the user can create models.
      */
-    public function create(User $user): bool
+    public function create(User|AdminUser $user): bool
     {
         try {
             return $this->hasPermission(AdminPermissionEnum::DELIVERY_ZONE_CREATE());
@@ -51,7 +52,7 @@ class DeliveryZonePolicy
     /**
      * Determine whether the user can update the model.
      */
-    public function update(User $user, DeliveryZone $deliveryZone): bool
+    public function update(User|AdminUser $user, DeliveryZone $deliveryZone): bool
     {
         try {
             return $this->hasPermission(AdminPermissionEnum::DELIVERY_ZONE_EDIT());
@@ -64,7 +65,7 @@ class DeliveryZonePolicy
     /**
      * Determine whether the user can delete the model.
      */
-    public function delete(User $user, DeliveryZone $deliveryZone): bool
+    public function delete(User|AdminUser $user, DeliveryZone $deliveryZone): bool
     {
         try {
             return $this->hasPermission(AdminPermissionEnum::DELIVERY_ZONE_DELETE());
@@ -76,7 +77,7 @@ class DeliveryZonePolicy
     /**
      * Determine whether the user can restore the model.
      */
-    public function restore(User $user, DeliveryZone $deliveryZone): bool
+    public function restore(User|AdminUser $user, DeliveryZone $deliveryZone): bool
     {
         return false;
     }
@@ -84,7 +85,7 @@ class DeliveryZonePolicy
     /**
      * Determine whether the user can permanently delete the model.
      */
-    public function forceDelete(User $user, DeliveryZone $deliveryZone): bool
+    public function forceDelete(User|AdminUser $user, DeliveryZone $deliveryZone): bool
     {
         return false;
     }

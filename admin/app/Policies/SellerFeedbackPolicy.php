@@ -3,6 +3,7 @@
 namespace App\Policies;
 
 use App\Models\SellerFeedback;
+use App\Models\AdminUser;
 use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
@@ -13,7 +14,7 @@ class SellerFeedbackPolicy
     /**
      * Determine whether the user can view any models.
      */
-    public function viewAny(User $user): bool
+    public function viewAny(User|AdminUser $user): bool
     {
         return true;
     }
@@ -21,7 +22,7 @@ class SellerFeedbackPolicy
     /**
      * Determine whether the user can view the model.
      */
-    public function view(User $user, SellerFeedback $sellerFeedback): bool
+    public function view(User|AdminUser $user, SellerFeedback $sellerFeedback): bool
     {
         return true;
     }
@@ -29,7 +30,7 @@ class SellerFeedbackPolicy
     /**
      * Determine whether the user can create models.
      */
-    public function create(User $user): bool
+    public function create(User|AdminUser $user): bool
     {
         return true;
     }
@@ -37,7 +38,7 @@ class SellerFeedbackPolicy
     /**
      * Determine whether the user can update the model.
      */
-    public function update(User $user, SellerFeedback $sellerFeedback): bool
+    public function update(User|AdminUser $user, SellerFeedback $sellerFeedback): bool
     {
         return $user->id === $sellerFeedback->user_id;
     }
@@ -45,7 +46,7 @@ class SellerFeedbackPolicy
     /**
      * Determine whether the user can delete the model.
      */
-    public function delete(User $user, SellerFeedback $sellerFeedback): bool
+    public function delete(User|AdminUser $user, SellerFeedback $sellerFeedback): bool
     {
         return $user->id === $sellerFeedback->user_id;
     }

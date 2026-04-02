@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Enums\AdminPermissionEnum;
 use App\Models\Promo;
+use App\Models\AdminUser;
 use App\Models\User;
 use App\Traits\ChecksPermissions;
 
@@ -14,7 +15,7 @@ class PromoPolicy
     /**
      * Determine whether the user can view any models.
      */
-    public function viewAny(User $user): bool
+    public function viewAny(User|AdminUser $user): bool
     {
         try {
             return $this->hasPermission(AdminPermissionEnum::PROMO_VIEW());
@@ -26,7 +27,7 @@ class PromoPolicy
     /**
      * Determine whether the user can view the model.
      */
-    public function view(User $user, Promo $promo): bool
+    public function view(User|AdminUser $user, Promo $promo): bool
     {
         try {
             return $this->hasPermission(AdminPermissionEnum::PROMO_VIEW());
@@ -38,7 +39,7 @@ class PromoPolicy
     /**
      * Determine whether the user can create models.
      */
-    public function create(User $user): bool
+    public function create(User|AdminUser $user): bool
     {
         try {
             return $this->hasPermission(AdminPermissionEnum::PROMO_CREATE());
@@ -51,7 +52,7 @@ class PromoPolicy
     /**
      * Determine whether the user can update the model.
      */
-    public function update(User $user, Promo $promo): bool
+    public function update(User|AdminUser $user, Promo $promo): bool
     {
         try {
             return $this->hasPermission(AdminPermissionEnum::PROMO_EDIT());
@@ -64,7 +65,7 @@ class PromoPolicy
     /**
      * Determine whether the user can delete the model.
      */
-    public function delete(User $user, Promo $promo): bool
+    public function delete(User|AdminUser $user, Promo $promo): bool
     {
         try {
             return $this->hasPermission(AdminPermissionEnum::PROMO_DELETE());
@@ -76,7 +77,7 @@ class PromoPolicy
     /**
      * Determine whether the user can restore the model.
      */
-    public function restore(User $user, Promo $promo): bool
+    public function restore(User|AdminUser $user, Promo $promo): bool
     {
         return false;
     }
@@ -84,7 +85,7 @@ class PromoPolicy
     /**
      * Determine whether the user can permanently delete the model.
      */
-    public function forceDelete(User $user, Promo $promo): bool
+    public function forceDelete(User|AdminUser $user, Promo $promo): bool
     {
         return false;
     }

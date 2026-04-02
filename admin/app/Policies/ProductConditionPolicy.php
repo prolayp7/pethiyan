@@ -5,6 +5,7 @@ namespace App\Policies;
 use App\Enums\DefaultSystemRolesEnum;
 use App\Enums\SellerPermissionEnum;
 use App\Models\ProductCondition;
+use App\Models\AdminUser;
 use App\Models\User;
 use App\Traits\ChecksPermissions;
 
@@ -15,7 +16,7 @@ class ProductConditionPolicy
     /**
      * Determine whether the user can view any models.
      */
-    public function viewAny(User $user): bool
+    public function viewAny(User|AdminUser $user): bool
     {
         if ($user->hasRole(DefaultSystemRolesEnum::SELLER())) {
             return true;
@@ -27,7 +28,7 @@ class ProductConditionPolicy
     /**
      * Determine whether the user can view the model.
      */
-    public function view(User $user, ProductCondition $productCondition): bool
+    public function view(User|AdminUser $user, ProductCondition $productCondition): bool
     {
         return false;
     }
@@ -35,7 +36,7 @@ class ProductConditionPolicy
     /**
      * Determine whether the user can create models.
      */
-    public function create(User $user): bool
+    public function create(User|AdminUser $user): bool
     {
         if ($user->hasRole(DefaultSystemRolesEnum::SELLER())) {
             return true;
@@ -47,7 +48,7 @@ class ProductConditionPolicy
     /**
      * Determine whether the user can update the model.
      */
-    public function update(User $user, ProductCondition $productCondition): bool
+    public function update(User|AdminUser $user, ProductCondition $productCondition): bool
     {
         if ($user->hasRole(DefaultSystemRolesEnum::SELLER())) {
             return true;
@@ -59,7 +60,7 @@ class ProductConditionPolicy
     /**
      * Determine whether the user can delete the model.
      */
-    public function delete(User $user, ProductCondition $productCondition): bool
+    public function delete(User|AdminUser $user, ProductCondition $productCondition): bool
     {
         if ($user->hasRole(DefaultSystemRolesEnum::SELLER())) {
             return true;
@@ -71,7 +72,7 @@ class ProductConditionPolicy
     /**
      * Determine whether the user can restore the model.
      */
-    public function restore(User $user, ProductCondition $productCondition): bool
+    public function restore(User|AdminUser $user, ProductCondition $productCondition): bool
     {
         return false;
     }
@@ -79,7 +80,7 @@ class ProductConditionPolicy
     /**
      * Determine whether the user can permanently delete the model.
      */
-    public function forceDelete(User $user, ProductCondition $productCondition): bool
+    public function forceDelete(User|AdminUser $user, ProductCondition $productCondition): bool
     {
         return false;
     }

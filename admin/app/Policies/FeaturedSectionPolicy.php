@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Enums\AdminPermissionEnum;
 use App\Models\FeaturedSection;
+use App\Models\AdminUser;
 use App\Models\User;
 use App\Traits\ChecksPermissions;
 
@@ -14,7 +15,7 @@ class FeaturedSectionPolicy
     /**
      * Determine whether the user can view any models.
      */
-    public function viewAny(User $user): bool
+    public function viewAny(User|AdminUser $user): bool
     {
         return $this->hasPermission(AdminPermissionEnum::FEATURED_SECTION_VIEW());
     }
@@ -22,7 +23,7 @@ class FeaturedSectionPolicy
     /**
      * Determine whether the user can view the model.
      */
-    public function view(User $user, FeaturedSection $featuredSection): bool
+    public function view(User|AdminUser $user, FeaturedSection $featuredSection): bool
     {
         return $this->hasPermission(AdminPermissionEnum::FEATURED_SECTION_VIEW());
     }
@@ -30,7 +31,7 @@ class FeaturedSectionPolicy
     /**
      * Determine whether the user can create models.
      */
-    public function create(User $user): bool
+    public function create(User|AdminUser $user): bool
     {
         return $this->hasPermission(AdminPermissionEnum::FEATURED_SECTION_CREATE());
     }
@@ -38,14 +39,14 @@ class FeaturedSectionPolicy
     /**
      * Determine whether the user can update the model.
      */
-    public function update(User $user, FeaturedSection $featuredSection): bool
+    public function update(User|AdminUser $user, FeaturedSection $featuredSection): bool
     {
         return $this->hasPermission(AdminPermissionEnum::FEATURED_SECTION_EDIT());
     }
     /**
      * Determine whether the user can update the model.
      */
-    public function sorting(User $user): bool
+    public function sorting(User|AdminUser $user): bool
     {
         return $this->hasPermission(AdminPermissionEnum::FEATURED_SECTION_SORTING_MODIFY());
     }
@@ -53,7 +54,7 @@ class FeaturedSectionPolicy
     /**
      * Determine whether the user can view sorting page.
      */
-    public function sortingView(User $user): bool
+    public function sortingView(User|AdminUser $user): bool
     {
         return $this->hasPermission(AdminPermissionEnum::FEATURED_SECTION_SORTING_VIEW());
     }
@@ -61,7 +62,7 @@ class FeaturedSectionPolicy
     /**
      * Determine whether the user can delete the model.
      */
-    public function delete(User $user, FeaturedSection $featuredSection): bool
+    public function delete(User|AdminUser $user, FeaturedSection $featuredSection): bool
     {
         return $this->hasPermission(AdminPermissionEnum::FEATURED_SECTION_DELETE());
     }
@@ -69,7 +70,7 @@ class FeaturedSectionPolicy
     /**
      * Determine whether the user can restore the model.
      */
-    public function restore(User $user, FeaturedSection $featuredSection): bool
+    public function restore(User|AdminUser $user, FeaturedSection $featuredSection): bool
     {
         return $this->hasPermission(AdminPermissionEnum::FEATURED_SECTION_EDIT());
     }
@@ -77,7 +78,7 @@ class FeaturedSectionPolicy
     /**
      * Determine whether the user can permanently delete the model.
      */
-    public function forceDelete(User $user, FeaturedSection $featuredSection): bool
+    public function forceDelete(User|AdminUser $user, FeaturedSection $featuredSection): bool
     {
         return $this->hasPermission(AdminPermissionEnum::FEATURED_SECTION_DELETE());
     }

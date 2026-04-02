@@ -8,6 +8,7 @@ use App\Enums\GuardNameEnum;
 use App\Enums\SellerPermissionEnum;
 use App\Models\SellerOrder;
 use App\Models\SellerOrderItem;
+use App\Models\AdminUser;
 use App\Models\User;
 use App\Traits\ChecksPermissions;
 
@@ -18,7 +19,7 @@ class OrderPolicy
     /**
      * Determine whether the user can view any models.
      */
-    public function viewAny(User $user): bool
+    public function viewAny(User|AdminUser $user): bool
     {
         // Only the seller who owns the order can view it
         if ($user->seller() === null) {
@@ -39,7 +40,7 @@ class OrderPolicy
     /**
      * Determine whether the user can view the model.
      */
-    public function view(User $user, $order): bool
+    public function view(User|AdminUser $user, $order): bool
     {
         try {
             // Only the seller who owns the order can view it
@@ -67,7 +68,7 @@ class OrderPolicy
     /**
      * Determine whether the user can update the model.
      */
-    public function update(User $user, SellerOrder $order): bool
+    public function update(User|AdminUser $user, SellerOrder $order): bool
     {
         try {
             // Only the seller who owns the order can update it
@@ -95,7 +96,7 @@ class OrderPolicy
     /**
      * Determine whether the user can update the status of an order item.
      */
-    public function updateStatus(User $user, SellerOrderItem $orderItem): bool
+    public function updateStatus(User|AdminUser $user, SellerOrderItem $orderItem): bool
     {
         try {
             // Only the seller who owns the order can update its status
@@ -120,7 +121,7 @@ class OrderPolicy
         }
     }
 
-    public function viewInvoice(User $user, $orderData): bool
+    public function viewInvoice(User|AdminUser $user, $orderData): bool
     {
         try {
             if ($this->hasPermission(AdminPermissionEnum::ORDER_VIEW())) {

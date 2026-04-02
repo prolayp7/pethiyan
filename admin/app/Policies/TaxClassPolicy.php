@@ -6,6 +6,7 @@ use App\Enums\AdminPermissionEnum;
 use App\Enums\DefaultSystemRolesEnum;
 use App\Enums\SellerPermissionEnum;
 use App\Models\TaxClass;
+use App\Models\AdminUser;
 use App\Models\User;
 use App\Traits\ChecksPermissions;
 
@@ -16,7 +17,7 @@ class TaxClassPolicy
     /**
      * Determine whether the user can view any tax classes.
      */
-    public function viewAny(User $user): bool
+    public function viewAny(User|AdminUser $user): bool
     {
          try {
             // Admin panel requires explicit permission to view Product FAQs list
@@ -34,7 +35,7 @@ class TaxClassPolicy
     /**
      * Determine whether the user can view the tax class.
      */
-    public function view(User $user, TaxClass $taxClass): bool
+    public function view(User|AdminUser $user, TaxClass $taxClass): bool
     {
         return true; // Adjust as needed
     }
@@ -42,7 +43,7 @@ class TaxClassPolicy
     /**
      * Determine whether the user can create tax classes.
      */
-    public function create(User $user): bool
+    public function create(User|AdminUser $user): bool
     {
         try {
             return $this->hasPermission(AdminPermissionEnum::TAX_CLASS_CREATE());
@@ -66,7 +67,7 @@ class TaxClassPolicy
     /**
      * Determine whether the user can delete the tax class.
      */
-    public function delete(User $user, TaxClass $taxClass): bool
+    public function delete(User|AdminUser $user, TaxClass $taxClass): bool
     {
         try {
             return $this->hasPermission(AdminPermissionEnum::TAX_CLASS_DELETE());

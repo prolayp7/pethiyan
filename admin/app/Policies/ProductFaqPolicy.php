@@ -6,6 +6,7 @@ use App\Enums\AdminPermissionEnum;
 use App\Enums\DefaultSystemRolesEnum;
 use App\Enums\SellerPermissionEnum;
 use App\Models\ProductFaq;
+use App\Models\AdminUser;
 use App\Models\User;
 use App\Traits\ChecksPermissions;
 use App\Traits\PanelAware;
@@ -18,7 +19,7 @@ class ProductFaqPolicy
     /**
      * Determine whether the user can view any models.
      */
-    public function viewAny(User $user): bool
+    public function viewAny(User|AdminUser $user): bool
     {
         try {
             // Admin panel requires explicit permission to view Product FAQs list
@@ -36,7 +37,7 @@ class ProductFaqPolicy
     /**
      * Determine whether the user can view the model.
      */
-    public function view(User $user, ProductFaq $productFaq): bool
+    public function view(User|AdminUser $user, ProductFaq $productFaq): bool
     {
         try {
             // Admin needs explicit permission to view individual Product FAQ
@@ -61,7 +62,7 @@ class ProductFaqPolicy
     /**
      * Determine whether the user can create models.
      */
-    public function create(User $user): bool
+    public function create(User|AdminUser $user): bool
     {
         try {
             // Only sellers with a valid seller record can create product FAQs
@@ -86,7 +87,7 @@ class ProductFaqPolicy
     /**
      * Determine whether the user can update the model.
      */
-    public function update(User $user, ProductFaq $productFaq): bool
+    public function update(User|AdminUser $user, ProductFaq $productFaq): bool
     {
         try {
             // Only the seller who owns the product can update it
@@ -113,7 +114,7 @@ class ProductFaqPolicy
     /**
      * Determine whether the user can delete the model.
      */
-    public function delete(User $user, ProductFaq $productFaq): bool
+    public function delete(User|AdminUser $user, ProductFaq $productFaq): bool
     {
         try {
             // Only the seller who owns the product can update it
@@ -140,7 +141,7 @@ class ProductFaqPolicy
     /**
      * Determine whether the user can restore the model.
      */
-    public function restore(User $user, ProductFaq $productFaq): bool
+    public function restore(User|AdminUser $user, ProductFaq $productFaq): bool
     {
         return false;
     }
@@ -148,7 +149,7 @@ class ProductFaqPolicy
     /**
      * Determine whether the user can permanently delete the model.
      */
-    public function forceDelete(User $user, ProductFaq $productFaq): bool
+    public function forceDelete(User|AdminUser $user, ProductFaq $productFaq): bool
     {
         return false;
     }

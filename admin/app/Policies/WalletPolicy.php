@@ -5,6 +5,7 @@ namespace App\Policies;
 use App\Enums\AdminPermissionEnum;
 use App\Enums\DefaultSystemRolesEnum;
 use App\Enums\SellerPermissionEnum;
+use App\Models\AdminUser;
 use App\Models\User;
 use App\Models\Wallet;
 use App\Traits\ChecksPermissions;
@@ -17,7 +18,7 @@ class WalletPolicy
     /**
      * Determine whether the user can view the wallet pages/listing.
      */
-    public function viewAny(User $user): bool
+    public function viewAny(User|AdminUser $user): bool
     {
         try {
             // Only sellers with a valid seller record can create product FAQs
@@ -38,7 +39,7 @@ class WalletPolicy
             return false;
         }
     }
-    public function viewWithdrawal(User $user): bool
+    public function viewWithdrawal(User|AdminUser $user): bool
     {
         try {
             // Only sellers with a valid seller record can create product FAQs
@@ -60,7 +61,7 @@ class WalletPolicy
         }
     }
 
-    public function requestWithdrawal(User $user): bool
+    public function requestWithdrawal(User|AdminUser $user): bool
     {
         try {
             // Only sellers with a valid seller record can create product FAQs
@@ -86,7 +87,7 @@ class WalletPolicy
     /**
      * Determine whether the user can view a specific wallet model.
      */
-    public function view(User $user, Wallet $wallet): bool
+    public function view(User|AdminUser $user, Wallet $wallet): bool
     {
         try {
             // Only sellers with a valid seller record can create product FAQs

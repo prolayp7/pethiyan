@@ -86,6 +86,11 @@ class AdminUser extends Authenticatable implements HasMedia
         return $this->hasMany(Notification::class, 'admin_user_id');
     }
 
+    public function seller(): ?Seller
+    {
+        return null;
+    }
+
     public function getProfileImageAttribute(): ?string
     {
         return $this->getFirstMediaUrl(SpatieMediaCollectionName::PROFILE_IMAGE());

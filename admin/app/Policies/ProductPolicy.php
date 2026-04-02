@@ -6,6 +6,7 @@ use App\Enums\AdminPermissionEnum;
 use App\Enums\DefaultSystemRolesEnum;
 use App\Enums\SellerPermissionEnum;
 use App\Models\Product;
+use App\Models\AdminUser;
 use App\Models\User;
 use App\Traits\ChecksPermissions;
 use Illuminate\Auth\Access\Response;
@@ -14,7 +15,7 @@ class ProductPolicy
 {
     use ChecksPermissions;
 
-    public function before(User $user, string $ability): ?bool
+    public function before(User|AdminUser $user, string $ability): ?bool
     {
         if ($user->hasRole(DefaultSystemRolesEnum::SUPER_ADMIN())) {
             return true;
@@ -26,7 +27,7 @@ class ProductPolicy
     /**
      * Determine whether the user can view any models.
      */
-    public function viewAny(User $user): bool
+    public function viewAny(User|AdminUser $user): bool
     {
         try {
             if ($user->seller() === null) {
@@ -43,7 +44,7 @@ class ProductPolicy
     /**
      * Determine whether the user can view the model.
      */
-    public function view(User $user, Product $product): bool
+    public function view(User|AdminUser $user, Product $product): bool
     {
         try {
             // Only the seller who owns the product can update it
@@ -70,7 +71,7 @@ class ProductPolicy
     /**
      * Determine whether the user can create models.
      */
-    public function create(User $user): bool
+    public function create(User|AdminUser $user): bool
     {
         try {
             // Admin users can create products with the PRODUCT_CREATE permission
@@ -95,7 +96,7 @@ class ProductPolicy
     /**
      * Determine whether the user can update the model.
      */
-    public function update(User $user, Product $product): bool
+    public function update(User|AdminUser $user, Product $product): bool
     {
         try {
             if ($user->seller() === null) {
@@ -123,7 +124,7 @@ class ProductPolicy
     /**
      * Determine whether the user can delete the model.
      */
-    public function delete(User $user, Product $product): bool
+    public function delete(User|AdminUser $user, Product $product): bool
     {
         try {
             if ($user->seller() === null) {
@@ -149,7 +150,7 @@ class ProductPolicy
     /**
      * Determine whether the user can restore the model.
      */
-    public function restore(User $user, Product $product): bool
+    public function restore(User|AdminUser $user, Product $product): bool
     {
         return false;
     }
@@ -157,12 +158,12 @@ class ProductPolicy
     /**
      * Determine whether the user can permanently delete the model.
      */
-    public function forceDelete(User $user, Product $product): bool
+    public function forceDelete(User|AdminUser $user, Product $product): bool
     {
         return false;
     }
 
-    public function verifyProduct(User $user, Product $product): bool
+    public function verifyProduct(User|AdminUser $user, Product $product): bool
     {
         try {
             return $this->hasPermission(AdminPermissionEnum::PRODUCT_STATUS_UPDATE());

@@ -5,6 +5,7 @@ namespace App\Policies;
 use App\Enums\AdminPermissionEnum;
 use App\Enums\DefaultSystemRolesEnum;
 use App\Enums\SellerPermissionEnum;
+use App\Models\AdminUser;
 use App\Models\User;
 use App\Traits\ChecksPermissions;
 
@@ -15,7 +16,7 @@ class SellerStatementPolicy
     /**
      * Determine whether the user can view any seller statements/commissions pages.
      */
-    public function viewAny(User $user): bool
+    public function viewAny(User|AdminUser $user): bool
     {
         // Only the seller who owns the order can view it
         if ($user->seller() === null) {
@@ -36,7 +37,7 @@ class SellerStatementPolicy
     /**
      * Determine whether the user can view seller statements/commissions data.
      */
-    public function view(User $user): bool
+    public function view(User|AdminUser $user): bool
     {
         // Only the seller who owns the order can view it
         if ($user->seller() === null) {
@@ -57,7 +58,7 @@ class SellerStatementPolicy
     /**
      * Determine whether the user can process a settlement action for a single entry.
      */
-    public function processSettle(User $user): bool
+    public function processSettle(User|AdminUser $user): bool
     {
         return $this->hasPermission(AdminPermissionEnum::COMMISSION_SETTLE());
     }
@@ -65,7 +66,7 @@ class SellerStatementPolicy
     /**
      * Determine whether the user can process settlement action for all eligible entries.
      */
-    public function processSettleAll(User $user): bool
+    public function processSettleAll(User|AdminUser $user): bool
     {
         return $this->hasPermission(AdminPermissionEnum::COMMISSION_SETTLE());
     }
@@ -73,7 +74,7 @@ class SellerStatementPolicy
     /**
      * Determine whether the user can view commission history.
      */
-    public function viewHistory(User $user): bool
+    public function viewHistory(User|AdminUser $user): bool
     {
         // Only the seller who owns the order can view it
         if ($user->seller() === null) {
@@ -94,7 +95,7 @@ class SellerStatementPolicy
     /**
      * Determine whether the user can view settled commissions list.
      */
-    public function viewSettled(User $user): bool
+    public function viewSettled(User|AdminUser $user): bool
     {
         // Only the seller who owns the order can view it
         if ($user->seller() === null) {
@@ -115,7 +116,7 @@ class SellerStatementPolicy
     /**
      * Determine whether the user can view unsettled debits list.
      */
-    public function viewUnsettledDebits(User $user): bool
+    public function viewUnsettledDebits(User|AdminUser $user): bool
     {
         // Only the seller who owns the order can view it
         if ($user->seller() === null) {
@@ -136,7 +137,7 @@ class SellerStatementPolicy
     /**
      * Determine whether the user can settle a debit entry.
      */
-    public function settleDebit(User $user): bool
+    public function settleDebit(User|AdminUser $user): bool
     {
         return $this->hasPermission(AdminPermissionEnum::COMMISSION_SETTLE());
     }
@@ -144,7 +145,7 @@ class SellerStatementPolicy
     /**
      * Determine whether the user can settle all debit entries.
      */
-    public function settleAllDebits(User $user): bool
+    public function settleAllDebits(User|AdminUser $user): bool
     {
         return $this->hasPermission(AdminPermissionEnum::COMMISSION_SETTLE());
     }

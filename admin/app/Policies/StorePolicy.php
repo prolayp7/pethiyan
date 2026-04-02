@@ -7,6 +7,7 @@ use App\Enums\DefaultSystemRolesEnum;
 use App\Enums\GuardNameEnum;
 use App\Enums\SellerPermissionEnum;
 use App\Models\Store;
+use App\Models\AdminUser;
 use App\Models\User;
 use App\Traits\ChecksPermissions;
 
@@ -17,7 +18,7 @@ class StorePolicy
     /**
      * Determine whether the user can view any models.
      */
-    public function viewAny(User $user): bool
+    public function viewAny(User|AdminUser $user): bool
     {
         // Seller panel: sellers can access their stores list if they are sellers
         if ($user->hasRole(DefaultSystemRolesEnum::SELLER())) {
@@ -34,7 +35,7 @@ class StorePolicy
     /**
      * Determine whether the user can view the model.
      */
-    public function view(User $user, Store $store): bool
+    public function view(User|AdminUser $user, Store $store): bool
     {
         try {
             // Admin with store.view can view any store
@@ -61,7 +62,7 @@ class StorePolicy
     /**
      * Determine whether the user can create models.
      */
-    public function create(User $user): bool
+    public function create(User|AdminUser $user): bool
     {
         try {
             // Admin can create stores (always for Pethiyan seller)
@@ -86,7 +87,7 @@ class StorePolicy
     /**
      * Determine whether the user can update the model.
      */
-    public function update(User $user, Store $store): bool
+    public function update(User|AdminUser $user, Store $store): bool
     {
         try {
             // Admin can update any store
@@ -114,7 +115,7 @@ class StorePolicy
     /**
      * Determine whether the user can delete the model.
      */
-    public function delete(User $user, Store $store): bool
+    public function delete(User|AdminUser $user, Store $store): bool
     {
         try {
             // Admin can delete any store
@@ -142,7 +143,7 @@ class StorePolicy
     /**
      * Determine whether the user can restore the model.
      */
-    public function restore(User $user, Store $store): bool
+    public function restore(User|AdminUser $user, Store $store): bool
     {
         return false;
     }
@@ -150,12 +151,12 @@ class StorePolicy
     /**
      * Determine whether the user can permanently delete the model.
      */
-    public function forceDelete(User $user, Store $store): bool
+    public function forceDelete(User|AdminUser $user, Store $store): bool
     {
         return false;
     }
 
-    public function verifyStore(User $user): bool
+    public function verifyStore(User|AdminUser $user): bool
     {
         // Only admins with explicit permission can verify
         return $this->hasPermission(AdminPermissionEnum::STORE_VERIFY());

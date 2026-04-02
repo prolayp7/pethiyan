@@ -5,6 +5,7 @@ namespace App\Policies;
 use App\Enums\AdminPermissionEnum;
 use App\Enums\DefaultSystemRolesEnum;
 use App\Enums\SellerPermissionEnum;
+use App\Models\AdminUser;
 use App\Models\User;
 use App\Traits\ChecksPermissions;
 
@@ -15,7 +16,7 @@ class OrderReturnPolicy
     /**
      * Determine whether the user can view any models.
      */
-    public function viewAny(User $user): bool
+    public function viewAny(User|AdminUser $user): bool
     {
         // Only the seller who owns the order can view it
         if ($user->seller() === null) {
@@ -33,7 +34,7 @@ class OrderReturnPolicy
         return false;
     }
 
-    public function decide(User $user, $order): bool
+    public function decide(User|AdminUser $user, $order): bool
     {
         try {
             // Only the seller who owns the order can update it

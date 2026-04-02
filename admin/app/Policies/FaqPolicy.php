@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Enums\AdminPermissionEnum;
 use App\Models\Faq;
+use App\Models\AdminUser;
 use App\Models\User;
 use App\Traits\ChecksPermissions;
 
@@ -14,7 +15,7 @@ class FaqPolicy
     /**
      * Determine whether the user can view any models.
      */
-    public function viewAny(User $user): bool
+    public function viewAny(User|AdminUser $user): bool
     {
         try {
             return $this->hasPermission(AdminPermissionEnum::FAQ_VIEW());
@@ -26,7 +27,7 @@ class FaqPolicy
     /**
      * Determine whether the user can view the model.
      */
-    public function view(User $user, Faq $Faq): bool
+    public function view(User|AdminUser $user, Faq $Faq): bool
     {
         try {
             return $this->hasPermission(AdminPermissionEnum::FAQ_VIEW());
@@ -38,7 +39,7 @@ class FaqPolicy
     /**
      * Determine whether the user can create models.
      */
-    public function create(User $user): bool
+    public function create(User|AdminUser $user): bool
     {
         return $this->hasPermission(AdminPermissionEnum::FAQ_CREATE());
     }
@@ -46,7 +47,7 @@ class FaqPolicy
     /**
      * Determine whether the user can update the model.
      */
-    public function update(User $user, Faq $Faq): bool
+    public function update(User|AdminUser $user, Faq $Faq): bool
     {
         return $this->hasPermission(AdminPermissionEnum::FAQ_EDIT());
     }
@@ -54,7 +55,7 @@ class FaqPolicy
     /**
      * Determine whether the user can delete the model.
      */
-    public function delete(User $user, Faq $Faq): bool
+    public function delete(User|AdminUser $user, Faq $Faq): bool
     {
         return $this->hasPermission(AdminPermissionEnum::FAQ_DELETE());
     }
@@ -62,7 +63,7 @@ class FaqPolicy
     /**
      * Determine whether the user can restore the model.
      */
-    public function restore(User $user, Faq $Faq): bool
+    public function restore(User|AdminUser $user, Faq $Faq): bool
     {
         return false;
     }
@@ -70,7 +71,7 @@ class FaqPolicy
     /**
      * Determine whether the user can permanently delete the model.
      */
-    public function forceDelete(User $user, Faq $Faq): bool
+    public function forceDelete(User|AdminUser $user, Faq $Faq): bool
     {
         return false;
     }

@@ -3,6 +3,7 @@
 namespace App\Policies;
 
 use App\Enums\AdminPermissionEnum;
+use App\Models\AdminUser;
 use App\Models\User;
 use App\Traits\ChecksPermissions;
 
@@ -16,7 +17,7 @@ class DeliveryBoyWithdrawalRequestPolicy
      * @param User $user
      * @return bool
      */
-    public function viewAny(User $user): bool
+    public function viewAny(User|AdminUser $user): bool
     {
         return $this->hasPermission(AdminPermissionEnum::DELIVERY_BOY_WITHDRAWAL_VIEW());
     }
@@ -27,7 +28,7 @@ class DeliveryBoyWithdrawalRequestPolicy
      * @param User $user
      * @return bool
      */
-    public function view(User $user): bool
+    public function view(User|AdminUser $user): bool
     {
         return $this->hasPermission(AdminPermissionEnum::DELIVERY_BOY_WITHDRAWAL_VIEW());
     }
@@ -38,7 +39,7 @@ class DeliveryBoyWithdrawalRequestPolicy
      * @param User $user
      * @return bool
      */
-    public function processRequest(User $user): bool
+    public function processRequest(User|AdminUser $user): bool
     {
         return $this->hasPermission(AdminPermissionEnum::DELIVERY_BOY_WITHDRAWAL_PROCESS());
     }
