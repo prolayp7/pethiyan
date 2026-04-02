@@ -7,6 +7,8 @@ use App\Http\Requests\Product\GetProductsByLocationRequest;
 use App\Http\Resources\Product\ProductCatalogResource;
 use App\Http\Resources\Product\ProductListResource;
 use App\Http\Resources\Product\ProductResource;
+use App\Enums\Product\ProductStatusEnum;
+use App\Enums\Product\ProductVarificationStatusEnum;
 use App\Models\Product;
 use App\Models\Category;
 use App\Models\Store;
@@ -15,7 +17,8 @@ use Dedoc\Scramble\Attributes\Group;
 use Dedoc\Scramble\Attributes\QueryParameter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Nette\Schema\ValidationException;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 
 #[Group('Products')]
 class ProductApiController extends Controller
@@ -121,10 +124,13 @@ class ProductApiController extends Controller
                 data: $e->errors()
             );
         } catch (\Exception $e) {
+            Log::error('Products index API failed.', [
+                'message' => $e->getMessage(),
+            ]);
             return ApiResponseType::sendJsonResponse(
                 success: false,
                 message: 'labels.error_fetching_products',
-                data: $e,
+                data: []
             );
         }
     }
@@ -137,9 +143,15 @@ class ProductApiController extends Controller
     #[QueryParameter('store_slug', description: 'Slug of the store to fetch products from', type: 'string', example: 'my-store')]
     public function storeWise(Request $request): JsonResponse
     {
-        $perPage = $request->input('per_page', 15);
-        $storeId = $request->input('store_id');
-        $storeSlug = $request->input('store_slug');
+        $validated = $request->validate([
+            'per_page' => 'nullable|integer|min:1|max:100',
+            'store_id' => 'nullable|integer|exists:stores,id',
+            'store_slug' => 'nullable|string|max:255',
+        ]);
+
+        $perPage = (int) ($validated['per_page'] ?? 15);
+        $storeId = $validated['store_id'] ?? null;
+        $storeSlug = isset($validated['store_slug']) ? trim((string) $validated['store_slug']) : null;
 
         // Check if at least one of store_id or store_slug is provided
         if (!$storeId && !$storeSlug) {
@@ -169,6 +181,10 @@ class ProductApiController extends Controller
             'variantAttributes.attribute',
             'variantAttributes.attributeValue'
         ]);
+
+        $query->where('verification_status', ProductVarificationStatusEnum::APPROVED());
+        $query->where('status', ProductStatusEnum::ACTIVE());
+
         $query->whereHas('variants.storeProductVariants', function ($q) use ($storeId) {
             $q->where('store_id', $storeId);
         });
@@ -220,10 +236,14 @@ class ProductApiController extends Controller
                 data: $e->errors()
             );
         } catch (\Exception $e) {
+            Log::error('Products show API failed.', [
+                'slug' => $slug,
+                'message' => $e->getMessage(),
+            ]);
             return ApiResponseType::sendJsonResponse(
                 success: false,
                 message: 'labels.error_fetching_product',
-                data: $e,
+                data: []
             );
         }
     }
@@ -251,6 +271,8 @@ class ProductApiController extends Controller
             $search = trim((string) ($validated['search'] ?? ''));
 
             $query = Product::query()
+                ->where('verification_status', ProductVarificationStatusEnum::APPROVED())
+                ->where('status', ProductStatusEnum::ACTIVE())
                 ->with([
                     'category:id,title,slug',
                     'brand:id,title,slug',
@@ -300,10 +322,71 @@ class ProductApiController extends Controller
                 data: $e->errors()
             );
         } catch (\Exception $e) {
+            Log::error('Products catalog API failed.', [
+                'message' => $e->getMessage(),
+            ]);
             return ApiResponseType::sendJsonResponse(
                 success: false,
                 message: 'labels.error_fetching_products',
-                data: $e->getMessage(),
+                data: [],
+            );
+        }
+    }
+
+    /**
+     * Get featured products with full catalog payload.
+     */
+    #[QueryParameter('customer_state_code', description: 'Optional customer state code for GST split (intra/inter).', type: 'string', example: 'TN')]
+    public function getFeaturedProduct(Request $request): JsonResponse
+    {
+        try {
+            $validated = $request->validate([
+                'customer_state_code' => 'nullable|string|max:10',
+            ]);
+
+            $query = Product::query()
+                ->where('verification_status', ProductVarificationStatusEnum::APPROVED())
+                ->where('status', ProductStatusEnum::ACTIVE())
+                ->where('featured', 1)
+                ->with([
+                    'category:id,title,slug',
+                    'brand:id,title,slug',
+                    'taxClasses:id,title',
+                    'taxClasses.taxRates:id,title,rate',
+                    'variants' => function ($variantQuery) {
+                        $variantQuery->with([
+                            'attributes.attribute:id,title,slug',
+                            'attributes.attributeValue:id,title,swatche_value',
+                            'storeProductVariants' => function ($spvQuery) {
+                                $spvQuery->with('store:id,name,slug,state_code,state_name');
+                            },
+                        ]);
+                    },
+                ]);
+
+            $products = $query->orderByDesc('id')->get()
+                ->map(fn($product) => new ProductCatalogResource($product))
+                ->values();
+
+            return ApiResponseType::sendJsonResponse(
+                success: true,
+                message: 'labels.product_fetched_successfully',
+                data: $products
+            );
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return ApiResponseType::sendJsonResponse(
+                success: false,
+                message: 'labels.validation_error',
+                data: $e->errors()
+            );
+        } catch (\Exception $e) {
+            Log::error('Featured products catalog API failed.', [
+                'message' => $e->getMessage(),
+            ]);
+            return ApiResponseType::sendJsonResponse(
+                success: false,
+                message: 'labels.error_fetching_products',
+                data: [],
             );
         }
     }
@@ -321,11 +404,19 @@ class ProductApiController extends Controller
             $validated = $request->validate([
                 'latitude' => 'required|numeric',
                 'longitude' => 'required|numeric',
-                'keywords' => 'required|string|min:1',
+                'keywords' => 'required|string|min:1|max:1000',
                 'per_page' => 'integer|min:1|max:50',
             ]);
 
             $keywords = array_map('trim', explode(',', $validated['keywords']));
+            $keywords = array_values(array_filter(array_unique($keywords)));
+            if (count($keywords) > 10) {
+                return ApiResponseType::sendJsonResponse(
+                    success: false,
+                    message: 'labels.validation_error',
+                    data: ['keywords' => ['A maximum of 10 keywords is allowed.']]
+                );
+            }
             $perPage = $validated['per_page'] ?? 10;
             $groupedResults = [];
 
@@ -367,10 +458,13 @@ class ProductApiController extends Controller
                 data: $e->errors()
             );
         } catch (\Exception $e) {
+            Log::error('Products search-by-keywords API failed.', [
+                'message' => $e->getMessage(),
+            ]);
             return ApiResponseType::sendJsonResponse(
                 success: false,
                 message: 'labels.error_fetching_products_by_keywords',
-                data: $e->getMessage(),
+                data: [],
             );
         }
     }

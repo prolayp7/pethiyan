@@ -174,8 +174,9 @@ Route::get('categories/sub-categories', [CategoryApiController::class, 'subCateg
 Route::get('brands', [BrandApiController::class, 'index']);
 
 // products
-Route::prefix('products')->name('products.')->group(function () {
+Route::prefix('products')->name('products.')->middleware('throttle:60,1')->group(function () {
     Route::get('/', [ProductApiController::class, 'getAllProduct']);
+    Route::get('/featured', [ProductApiController::class, 'getFeaturedProduct']);
     Route::get('/search-by-keywords', [ProductApiController::class, 'searchByKeywords']);
     Route::get('/store-wise', [ProductApiController::class, 'storeWise']);
     Route::get('/{slug}', [ProductApiController::class, 'show']);
@@ -195,7 +196,7 @@ Route::prefix('delivery-zone')->name('delivery_zone.')->group(function () {
     Route::get('/', [DeliveryZoneApiController::class, 'index']);
     Route::get('/check', [DeliveryZoneApiController::class, 'checkDelivery']);
     Route::get('/stores', [StoreApiController::class, 'getStoresByLocation']);
-    Route::get('/products', [ProductApiController::class, 'index']);
+    Route::get('/products', [ProductApiController::class, 'index'])->middleware('throttle:60,1');
     Route::get('/{id}', [DeliveryZoneApiController::class, 'show']);
 });
 

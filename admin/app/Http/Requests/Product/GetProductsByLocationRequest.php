@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Product;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class GetProductsByLocationRequest extends FormRequest
 {
@@ -28,8 +29,8 @@ class GetProductsByLocationRequest extends FormRequest
             'page' => 'integer|min:1',
             'categories' => 'string|nullable',
             'brands' => 'string|nullable',
-            'sort' => 'string|nullable',
-            'store' => 'string|nullable',
+            'sort' => ['string', 'nullable', Rule::in(['price_asc', 'price_desc', 'relevance', 'avg_rated', 'best_seller', 'featured'])],
+            'store' => 'string|nullable|max:255',
             'exclude_product' => 'string|nullable',
             'search' => 'string|nullable|min:2|max:255',
             'include_child_categories' => 'nullable|boolean'
