@@ -221,7 +221,7 @@ class WithdrawalService
             $withdrawalRequest->status = $data['status'];
             $withdrawalRequest->admin_remark = $data['remark'] ?? null;
             $withdrawalRequest->processed_at = now();
-            $withdrawalRequest->processed_by = $adminId;
+            $withdrawalRequest->processed_by_admin_id = $adminId;
 
             // If approved, deduct the amount from the wallet
             if ($data['status'] === 'approved') {
@@ -328,7 +328,7 @@ class WithdrawalService
             $withdrawalRequest->status = $data['status'];
             $withdrawalRequest->admin_remark = $data['remark'] ?? null;
             $withdrawalRequest->processed_at = now();
-            $withdrawalRequest->processed_by = $adminId;
+            $withdrawalRequest->processed_by_admin_id = $adminId;
 
             // If approved, deduct the amount from the wallet
             if ($data['status'] === SellerWithdrawalStatusEnum::APPROVED()) {

@@ -14,6 +14,7 @@ class NotificationResource extends JsonResource
         return [
             'id' => $this->id,
             'user_id' => $this->user_id,
+            'admin_user_id' => $this->admin_user_id,
             'store_id' => $this->store_id,
             'order_id' => $this->order_id,
             'type' => $this->type?->value ?? $this->type,
@@ -31,6 +32,13 @@ class NotificationResource extends JsonResource
                     'id' => $this->user->id,
                     'name' => $this->user->name,
                     'email' => $this->user->email,
+                ];
+            }),
+            'admin_user' => $this->whenLoaded('adminUser', function () {
+                return [
+                    'id' => $this->adminUser->id,
+                    'name' => $this->adminUser->name,
+                    'email' => $this->adminUser->email,
                 ];
             }),
 

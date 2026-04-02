@@ -14,6 +14,7 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rules\Enum;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
@@ -144,7 +145,7 @@ class SellerWithdrawalController extends Controller
                     'status' => $validated['status'],
                     'remark' => $validated['remark'] ?? null,
                 ],
-                auth()->id(),
+                Auth::guard('admin')->id(),
                 'seller'
             );
 

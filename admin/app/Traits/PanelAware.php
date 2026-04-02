@@ -3,6 +3,8 @@
 namespace App\Traits;
 
 use App\Exceptions\SellerNotFoundException;
+use App\Models\AdminUser;
+use App\Models\User;
 use App\Notifications\AdminPasswordResetNotification;
 use App\Notifications\SellerPasswordResetNotification;
 use App\Types\Api\ApiResponseType;
@@ -102,16 +104,22 @@ trait PanelAware
 
         $panel = $this->getPanel();
 
-        // For customer panel, accept users without access_panel or with null access_panel
+        if ($panel === 'admin') {
+            return $user instanceof AdminUser;
+        }
+
+        if ($panel === 'seller') {
+            if (!$user instanceof User) {
+                return false;
+            }
+
+            return (string) optional($user->access_panel)->value === 'seller';
+        }
+
+        // For customer panel, accept only site users.
         if ($panel === 'customer') {
-            return true;
+            return $user instanceof User;
         }
-
-        // For admin and seller panels, require specific access_panel
-        if (!$user->access_panel) {
-            return false;
-        }
-
-        return $user->access_panel->value === $panel;
+        return false;
     }
 }

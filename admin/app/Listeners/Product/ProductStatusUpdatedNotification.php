@@ -4,8 +4,6 @@ namespace App\Listeners\Product;
 
 use App\Events\Product\ProductStatusAfterUpdate;
 use App\Notifications\ProductStatusUpdated;
-use App\Models\User;
-use App\Enums\GuardNameEnum;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Support\Facades\Log;
 

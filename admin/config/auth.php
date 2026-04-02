@@ -42,12 +42,12 @@ return [
         ],
         'admin' => [
             'driver' => 'session',
-            'provider' => 'users',
+            'provider' => 'admins',
         ],
 
         'seller' => [
             'driver' => 'session',
-            'provider' => 'users',
+            'provider' => 'sellers',
         ],
     ],
 
@@ -75,14 +75,13 @@ return [
         ],
         'admins' => [
             'driver' => 'eloquent',
-            'model' => App\Models\User::class,
+            'model' => App\Models\AdminUser::class,
         ],
 
         'sellers' => [
             'driver' => 'eloquent',
             'model' => App\Models\User::class,
         ],
-        Spatie\Permission\PermissionServiceProvider::class,
 
         // 'users' => [
         //     'driver' => 'database',
@@ -112,6 +111,12 @@ return [
     'passwords' => [
         'users' => [
             'provider' => 'users',
+            'table' => env('AUTH_PASSWORD_RESET_TOKEN_TABLE', 'password_reset_tokens'),
+            'expire' => 60,
+            'throttle' => 60,
+        ],
+        'admins' => [
+            'provider' => 'admins',
             'table' => env('AUTH_PASSWORD_RESET_TOKEN_TABLE', 'password_reset_tokens'),
             'expire' => 60,
             'throttle' => 60,

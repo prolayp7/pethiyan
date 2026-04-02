@@ -22,6 +22,7 @@ class Notification extends Model
 
     protected $fillable = [
         'user_id',
+        'admin_user_id',
         'store_id',
         'order_id',
         'type',
@@ -70,6 +71,14 @@ class Notification extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Get the admin user that owns the notification.
+     */
+    public function adminUser(): BelongsTo
+    {
+        return $this->belongsTo(AdminUser::class, 'admin_user_id');
     }
 
     /**

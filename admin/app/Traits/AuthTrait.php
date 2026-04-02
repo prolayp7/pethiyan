@@ -6,6 +6,7 @@ use App\Enums\Seller\SellerVerificationStatusEnum;
 use App\Events\Auth\UserLoggedIn;
 use App\Events\Auth\UserRegistered;
 use App\Http\Resources\User\UserResource;
+use App\Models\AdminUser;
 use App\Models\OtpVerification;
 use App\Models\User;
 use App\Models\UserFcmToken;
@@ -57,18 +58,28 @@ trait AuthTrait
             ];
 
             // Optional role-based access check (admin/seller), if the controller sets $role
+            $userModelClass = User::class;
             if (property_exists($this, 'role')) {
                 $role = $this->role;
-                $userForRoleCheck = User::where($identifierField, $identifierValue)->first();
-
-                if (!$userForRoleCheck) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => __('labels.invalid_credentials'),
-                        'data' => []
-                    ]);
+                if ($role === 'admin') {
+                    $userModelClass = AdminUser::class;
+                } elseif ($role === 'seller') {
+                    $userModelClass = User::class;
                 }
+            }
 
+            $userForRoleCheck = $userModelClass::where($identifierField, $identifierValue)->first();
+
+            if (!$userForRoleCheck) {
+                return response()->json([
+                    'success' => false,
+                    'message' => __('labels.invalid_credentials'),
+                    'data' => []
+                ]);
+            }
+
+            if (property_exists($this, 'role')) {
+                $role = $this->role;
                 if ($role === 'seller') {
                     if (!empty($userForRoleCheck->access_panel?->value) && $userForRoleCheck->access_panel->value !== 'seller') {
                         return response()->json([
@@ -97,15 +108,6 @@ trait AuthTrait
                                 'verification_status' => $seller->verification_status,
                             ]
                         ], 403);
-                    }
-                }
-                if ($role === 'admin') {
-                    if (!empty($userForRoleCheck->access_panel?->value) && $userForRoleCheck->access_panel->value !== 'admin') {
-                        return response()->json([
-                            'success' => false,
-                            'message' => __('labels.invalid_credentials'),
-                            'data' => []
-                        ]);
                     }
                 }
             }

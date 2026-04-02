@@ -24,6 +24,7 @@ class DeliveryBoyWithdrawalRequest extends Model
         'admin_remark',
         'processed_at',
         'processed_by',
+        'processed_by_admin_id',
         'transaction_id',
     ];
 
@@ -61,7 +62,7 @@ class DeliveryBoyWithdrawalRequest extends Model
      */
     public function processedBy(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'processed_by');
+        return $this->belongsTo(AdminUser::class, 'processed_by_admin_id');
     }
 
     /**

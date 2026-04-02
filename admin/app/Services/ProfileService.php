@@ -3,7 +3,7 @@
 namespace App\Services;
 
 use App\Enums\SpatieMediaCollectionName;
-use App\Models\User;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -12,13 +12,13 @@ class ProfileService
     /**
      * Update user profile
      *
-     * @param User $user
+     * @param Model $user
      * @param array $validatedData
      * @param Request|null $request
-     * @return User
+     * @return Model
      * @throws \Exception
      */
-    public function updateProfile(User $user, array $validatedData, Request $request = null): User
+    public function updateProfile(Model $user, array $validatedData, Request $request = null): Model
     {
         try {
             DB::beginTransaction();
@@ -44,10 +44,10 @@ class ProfileService
     /**
      * Get user profile data
      *
-     * @param User $user
+     * @param Model $user
      * @return array
      */
-    public function getProfileData(User $user): array
+    public function getProfileData(Model $user): array
     {
         return [
             'id' => $user->id,

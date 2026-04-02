@@ -4,9 +4,6 @@ namespace App\Services;
 
 use App\Enums\NotificationTypeEnum;
 use App\Models\Notification;
-use App\Models\User;
-use App\Models\Store;
-use App\Models\Order;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use Exception;
@@ -27,6 +24,7 @@ class NotificationService
 
             $notification = Notification::create([
                 'user_id' => $data['user_id'] ?? null,
+                'admin_user_id' => $data['admin_user_id'] ?? null,
                 'store_id' => $data['store_id'] ?? null,
                 'order_id' => $data['order_id'] ?? null,
                 'type' => $data['type'] ?? NotificationTypeEnum::GENERAL,
@@ -57,7 +55,7 @@ class NotificationService
     public function getUserNotifications(int $userId, int $perPage = 15): array
     {
         $notifications = Notification::where('user_id', $userId)
-            ->with(['user', 'store', 'order'])
+            ->with(['user', 'adminUser', 'store', 'order'])
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
 
@@ -82,7 +80,7 @@ class NotificationService
     public function getNotificationsBySentTo(string $sentTo, int $perPage = 15): array
     {
         $notifications = Notification::sentTo($sentTo)
-            ->with(['user', 'store', 'order'])
+            ->with(['user', 'adminUser', 'store', 'order'])
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
 
@@ -199,7 +197,7 @@ class NotificationService
     public function getNotificationsByType(NotificationTypeEnum $type, int $perPage = 15): array
     {
         $notifications = Notification::ofType($type)
-            ->with(['user', 'store', 'order'])
+            ->with(['user', 'adminUser', 'store', 'order'])
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
 
@@ -239,6 +237,51 @@ class NotificationService
 
             return $notifications;
 
+        } catch (Exception $e) {
+            DB::rollBack();
+            throw $e;
+        }
+    }
+
+    public function getAdminNotifications(int $adminUserId, int $perPage = 15): array
+    {
+        $notifications = Notification::where('admin_user_id', $adminUserId)
+            ->where('sent_to', 'admin')
+            ->with(['user', 'adminUser', 'store', 'order'])
+            ->orderBy('created_at', 'desc')
+            ->paginate($perPage);
+
+        return [
+            'notifications' => $notifications->items(),
+            'pagination' => [
+                'current_page' => $notifications->currentPage(),
+                'last_page' => $notifications->lastPage(),
+                'per_page' => $notifications->perPage(),
+                'total' => $notifications->total(),
+            ]
+        ];
+    }
+
+    public function getUnreadCountForAdmin(int $adminUserId): int
+    {
+        return Notification::where('admin_user_id', $adminUserId)
+            ->where('sent_to', 'admin')
+            ->unread()
+            ->count();
+    }
+
+    public function markAllAsReadForAdminUser(int $adminUserId): bool
+    {
+        try {
+            DB::beginTransaction();
+
+            Notification::where('admin_user_id', $adminUserId)
+                ->where('sent_to', 'admin')
+                ->unread()
+                ->update(['is_read' => true]);
+
+            DB::commit();
+            return true;
         } catch (Exception $e) {
             DB::rollBack();
             throw $e;

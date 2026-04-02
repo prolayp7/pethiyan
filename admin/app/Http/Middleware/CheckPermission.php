@@ -20,8 +20,9 @@ class CheckPermission
      */
     public function handle(Request $request, Closure $next, string $permission): Response
     {
-        $user = Auth::user();
         $panel = $request->segment(1);
+        $guard = $panel === 'seller' ? 'seller' : 'admin';
+        $user = Auth::guard($guard)->user();
 
         // Check if the user is authenticated
         if (!$user) {

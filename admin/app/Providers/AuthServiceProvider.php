@@ -29,6 +29,7 @@ use App\Models\Setting;
 use App\Models\Store;
 use App\Models\TaxClass;
 use App\Models\TaxRate;
+use App\Models\AdminUser;
 use App\Models\User;
 use App\Models\Notification;
 use App\Policies\BannerPolicy;
@@ -83,6 +84,7 @@ class AuthServiceProvider extends ServiceProvider
         TaxClass::class => TaxClassPolicy::class,
         TaxRate::class => TaxClassPolicy::class,
         User::class => SystemUserPolicy::class,
+        AdminUser::class => SystemUserPolicy::class,
         Setting::class => SettingPolicy::class,
         Store::class => StorePolicy::class,
         Product::class => ProductPolicy::class,

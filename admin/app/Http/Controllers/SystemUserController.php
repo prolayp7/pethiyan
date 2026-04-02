@@ -9,6 +9,7 @@ use App\Enums\SellerPermissionEnum;
 use App\Enums\SettingTypeEnum;
 use App\Http\Requests\SystemUser\StoreSystemUserRequest;
 use App\Http\Requests\SystemUser\UpdateSystemUserRequest;
+use App\Models\AdminUser;
 use App\Models\Seller;
 use App\Models\SellerUser;
 use App\Models\User;
@@ -56,7 +57,8 @@ class SystemUserController extends Controller
      */
     public function index(): View
     {
-        $this->authorize('viewAny', User::class);
+        $modelClass = $this->getPanel() === 'admin' ? AdminUser::class : User::class;
+        $this->authorize('viewAny', $modelClass);
         if ($this->getPanel() == 'seller') {
             $query = Role::query();
             $user = auth()->user();
@@ -90,14 +92,14 @@ class SystemUserController extends Controller
      */
     public function store(StoreSystemUserRequest $request): JsonResponse
     {
+        $modelClass = $this->getPanel() === 'admin' ? AdminUser::class : User::class;
         try {
-            $this->authorize('create', User::class);
+            $this->authorize('create', $modelClass);
         } catch (AuthorizationException $e) {
             return ApiResponseType::sendJsonResponse(false, 'labels.permission_denied', [], 403);
         }
 
         $validated = $request->validated();
-        $validated['access_panel'] = $this->getPanel();
         $user = auth()->user();
 
         // Check if the access panel is 'seller' and ensure the seller exists.
@@ -109,13 +111,15 @@ class SystemUserController extends Controller
             $validated['seller_id'] = $seller->id;
         }
 
-        // Store the user in the User model
-        $newUser = new User();
+        // Store the user in the proper model for each panel
+        $newUser = $this->getPanel() === 'admin' ? new AdminUser() : new User();
         $newUser->name = $validated['name'];
         $newUser->email = $validated['email'];
         $newUser->mobile = $validated['mobile'];
         $newUser->password = bcrypt($validated['password']); // Encrypt the password
-        $newUser->access_panel = $validated['access_panel'];
+        if ($this->getPanel() !== 'admin') {
+            $newUser->access_panel = $this->getPanel();
+        }
         $newUser->save();
 
         // Assign the Spatie role to the user, ensuring seller can only assign roles from their own team
@@ -154,7 +158,9 @@ class SystemUserController extends Controller
      */
     public function show($id): JsonResponse
     {
-        $user = User::with(['roles'])->find($id);
+        $user = ($this->getPanel() === 'admin' ? AdminUser::query() : User::query())
+            ->with(['roles'])
+            ->find($id);
         if (!$user) {
             return ApiResponseType::sendJsonResponse(false, 'labels.user_not_found', [], 404);
         }
@@ -172,7 +178,7 @@ class SystemUserController extends Controller
      */
     public function update(UpdateSystemUserRequest $request, $id): JsonResponse
     {
-        $user = User::find($id);
+        $user = ($this->getPanel() === 'admin' ? AdminUser::query() : User::query())->find($id);
         if (!$user) {
             return ApiResponseType::sendJsonResponse(false, 'labels.user_not_found', [], 404);
         }
@@ -222,7 +228,7 @@ class SystemUserController extends Controller
      */
     public function destroy(string $id): JsonResponse
     {
-        $user = User::find($id);
+        $user = ($this->getPanel() === 'admin' ? AdminUser::query() : User::query())->find($id);
         if (!$user) {
             return ApiResponseType::sendJsonResponse(false, 'labels.user_not_found', [], 404);
         }
@@ -234,7 +240,9 @@ class SystemUserController extends Controller
         }
 
         // Delete associated pivot record
-        SellerUser::where('user_id', $user->id)->delete();
+        if ($this->getPanel() !== 'admin') {
+            SellerUser::where('user_id', $user->id)->delete();
+        }
 
         $user->syncRoles([]);
         // Delete the user
@@ -268,8 +276,7 @@ class SystemUserController extends Controller
                 ->select('users.*', 'seller_user.seller_id')
                 ->where('seller_user.seller_id', '=', $seller->id);
         } else {
-            $query = User::query()
-                ->where('access_panel', 'admin')
+            $query = AdminUser::query()
                 ->whereDoesntHave('roles', function ($q) {
                     $q->where('name', DefaultSystemRolesEnum::SUPER_ADMIN())->orWhere('name', DefaultSystemRolesEnum::CUSTOMER())->orWhere('name', DefaultSystemRolesEnum::SELLER());
                 });

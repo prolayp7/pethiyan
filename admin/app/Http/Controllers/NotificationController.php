@@ -8,6 +8,7 @@ use App\Enums\NotificationTypeEnum;
 use App\Enums\SellerPermissionEnum;
 use App\Http\Resources\NotificationResource;
 use App\Models\Notification;
+use Illuminate\Support\Facades\Auth;
 use App\Services\FirebaseService;
 use App\Services\NotificationService;
 use App\Traits\ChecksPermissions;
@@ -39,10 +40,12 @@ class NotificationController extends Controller
 
         $user = auth()->user();
         if ($user) {
-            $seller = $user->seller();
-            $this->sellerId = $seller ? $seller->id : 0;
-            $this->sellerUserId = $seller?->user_id ?? 0;
             $enum = $this->getPanel() === 'seller' ? SellerPermissionEnum::class : AdminPermissionEnum::class;
+            if ($this->getPanel() === 'seller' && method_exists($user, 'seller')) {
+                $seller = $user->seller();
+                $this->sellerId = $seller ? $seller->id : 0;
+                $this->sellerUserId = $seller?->user_id ?? 0;
+            }
 
             $this->editPermission = $this->hasPermission($enum::NOTIFICATION_EDIT()) || $user->hasRole(DefaultSystemRolesEnum::SELLER());
             $this->deletePermission = $this->hasPermission($enum::NOTIFICATION_DELETE()) || $user->hasRole(DefaultSystemRolesEnum::SELLER());
@@ -84,6 +87,7 @@ class NotificationController extends Controller
 
             $validated = $request->validate([
                 'user_id' => 'nullable|exists:users,id',
+                'admin_user_id' => 'nullable|exists:admin_users,id',
                 'store_id' => 'nullable|exists:stores,id',
                 'order_id' => 'nullable|exists:orders,id',
                 'type' => ['required', new Enum(NotificationTypeEnum::class)],
@@ -114,7 +118,7 @@ class NotificationController extends Controller
     public function show($id): JsonResponse
     {
         try {
-            $notification = Notification::with(['user', 'store', 'order'])->findOrFail($id);
+            $notification = Notification::with(['user', 'adminUser', 'store', 'order'])->findOrFail($id);
             return ApiResponseType::sendJsonResponse(
                 success: true,
                 message: __('labels.notification_retrieved_successfully'),
@@ -211,9 +215,13 @@ class NotificationController extends Controller
             $this->authorize('viewAny', Notification::class);
 
             $perPage = $request->get('per_page', 15);
-            $userId = auth()->id();
-
-            $result = $this->notificationService->getUserNotifications($userId, $perPage);
+            if ($this->getPanel() === 'admin') {
+                $adminUserId = Auth::guard('admin')->id();
+                $result = $this->notificationService->getAdminNotifications($adminUserId, $perPage);
+            } else {
+                $userId = auth()->id();
+                $result = $this->notificationService->getUserNotifications($userId, $perPage);
+            }
 
             return ApiResponseType::sendJsonResponse(
                 success: true,
@@ -281,6 +289,20 @@ class NotificationController extends Controller
                     );
                 }
                 $this->notificationService->markAllAsRead($userId);
+            } elseif ($this->getPanel() === 'admin') {
+                $adminUserId = Auth::guard('admin')->id();
+                $count = Notification::where('admin_user_id', $adminUserId)
+                    ->where('sent_to', 'admin')
+                    ->where('is_read', false)
+                    ->count();
+                if ($count === 0) {
+                    return ApiResponseType::sendJsonResponse(
+                        success: false,
+                        message: __('labels.no_unread_notifications'),
+                        data: []
+                    );
+                }
+                $this->notificationService->markAllAsReadForAdminUser($adminUserId);
             } else {
                 $count = Notification::where('sent_to', $this->getPanel())->where('is_read', false)->count();
                 if ($count === 0) {
@@ -319,8 +341,12 @@ class NotificationController extends Controller
     public function getUnreadCount(): JsonResponse
     {
         try {
-            $userId = auth()->id();
-            $count = $this->notificationService->getUnreadCount($userId);
+            if ($this->getPanel() === 'admin') {
+                $count = $this->notificationService->getUnreadCountForAdmin(Auth::guard('admin')->id());
+            } else {
+                $userId = auth()->id();
+                $count = $this->notificationService->getUnreadCount($userId);
+            }
 
             return ApiResponseType::sendJsonResponse(
                 success: true,
@@ -359,7 +385,8 @@ class NotificationController extends Controller
 
             // Filter by admin notifications only
             if ($this->getPanel() === 'admin') {
-                $query->where('sent_to', 'admin');
+                $query->where('sent_to', 'admin')
+                    ->where('admin_user_id', Auth::guard('admin')->id());
             } elseif ($this->getPanel() === 'seller') {
                 $query->where('sent_to', 'seller')
                     ->where('user_id', $this->sellerUserId);
@@ -389,7 +416,7 @@ class NotificationController extends Controller
             $notifications = $query->orderBy($orderColumn, $orderDirection)
                 ->skip($start)
                 ->take($length)
-                ->with(['user', 'store', 'order'])
+                ->with(['user', 'adminUser', 'store', 'order'])
                 ->get();
 
             $data = [];

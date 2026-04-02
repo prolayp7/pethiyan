@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use App\Models\AdminUser;
 use App\Models\User;
 
 class PasswordResetController extends Controller
@@ -32,14 +33,18 @@ class PasswordResetController extends Controller
     public function sendResetLinkEmail(Request $request): RedirectResponse|JsonResponse
     {
         $request->validate(['email' => 'required|email']);
+        $panel = $this->getPanel();
+        $broker = $panel === 'admin' ? 'admins' : 'users';
 
-        // Find the user by email
-        $user = User::where('email', $request->email)->first();
+        // Find the user by email in the active panel model.
+        $user = $panel === 'admin'
+            ? AdminUser::where('email', $request->email)->first()
+            : User::where('email', $request->email)->first();
 
         // Prevent account enumeration: always return a success-style response,
         // but only send the reset link for valid users of the active panel.
         if ($user && $this->validateUserPanel($user)) {
-            $token = app('auth.password.broker')->createToken($user);
+            $token = Password::broker($broker)->createToken($user);
             $notificationClass = $this->getNotificationClass();
             $user->notify(new $notificationClass($token));
         }
@@ -76,9 +81,11 @@ class PasswordResetController extends Controller
             'email' => 'required|email',
             'password' => 'required|min:8|confirmed',
         ]);
-        $status = Password::reset(
+        $broker = $this->getPanel() === 'admin' ? 'admins' : 'users';
+
+        $status = Password::broker($broker)->reset(
             $request->only('email', 'password', 'password_confirmation', 'token'),
-            function (User $user, string $password) {
+            function ($user, string $password) {
                 $user->forceFill([
                     'password' => Hash::make($password)
                 ])->setRememberToken(Str::random(60));

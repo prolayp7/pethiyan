@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Events\Product\ProductAfterUpdate;
+use App\Models\AdminUser;
 use App\Models\Notification as NotificationModel;
 use App\Models\Setting;
 use App\Enums\NotificationTypeEnum;
@@ -89,10 +90,12 @@ class ProductUpdated extends Notification implements ShouldQueue
     {
         $product = $this->event->product;
         $sentTo = in_array($this->sentTo, ['admin', 'seller', 'customer'], true) ? $this->sentTo : 'customer';
+        $isAdminPanelUser = $notifiable instanceof AdminUser;
 
         // Store in custom notifications table
         NotificationModel::create([
-            'user_id' => $notifiable->id,
+            'user_id' => $isAdminPanelUser ? null : $notifiable->id,
+            'admin_user_id' => $isAdminPanelUser ? $notifiable->id : null,
             'store_id' => $product->seller_id, // assuming seller_id is the store
             'type' => NotificationTypeEnum::PRODUCT,
             'sent_to' => $sentTo,

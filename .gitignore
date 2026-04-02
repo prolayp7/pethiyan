@@ -79,6 +79,8 @@ Thumbs.db
 .codex
 .codex/
 sample_data/
+email-template-previews/
+invoice-template-previews/
 
 *.xlsx
 *.txt

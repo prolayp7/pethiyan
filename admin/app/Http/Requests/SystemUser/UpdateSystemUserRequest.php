@@ -22,6 +22,7 @@ class UpdateSystemUserRequest extends FormRequest
      */
     public function rules(): array
     {
+        $isAdminPanel = $this->is('admin/*') || $this->routeIs('admin.*');
         $seller = auth()->user()?->seller();
 
         $roleExistsRule = Rule::exists('roles', 'name');
@@ -34,7 +35,7 @@ class UpdateSystemUserRequest extends FormRequest
 
         return [
             'name' => 'required|string|max:255',
-            'mobile' => 'required|numeric|unique:users,mobile,' . $this->route('id'),
+            'mobile' => 'required|numeric|unique:' . ($isAdminPanel ? 'admin_users' : 'users') . ',mobile,' . $this->route('id'),
             'roles' => ['sometimes', 'array'],
             'roles.*' => ['string', $roleExistsRule],
         ];

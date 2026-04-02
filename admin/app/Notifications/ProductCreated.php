@@ -5,6 +5,7 @@ namespace App\Notifications;
 use App\Events\Product\ProductAfterCreate;
 use App\Models\Notification as NotificationModel;
 use App\Models\Setting;
+use App\Models\AdminUser;
 use App\Enums\NotificationTypeEnum;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -86,12 +87,13 @@ class ProductCreated extends Notification implements ShouldQueue
     public function toDatabase(object $notifiable): array
     {
         $product = $this->event->product;
-        $isAdminPanelUser = (($notifiable->access_panel ?? null) === \App\Enums\GuardNameEnum::ADMIN);
+        $isAdminPanelUser = $notifiable instanceof AdminUser;
         $sentTo = $isAdminPanelUser ? 'admin' : 'seller';
 
         // Store in custom notifications table
         NotificationModel::create([
-            'user_id' => $notifiable->id,
+            'user_id' => $isAdminPanelUser ? null : $notifiable->id,
+            'admin_user_id' => $isAdminPanelUser ? $notifiable->id : null,
             'store_id' => $product->seller_id, // assuming seller_id is the store
             'type' => NotificationTypeEnum::PRODUCT,
             'sent_to' => $sentTo,

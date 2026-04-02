@@ -3,9 +3,8 @@
 namespace App\Listeners\Product;
 
 use App\Events\Product\ProductAfterUpdate;
+use App\Models\AdminUser;
 use App\Notifications\ProductUpdated;
-use App\Models\User;
-use App\Enums\GuardNameEnum;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Support\Facades\Log;
 
@@ -26,8 +25,7 @@ class ProductUpdatedNotification implements ShouldQueue
         // Get the seller user
         $seller = $event->product->seller ? $event->product->seller->user : null;
 
-        // Get admin users using access_panel
-        $adminUsers = User::where('access_panel', GuardNameEnum::ADMIN)->get();
+        $adminUsers = AdminUser::query()->get();
 
         // Send notification to seller
         if ($seller && $seller->email) {

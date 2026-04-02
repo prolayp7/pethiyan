@@ -3,7 +3,7 @@
 namespace Database\Seeders;
 
 use App\Enums\DefaultSystemRolesEnum;
-use App\Models\User;
+use App\Models\AdminUser;
 use Illuminate\Database\Seeder;
 
 class AdminUserSeeder extends Seeder
@@ -13,13 +13,12 @@ class AdminUserSeeder extends Seeder
      */
     public function run(): void
     {
-        $user = User::firstOrCreate(
+        $user = AdminUser::firstOrCreate(
             ['email' => 'admin@pethiyan.com'],
             [
                 'name'              => 'Super Admin',
                 'mobile'            => '9000000000',
-                'status'            => 'active',
-                'access_panel'      => 'admin',
+                'status'            => true,
                 'password'          => bcrypt('Admin@1234'),
                 'email_verified_at' => now(),
             ]

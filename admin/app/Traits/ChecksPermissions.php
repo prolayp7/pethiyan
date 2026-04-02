@@ -18,7 +18,8 @@ trait ChecksPermissions
      */
     protected function hasPermission(string $permission): bool
     {
-        $user = Auth::user();
+        $guard = $this->getPanel() === 'admin' ? 'admin' : ($this->getPanel() === 'seller' ? 'seller' : null);
+        $user = $guard ? Auth::guard($guard)->user() : Auth::user();
         if (!$user) {
             return false; // No user is authenticated
         }
@@ -40,7 +41,11 @@ trait ChecksPermissions
      */
     protected function hasAnyPermission(array $permissions): bool
     {
-        $user = Auth::user();
+        $guard = $this->getPanel() === 'admin' ? 'admin' : ($this->getPanel() === 'seller' ? 'seller' : null);
+        $user = $guard ? Auth::guard($guard)->user() : Auth::user();
+        if (!$user) {
+            return false;
+        }
         if ($user->hasRole(DefaultSystemRolesEnum::SUPER_ADMIN())) {
             return true; // Super Admin has all permissions
         }
@@ -55,7 +60,11 @@ trait ChecksPermissions
      */
     protected function hasAllPermissions(array $permissions): bool
     {
-        $user = Auth::user();
+        $guard = $this->getPanel() === 'admin' ? 'admin' : ($this->getPanel() === 'seller' ? 'seller' : null);
+        $user = $guard ? Auth::guard($guard)->user() : Auth::user();
+        if (!$user) {
+            return false;
+        }
         if ($user->hasRole(DefaultSystemRolesEnum::SUPER_ADMIN())) {
             return true; // Super Admin has all permissions
         }

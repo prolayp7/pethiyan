@@ -4,6 +4,7 @@ use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\CountryController;
 use App\Http\Controllers\OrderController;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\PolicyController;
 use Illuminate\Support\Facades\Route;
 use App\Services\SettingService;
@@ -29,10 +30,11 @@ Route::get('/', function () {
         return view('new-welcome');
     }
 
-    if (auth()->check()) {
-        if (auth()->user()->access_panel->value == 'admin') {
-            return redirect()->route('admin.dashboard');
-        }
+    if (Auth::guard('admin')->check()) {
+        return redirect()->route('admin.dashboard');
+    }
+
+    if (Auth::guard('seller')->check()) {
         return redirect()->route('seller.dashboard');
     }
     return redirect()->route('admin.login');

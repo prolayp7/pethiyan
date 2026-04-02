@@ -22,6 +22,7 @@ class StoreSystemUserRequest extends FormRequest
      */
     public function rules(): array
     {
+        $isAdminPanel = $this->is('admin/*') || $this->routeIs('admin.*');
         $seller = auth()->user()?->seller();
 
         $roleExistsRule = Rule::exists('roles', 'name');
@@ -35,8 +36,8 @@ class StoreSystemUserRequest extends FormRequest
 
         return [
             'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email',
-            'mobile' => 'required|numeric|unique:users,mobile',
+            'email' => 'required|email|unique:' . ($isAdminPanel ? 'admin_users' : 'users') . ',email',
+            'mobile' => 'required|numeric|unique:' . ($isAdminPanel ? 'admin_users' : 'users') . ',mobile',
             'password' => 'required|string|min:8',
             'roles' => ['required', 'array'],
             'roles.*' => ['string', $roleExistsRule],

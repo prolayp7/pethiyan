@@ -6,7 +6,6 @@ use App\Enums\AdminPermissionEnum;
 use App\Enums\DefaultSystemRolesEnum;
 use App\Enums\SellerPermissionEnum;
 use App\Models\Notification;
-use App\Models\User;
 use App\Traits\ChecksPermissions;
 
 class NotificationPolicy
@@ -16,7 +15,7 @@ class NotificationPolicy
     /**
      * Determine whether the user can view any models.
      */
-    public function viewAny(User $user): bool
+    public function viewAny($user): bool
     {
         try {
             if ($this->getPanel() == 'seller') {
@@ -42,7 +41,7 @@ class NotificationPolicy
     /**
      * Determine whether the user can view the model.
      */
-    public function view(User $user, Notification $notification): bool
+    public function view($user, Notification $notification): bool
     {
         try {
             if ($this->getPanel() == 'seller') {
@@ -71,7 +70,7 @@ class NotificationPolicy
     /**
      * Determine whether the user can create models.
      */
-    public function create(User $user): bool
+    public function create($user): bool
     {
         try {
             return $this->hasPermission(AdminPermissionEnum::NOTIFICATION_CREATE());
@@ -83,7 +82,7 @@ class NotificationPolicy
     /**
      * Determine whether the user can update the model.
      */
-    public function update(User $user, Notification $notification): bool
+    public function update($user, Notification $notification): bool
     {
         return $this->extracted($user, $notification);
     }
@@ -91,12 +90,12 @@ class NotificationPolicy
     /**
      * Determine whether the user can update the model.
      */
-    public function markAsRead(User $user, Notification $notification): bool
+    public function markAsRead($user, Notification $notification): bool
     {
         return $this->extracted($user, $notification);
     }
 
-    public function readAll(User $user): bool
+    public function readAll($user): bool
     {
         try {
             if ($this->getPanel() == 'seller') {
@@ -122,7 +121,7 @@ class NotificationPolicy
     /**
      * Determine whether the user can delete the model.
      */
-    public function delete(User $user, Notification $notification): bool
+    public function delete($user, Notification $notification): bool
     {
         try {
             if ($this->getPanel() == 'seller') {
@@ -151,7 +150,7 @@ class NotificationPolicy
     /**
      * Determine whether the user can restore the model.
      */
-    public function restore(User $user, Notification $notification): bool
+    public function restore($user, Notification $notification): bool
     {
         return false;
     }
@@ -159,17 +158,17 @@ class NotificationPolicy
     /**
      * Determine whether the user can permanently delete the model.
      */
-    public function forceDelete(User $user, Notification $notification): bool
+    public function forceDelete($user, Notification $notification): bool
     {
         return false;
     }
 
     /**
-     * @param User $user
+     * @param mixed $user
      * @param Notification $notification
      * @return bool
      */
-    public function extracted(User $user, Notification $notification): bool
+    public function extracted($user, Notification $notification): bool
     {
         try {
             if ($this->getPanel() == 'seller') {
