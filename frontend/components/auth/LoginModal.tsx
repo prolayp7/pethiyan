@@ -15,6 +15,8 @@ import type { AuthUser } from "@/context/AuthContext";
 interface LoginModalProps {
   open: boolean;
   onClose: () => void;
+  onSuccess?: () => void;
+  redirectTo?: string;
 }
 
 type Tab = "login" | "register";
@@ -52,9 +54,18 @@ function validatePassword(pw: string): string {
 
 // ── Component ────────────────────────────────────────────────────────────────
 
-export default function LoginModal({ open, onClose }: LoginModalProps) {
+export default function LoginModal({ open, onClose, onSuccess, redirectTo }: LoginModalProps) {
   const router = useRouter();
   const { login } = useAuth();
+
+  const completeLogin = useCallback((user: AuthUser, token: string) => {
+    login(user, token);
+    onClose();
+    onSuccess?.();
+    if (!onSuccess) {
+      router.push(redirectTo || "/account");
+    }
+  }, [login, onClose, onSuccess, redirectTo, router]);
 
   const [tab, setTab] = useState<Tab>("login");
   const [step, setStep] = useState<Step>("form");
@@ -235,7 +246,7 @@ export default function LoginModal({ open, onClose }: LoginModalProps) {
     setLoading(true);
     try {
       const res = await loginWithPassword(loginIdentifier, loginPassword);
-      if (res.success && res.token && res.user) { login(res.user, res.token); onClose(); router.push("/account"); }
+      if (res.success && res.token && res.user) { completeLogin(res.user, res.token); }
       else setApiError(res.message ?? "Invalid credentials. Please try again.");
     } catch { setApiError("Something went wrong. Please try again."); }
     finally { setLoading(false); }
@@ -262,7 +273,7 @@ export default function LoginModal({ open, onClose }: LoginModalProps) {
     setLoading(true);
     try {
       const res = await verifyOtp(loginMobile, otp);
-      if (res.success && res.token && res.user) { login(res.user, res.token); onClose(); router.push("/account"); }
+      if (res.success && res.token && res.user) { completeLogin(res.user, res.token); }
       else setApiError(res.message ?? "Invalid OTP. Please try again.");
     } catch { setApiError("Something went wrong. Please try again."); }
     finally { setLoading(false); }
@@ -300,7 +311,7 @@ export default function LoginModal({ open, onClose }: LoginModalProps) {
     setLoading(true);
     try {
       const res = await verifyMobile(regMobile, otp);
-      if (res.success && pendingAuth.current) { login(pendingAuth.current.user, pendingAuth.current.token); onClose(); router.push("/account"); }
+      if (res.success && pendingAuth.current) { completeLogin(pendingAuth.current.user, pendingAuth.current.token); }
       else setApiError(res.message ?? "Invalid OTP. Please try again.");
     } catch { setApiError("Something went wrong. Please try again."); }
     finally { setLoading(false); }
@@ -316,9 +327,7 @@ export default function LoginModal({ open, onClose }: LoginModalProps) {
       const res = await googleCallback(idToken);
 
       if (res.success) {
-        login(res.user, res.token);
-        onClose();
-        router.push("/account");
+        completeLogin(res.user, res.token);
         return;
       }
 
@@ -357,9 +366,7 @@ export default function LoginModal({ open, onClose }: LoginModalProps) {
         password_confirmation: googleNewUserConfirm,
       });
       if (res.success) {
-        login(res.user, res.token);
-        onClose();
-        router.push("/account");
+        completeLogin(res.user, res.token);
       } else {
         setApiError(res.message ?? "Registration failed. Please try again.");
       }

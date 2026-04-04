@@ -10,9 +10,11 @@ import {
 } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
+import LoginModal from "@/components/auth/LoginModal";
 import {
-  getAddresses, createAddress, getShippingRates, applyCoupon,
-  createRazorpayOrder, verifyRazorpayPayment, createCheckout,
+  getAddresses, getShippingRates, applyCoupon,
+  createAddressDetailed, updateAddress,
+  createRazorpayOrder, verifyRazorpayPayment, createEasepayOrder, getPaymentSettings, syncCartToServer, createCheckout,
   type ApiAddress, type ApiShippingRate, type ApiCouponResult,
 } from "@/lib/api";
 
@@ -44,12 +46,20 @@ interface RazorpayOptions {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function fmt(n: number) {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 0,
-  }).format(n);
+function makeFmt(symbol: string) {
+  return (n: number) =>
+    `${symbol}${n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function fmtWeight(weightG: number): string {
+  return weightG >= 1000
+    ? `${(weightG / 1000).toFixed(2).replace(/\.?0+$/, "")} kg`
+    : `${weightG} g`;
+}
+
+function shouldBypassOptimizer(src?: string | null): boolean {
+  if (!src) return false;
+  return /^https?:\/\//i.test(src);
 }
 
 function loadRazorpayScript(): Promise<boolean> {
@@ -76,6 +86,7 @@ const INDIAN_STATES = [
 ];
 
 type Step = 1 | 2 | 3;
+type PaymentMethod = "razorpay" | "easepay" | "cod";
 
 const BLANK_ADDRESS = {
   name: "", phone: "", address_line1: "", address_line2: "",
@@ -140,9 +151,12 @@ interface AddressFormProps {
   onSave: () => void;
   onCancel?: () => void;
   saving: boolean;
+  errorMessage?: string;
+  fieldErrors?: Record<string, string[]>;
+  isEditing?: boolean;
 }
 
-function AddressForm({ value, onChange, onSave, onCancel, saving }: AddressFormProps) {
+function AddressForm({ value, onChange, onSave, onCancel, saving, errorMessage, fieldErrors, isEditing }: AddressFormProps) {
   const set = (field: keyof typeof BLANK_ADDRESS) => (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => onChange({ ...value, [field]: e.target.value });
@@ -152,7 +166,19 @@ function AddressForm({ value, onChange, onSave, onCancel, saving }: AddressFormP
 
   return (
     <div className="space-y-3 mt-4 p-5 rounded-2xl border border-gray-200 bg-gray-50">
-      <h3 className="text-sm font-bold text-(--color-secondary)">New Address</h3>
+      <h3 className="text-sm font-bold text-(--color-secondary)">{isEditing ? "Edit Address" : "New Address"}</h3>
+      {(errorMessage || (fieldErrors && Object.keys(fieldErrors).length > 0)) && (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2">
+          {errorMessage && <p className="text-xs font-semibold text-red-700 mb-1">{errorMessage}</p>}
+          <ul className="list-disc pl-4 space-y-0.5">
+            {Object.values(fieldErrors ?? {}).flat().map((msg, i) => (
+              <li key={`${msg}-${i}`} className="text-xs text-red-700">
+                {msg}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
@@ -205,8 +231,8 @@ function AddressForm({ value, onChange, onSave, onCancel, saving }: AddressFormP
           className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold text-white disabled:opacity-50 disabled:cursor-not-allowed"
           style={{ background: "linear-gradient(135deg,#1f4f8a,#0f2f5f)" }}
         >
-          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-          Save Address
+          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : isEditing ? <Edit2 className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+          {isEditing ? "Update Address" : "Save Address"}
         </button>
         {onCancel && (
           <button onClick={onCancel} className="px-5 py-2.5 rounded-xl text-sm font-semibold text-gray-600 border border-gray-200 hover:bg-gray-50 transition-colors">
@@ -225,10 +251,12 @@ interface OrderSummaryProps {
   discount: number;
   shippingCharge: number;
   couponResult: ApiCouponResult | null;
-  items: { name: string; quantity: number; price: number; image?: string | null }[];
+  currencySymbol: string;
+  items: { name: string; quantity: number; price: number; image?: string | null; weight?: number; weightUnit?: string }[];
 }
 
-function OrderSummary({ subtotal, discount, shippingCharge, couponResult, items }: OrderSummaryProps) {
+function OrderSummary({ subtotal, discount, shippingCharge, couponResult, currencySymbol, items }: OrderSummaryProps) {
+  const fmt = makeFmt(currencySymbol);
   const taxable = subtotal - discount + shippingCharge;
   const gst = Math.round(taxable * 18 / 118);
   const grand = taxable;
@@ -243,7 +271,13 @@ function OrderSummary({ subtotal, discount, shippingCharge, couponResult, items 
           <div key={i} className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg overflow-hidden border border-gray-100 bg-gray-50 relative shrink-0">
               {item.image ? (
-                <Image src={item.image} alt={item.name} fill className="object-cover" />
+                <Image
+                  src={item.image}
+                  alt={item.name}
+                  fill
+                  className="object-cover"
+                  unoptimized={shouldBypassOptimizer(item.image)}
+                />
               ) : (
                 <div className="w-full h-full flex items-center justify-center">
                   <ShoppingBag className="h-4 w-4 text-gray-300" />
@@ -255,6 +289,16 @@ function OrderSummary({ subtotal, discount, shippingCharge, couponResult, items 
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-xs font-medium text-(--color-secondary) line-clamp-1">{item.name}</p>
+              {item.weight != null && item.weight > 0 && (() => {
+                const unit = (item.weightUnit ?? "g").toLowerCase();
+                const unitG = unit === "kg" ? item.weight * 1000 : item.weight;
+                const totalG = unitG * item.quantity;
+                return (
+                  <p className="text-[10px] text-gray-400 mt-0.5">
+                    {fmtWeight(unitG)} × {item.quantity} = <span className="font-medium text-gray-500">{fmtWeight(totalG)}</span>
+                  </p>
+                );
+              })()}
             </div>
             <p className="text-xs font-bold text-(--color-secondary) shrink-0">
               {fmt(item.price * item.quantity)}
@@ -308,18 +352,24 @@ function OrderSummary({ subtotal, discount, shippingCharge, couponResult, items 
 
 export default function CheckoutClient() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, isLoading: authLoading, isLoggedIn } = useAuth();
   const { items, total, clearCart } = useCart();
+  const currencySymbol = items[0]?.currencySymbol ?? "₹";
+  const fmt = makeFmt(currencySymbol);
 
   const [step, setStep] = useState<Step>(1);
+  const [loginModalDismissed, setLoginModalDismissed] = useState(false);
 
   // Address state
   const [addresses, setAddresses] = useState<ApiAddress[]>([]);
   const [addressLoading, setAddressLoading] = useState(true);
   const [selectedAddressId, setSelectedAddressId] = useState<number | null>(null);
   const [showAddressForm, setShowAddressForm] = useState(false);
+  const [editingAddressId, setEditingAddressId] = useState<number | null>(null);
   const [newAddress, setNewAddress] = useState(BLANK_ADDRESS);
   const [savingAddress, setSavingAddress] = useState(false);
+  const [addressSaveError, setAddressSaveError] = useState("");
+  const [addressFieldErrors, setAddressFieldErrors] = useState<Record<string, string[]>>({});
 
   // Shipping state
   const [shippingRates, setShippingRates] = useState<ApiShippingRate[]>([]);
@@ -333,7 +383,8 @@ export default function CheckoutClient() {
   const [couponError, setCouponError] = useState("");
 
   // Payment state
-  const [paymentMethod, setPaymentMethod] = useState<"razorpay" | "cod">("razorpay");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("razorpay");
+  const [availablePaymentMethods, setAvailablePaymentMethods] = useState<PaymentMethod[]>(["razorpay", "cod"]);
   const [processingPayment, setProcessingPayment] = useState(false);
   const [paymentError, setPaymentError] = useState("");
 
@@ -342,14 +393,28 @@ export default function CheckoutClient() {
     if (items.length === 0) router.replace("/cart");
   }, [items.length, router]);
 
-  // Load addresses on mount
+  // Load addresses once auth is ready (prevents empty load before token rehydration).
   useEffect(() => {
+    if (authLoading || !isLoggedIn) return;
+
     getAddresses().then((list) => {
       setAddresses(list);
       const def = list.find((a) => a.is_default) ?? list[0];
       if (def) setSelectedAddressId(def.id);
       if (list.length === 0) setShowAddressForm(true);
       setAddressLoading(false);
+    });
+  }, [authLoading, isLoggedIn]);
+
+  useEffect(() => {
+    getPaymentSettings().then((settings) => {
+      const methods: PaymentMethod[] = [];
+      if (settings.razorpayEnabled) methods.push("razorpay");
+      if (settings.easepayEnabled) methods.push("easepay");
+      if (settings.codEnabled) methods.push("cod");
+      if (methods.length === 0) methods.push("cod");
+      setAvailablePaymentMethods(methods);
+      setPaymentMethod((current) => (methods.includes(current) ? current : methods[0]));
     });
   }, []);
 
@@ -362,9 +427,52 @@ export default function CheckoutClient() {
 
   // ── Handlers ──
 
+  const handleEditAddress = useCallback((addr: ApiAddress) => {
+    setEditingAddressId(addr.id);
+    setNewAddress({
+      name: addr.name,
+      phone: addr.phone,
+      address_line1: addr.address_line1,
+      address_line2: addr.address_line2 ?? "",
+      city: addr.city,
+      state: addr.state,
+      pincode: addr.pincode,
+    });
+    setAddressSaveError("");
+    setAddressFieldErrors({});
+    setShowAddressForm(true);
+  }, []);
+
   const handleSaveAddress = useCallback(async () => {
+    setAddressSaveError("");
+    setAddressFieldErrors({});
     setSavingAddress(true);
-    const saved = await createAddress({
+
+    if (editingAddressId !== null) {
+      // ── Update existing address ──
+      const updated = await updateAddress(editingAddressId, {
+        name: newAddress.name,
+        phone: newAddress.phone,
+        address_line1: newAddress.address_line1,
+        address_line2: newAddress.address_line2,
+        city: newAddress.city,
+        state: newAddress.state,
+        pincode: newAddress.pincode,
+      });
+      setSavingAddress(false);
+      if (updated) {
+        setAddresses((prev) => prev.map((a) => (a.id === editingAddressId ? updated : a)));
+        setShowAddressForm(false);
+        setEditingAddressId(null);
+        setNewAddress(BLANK_ADDRESS);
+      } else {
+        setAddressSaveError("Failed to update address. Please try again.");
+      }
+      return;
+    }
+
+    // ── Create new address ──
+    const result = await createAddressDetailed({
       name: newAddress.name,
       phone: newAddress.phone,
       address_line1: newAddress.address_line1,
@@ -374,23 +482,35 @@ export default function CheckoutClient() {
       pincode: newAddress.pincode,
     });
     setSavingAddress(false);
-    if (saved) {
-      setAddresses((prev) => [...prev, saved]);
-      setSelectedAddressId(saved.id);
+    if (result.success && result.address) {
+      setAddresses((prev) => [...prev, result.address as ApiAddress]);
+      setSelectedAddressId(result.address.id);
       setShowAddressForm(false);
       setNewAddress(BLANK_ADDRESS);
+      setAddressSaveError("");
+      setAddressFieldErrors({});
+    } else {
+      setAddressSaveError(result.message ?? "Failed to save address.");
+      setAddressFieldErrors(result.errors ?? {});
     }
-  }, [newAddress]);
+  }, [newAddress, editingAddressId]);
 
   const handleContinueToShipping = useCallback(async () => {
     if (!selectedAddress) return;
     setStep(2);
     setShippingLoading(true);
-    const rates = await getShippingRates(selectedAddress.pincode, total - discount);
+    // Calculate total weight in grams from all cart items
+    const totalWeightGrams = items.reduce((sum, item) => {
+      if (item.weight == null || item.weight <= 0) return sum;
+      const unit = (item.weightUnit ?? "g").toLowerCase();
+      const unitGrams = unit === "kg" ? item.weight * 1000 : item.weight;
+      return sum + unitGrams * item.quantity;
+    }, 0);
+    const rates = await getShippingRates(selectedAddress.pincode, total - discount, totalWeightGrams || undefined);
     setShippingRates(rates);
     if (rates.length > 0) setSelectedRateId(rates[0].id);
     setShippingLoading(false);
-  }, [selectedAddress, total, discount]);
+  }, [selectedAddress, total, discount, items]);
 
   const handleApplyCoupon = useCallback(async () => {
     if (!couponCode.trim()) return;
@@ -417,10 +537,28 @@ export default function CheckoutClient() {
       quantity: item.quantity,
     }));
 
+    // Sync local cart to server-side cart before placing order
+    const syncableItems = items.filter((i) => i.variantId && i.storeId);
+    if (syncableItems.length > 0) {
+      console.log("[handlePlaceOrder] syncing cart to server...");
+      const synced = await syncCartToServer(
+        syncableItems.map((i) => ({ variantId: i.variantId!, storeId: i.storeId!, quantity: i.quantity }))
+      );
+      console.log("[handlePlaceOrder] cart sync result:", synced);
+      if (!synced.success) {
+        setPaymentError(synced.message ?? "Failed to sync cart. Please try again.");
+        setProcessingPayment(false);
+        return;
+      }
+    } else {
+      console.warn("[handlePlaceOrder] no syncable items (missing variantId or storeId):", items);
+    }
+
     if (paymentMethod === "cod") {
       const result = await createCheckout({
         address_id: selectedAddressId,
         shipping_rate_id: selectedRateId,
+        delivery_charge: shippingCharge,
         coupon_code: couponResult?.code,
         payment_method: "cod",
         items: checkoutItems,
@@ -432,6 +570,33 @@ export default function CheckoutClient() {
       } else {
         setPaymentError(result.message ?? "Order failed. Please try again.");
       }
+      return;
+    }
+
+    if (paymentMethod === "easepay") {
+      const result = await createCheckout({
+        address_id: selectedAddressId,
+        shipping_rate_id: selectedRateId,
+        delivery_charge: shippingCharge,
+        coupon_code: couponResult?.code,
+        payment_method: "easepay",
+        items: checkoutItems,
+      });
+
+      if (!result.success || !result.order_id) {
+        setPaymentError(result.message ?? "Order failed. Please try again.");
+        setProcessingPayment(false);
+        return;
+      }
+
+      const easepayOrder = await createEasepayOrder(result.order_id, grandTotal);
+      if (!easepayOrder?.payment_url) {
+        setPaymentError("Could not initiate Easepay payment. Please try again.");
+        setProcessingPayment(false);
+        return;
+      }
+
+      window.location.href = easepayOrder.payment_url;
       return;
     }
 
@@ -466,23 +631,33 @@ export default function CheckoutClient() {
       },
       theme: { color: "#1f4f8a" },
       handler: async (response) => {
-        // Verify payment
+        console.group("[Razorpay handler]");
+        console.log("Razorpay response:", response);
+
+        // Verify payment signature
+        console.log("Step 1 — verifying payment signature...");
         const verified = await verifyRazorpayPayment({
           razorpay_payment_id: response.razorpay_payment_id,
           razorpay_order_id: response.razorpay_order_id,
           razorpay_signature: response.razorpay_signature,
         });
+        console.log("Verify result:", verified);
 
         if (!verified.success) {
+          console.warn("Signature verification failed:", verified.message);
+          console.groupEnd();
           setPaymentError("Payment verification failed. Contact support.");
           setProcessingPayment(false);
           return;
         }
 
         // Create order
+        console.log("Step 2 — placing order...");
+        console.log("address_id:", selectedAddressId, "shipping_rate_id:", selectedRateId);
         const result = await createCheckout({
           address_id: selectedAddressId!,
           shipping_rate_id: selectedRateId!,
+          delivery_charge: shippingCharge,
           coupon_code: couponResult?.code,
           payment_method: "razorpay",
           razorpay_payment_id: response.razorpay_payment_id,
@@ -490,6 +665,8 @@ export default function CheckoutClient() {
           razorpay_signature: response.razorpay_signature,
           items: checkoutItems,
         });
+        console.log("createCheckout result:", result);
+        console.groupEnd();
 
         setProcessingPayment(false);
         if (result.success) {
@@ -506,12 +683,47 @@ export default function CheckoutClient() {
     rzp.open();
   }, [
     selectedAddressId, selectedRateId, paymentMethod, items,
-    couponResult, grandTotal, user, clearCart, router,
+    couponResult, grandTotal, user, clearCart, router, shippingCharge,
   ]);
 
   // ── Render ──
 
   if (items.length === 0) return null;
+  if (authLoading) return null;
+
+  if (!isLoggedIn) {
+    const loginOpen = !loginModalDismissed;
+    return (
+      <div style={{ background: "var(--background)", minHeight: "100vh" }}>
+        <div className="max-w-2xl mx-auto px-4 py-16">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 text-center">
+            <h1 className="text-2xl font-extrabold text-(--color-secondary) mb-3">Login Required</h1>
+            <p className="text-gray-500 mb-6">
+              Please sign in or register to continue checkout.
+            </p>
+            <div className="flex items-center justify-center gap-3">
+              <button
+                onClick={() => setLoginModalDismissed(false)}
+                className="px-6 py-3 rounded-xl text-sm font-bold text-white"
+                style={{ background: "linear-gradient(135deg,#1f4f8a,#0f2f5f)" }}
+              >
+                Login / Register
+              </button>
+              <Link href="/cart" className="px-6 py-3 rounded-xl text-sm font-semibold border border-gray-200 text-gray-600 hover:bg-gray-50">
+                Back to Cart
+              </Link>
+            </div>
+          </div>
+        </div>
+
+        <LoginModal
+          open={loginOpen}
+          onClose={() => setLoginModalDismissed(true)}
+          onSuccess={() => setLoginModalDismissed(false)}
+        />
+      </div>
+    );
+  }
 
   return (
     <div style={{ background: "var(--background)", minHeight: "100vh" }}>
@@ -588,7 +800,14 @@ export default function CheckoutClient() {
                               </p>
                               <p className="text-xs text-gray-400 mt-1">📞 +91 {addr.phone}</p>
                             </div>
-                            <Edit2 className="h-4 w-4 text-gray-300 shrink-0 mt-0.5" />
+                            <button
+                              type="button"
+                              onClick={(e) => { e.preventDefault(); handleEditAddress(addr); }}
+                              className="p-1.5 rounded-lg text-gray-300 hover:text-(--color-primary) hover:bg-blue-50 transition-colors shrink-0 mt-0.5"
+                              aria-label="Edit address"
+                            >
+                              <Edit2 className="h-4 w-4" />
+                            </button>
                           </label>
                         ))}
                       </div>
@@ -607,8 +826,11 @@ export default function CheckoutClient() {
                         value={newAddress}
                         onChange={setNewAddress}
                         onSave={handleSaveAddress}
-                        onCancel={addresses.length > 0 ? () => setShowAddressForm(false) : undefined}
+                        onCancel={addresses.length > 0 ? () => { setShowAddressForm(false); setEditingAddressId(null); setNewAddress(BLANK_ADDRESS); } : undefined}
                         saving={savingAddress}
+                        errorMessage={addressSaveError}
+                        fieldErrors={addressFieldErrors}
+                        isEditing={editingAddressId !== null}
                       />
                     )}
                   </>
@@ -786,42 +1008,43 @@ export default function CheckoutClient() {
                 <div className="space-y-3 mb-6">
                   <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Payment Method</p>
 
-                  <label className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${
-                    paymentMethod === "razorpay" ? "border-(--color-primary) bg-blue-50" : "border-gray-100 hover:border-gray-200"
-                  }`}>
-                    <input
-                      type="radio"
-                      name="payment"
-                      value="razorpay"
-                      checked={paymentMethod === "razorpay"}
-                      onChange={() => setPaymentMethod("razorpay")}
-                      className="accent-(--color-primary)"
-                    />
-                    <CreditCard className="h-5 w-5 text-(--color-primary)" />
-                    <div>
-                      <p className="text-sm font-semibold text-(--color-secondary)">Online Payment</p>
-                      <p className="text-xs text-gray-400">UPI, Cards, Net Banking via Razorpay</p>
-                    </div>
-                    <img src="/razorpay-logo.svg" alt="Razorpay" className="h-5 ml-auto" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
-                  </label>
-
-                  <label className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${
-                    paymentMethod === "cod" ? "border-(--color-primary) bg-blue-50" : "border-gray-100 hover:border-gray-200"
-                  }`}>
-                    <input
-                      type="radio"
-                      name="payment"
-                      value="cod"
-                      checked={paymentMethod === "cod"}
-                      onChange={() => setPaymentMethod("cod")}
-                      className="accent-(--color-primary)"
-                    />
-                    <Banknote className="h-5 w-5 text-green-600" />
-                    <div>
-                      <p className="text-sm font-semibold text-(--color-secondary)">Cash on Delivery</p>
-                      <p className="text-xs text-gray-400">Pay when your order arrives</p>
-                    </div>
-                  </label>
+                  {availablePaymentMethods.map((method) => (
+                    <label
+                      key={method}
+                      className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                        paymentMethod === method ? "border-(--color-primary) bg-blue-50" : "border-gray-100 hover:border-gray-200"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="payment"
+                        value={method}
+                        checked={paymentMethod === method}
+                        onChange={() => setPaymentMethod(method)}
+                        className="accent-(--color-primary)"
+                      />
+                      {method === "cod" ? (
+                        <Banknote className="h-5 w-5 text-green-600" />
+                      ) : (
+                        <CreditCard className="h-5 w-5 text-(--color-primary)" />
+                      )}
+                      <div>
+                        <p className="text-sm font-semibold text-(--color-secondary)">
+                          {method === "cod" ? "Cash on Delivery" : method === "easepay" ? "Online Payment (Easepay)" : "Online Payment (Razorpay)"}
+                        </p>
+                        <p className="text-xs text-gray-400">
+                          {method === "cod"
+                            ? "Pay when your order arrives"
+                            : method === "easepay"
+                              ? "UPI, Cards, Net Banking via Easepay"
+                              : "UPI, Cards, Net Banking via Razorpay"}
+                        </p>
+                      </div>
+                      {method === "razorpay" && (
+                        <img src="/razorpay-logo.svg" alt="Razorpay" className="h-5 ml-auto" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                      )}
+                    </label>
+                  ))}
                 </div>
 
                 {/* Error */}
@@ -848,6 +1071,11 @@ export default function CheckoutClient() {
                       <CreditCard className="h-4 w-4" />
                       Pay {fmt(grandTotal)}
                     </>
+                  ) : paymentMethod === "easepay" ? (
+                    <>
+                      <CreditCard className="h-4 w-4" />
+                      Pay with Easepay — {fmt(grandTotal)}
+                    </>
                   ) : (
                     <>
                       <Banknote className="h-4 w-4" />
@@ -871,6 +1099,7 @@ export default function CheckoutClient() {
               discount={discount}
               shippingCharge={shippingCharge}
               couponResult={couponResult}
+              currencySymbol={currencySymbol}
               items={items}
             />
           </div>

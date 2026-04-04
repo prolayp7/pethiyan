@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Product;
 
+use App\Services\CurrencyService;
 use App\Services\GstService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -12,6 +13,7 @@ class ProductCatalogResource extends JsonResource
     {
         $customerStateCode = $request->input('customer_state_code');
         $gstService = app(GstService::class);
+        $currency = app(CurrencyService::class);
         $gstRate = (int) ($this->gst_rate ?? 0);
 
         $variantImages = $this->variants
@@ -141,6 +143,10 @@ class ProductCatalogResource extends JsonResource
                 'gst_rate' => $this->gst_rate,
                 'is_inclusive_tax' => (bool) $this->is_inclusive_tax,
                 'customer_state_code' => $customerStateCode,
+            ],
+            'currency' => [
+                'symbol' => $currency->getSymbol(),
+                'code' => $currency->getCode(),
             ],
             'variants' => $variants,
             'created_at' => $this->created_at,

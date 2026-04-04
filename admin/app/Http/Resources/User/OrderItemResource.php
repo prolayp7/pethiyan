@@ -20,8 +20,8 @@ class OrderItemResource extends JsonResource
         if ($isReviewExist) {
             $userReview = OrderService::getUserReviewByOrderItemId($this->id);
         }
-        $sellerId = $this->when($this->product, $this->store->seller->id);
-        $sellerName = $this->when($this->product, $this->store->seller->user->name);
+        $sellerId = $this->store?->seller?->id ?? null;
+        $sellerName = $this->store?->seller?->user?->name ?? null;
 
         $attachments = [];
         try {

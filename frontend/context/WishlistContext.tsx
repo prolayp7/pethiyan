@@ -7,6 +7,8 @@ import React, {
   useCallback,
   useEffect,
 } from "react";
+import { useAuth } from "@/context/AuthContext";
+import { getWishlistItems } from "@/lib/api";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -21,6 +23,7 @@ export interface WishlistItem {
 interface WishlistContextType {
   items: WishlistItem[];
   isWishlisted: (id: number) => boolean;
+  add: (item: WishlistItem) => void;
   toggle: (item: WishlistItem) => void;
   remove: (id: number) => void;
   clear: () => void;
@@ -39,6 +42,7 @@ const WishlistContext = createContext<WishlistContextType | undefined>(
 
 export function WishlistProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<WishlistItem[]>([]);
+  const { isLoggedIn, token } = useAuth();
 
   // Rehydrate from localStorage on mount
   useEffect(() => {
@@ -55,10 +59,49 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem(LS_KEY, JSON.stringify(items));
   }, [items]);
 
+  // Sync count from backend for robust cross-session/device accuracy.
+  useEffect(() => {
+    let active = true;
+
+    const run = async () => {
+      if (!isLoggedIn || !token) {
+        return;
+      }
+
+      const rows = await getWishlistItems();
+      if (!active) return;
+      const dedupByProduct = new Map<number, WishlistItem>();
+      rows.forEach((row) => {
+        if (!row.product) return;
+        if (dedupByProduct.has(row.product.id)) return;
+        dedupByProduct.set(row.product.id, {
+          id: row.product.id,
+          name: row.product.title,
+          slug: row.product.slug,
+          image: row.product.image ?? null,
+          price: Number(row.variant?.special_price ?? row.variant?.price ?? 0),
+        });
+      });
+      setItems(Array.from(dedupByProduct.values()));
+    };
+
+    void run();
+    return () => {
+      active = false;
+    };
+  }, [isLoggedIn, token]);
+
   const isWishlisted = useCallback(
     (id: number) => items.some((i) => i.id === id),
     [items]
   );
+
+  const add = useCallback((item: WishlistItem) => {
+    setItems((prev) => {
+      if (prev.some((i) => i.id === item.id)) return prev;
+      return [...prev, item];
+    });
+  }, []);
 
   const toggle = useCallback((item: WishlistItem) => {
     setItems((prev) => {
@@ -71,11 +114,15 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
     setItems((prev) => prev.filter((i) => i.id !== id));
   }, []);
 
-  const clear = useCallback(() => setItems([]), []);
+  const clear = useCallback(() => {
+    setItems([]);
+  }, []);
+
+  const count = items.length;
 
   return (
     <WishlistContext.Provider
-      value={{ items, isWishlisted, toggle, remove, clear, count: items.length }}
+      value={{ items, isWishlisted, add, toggle, remove, clear, count }}
     >
       {children}
     </WishlistContext.Provider>

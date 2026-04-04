@@ -12,6 +12,7 @@ import NavigationMenu from "@/components/headers/NavigationMenu6";
 import MobileBottomNav from "@/components/ui/MobileBottomNav";
 import ScrollToTop from "@/components/ui/ScrollToTop";
 import Footer from "@/components/layout/Footercopy7";
+import CouponPopup from "@/components/popups/CouponPopup";
 import { organizationSchema, websiteSchema, jsonLd } from "@/lib/structured-data";
 import { Toaster } from "react-hot-toast";
 
@@ -103,6 +104,11 @@ export default function RootLayout({
         <script {...jsonLd(siteSchema)} key="site-schema" />
       </head>
       <body className="antialiased bg-background text-foreground font-sans">
+        {/* Portal root — sits above app-root in z-order, outside its stacking context */}
+        <div id="portal-root" />
+
+        {/* App root — explicit z:0 stacking context so portal-root always wins */}
+        <div id="app-root" style={{ isolation: "isolate", position: "relative", zIndex: 0 }}>
         <AuthProvider>
           <WishlistProvider>
             <CartProvider>
@@ -137,6 +143,9 @@ export default function RootLayout({
               {/* Floating scroll-to-top */}
               <ScrollToTop />
 
+              {/* Coupon popup — shown once per session after 2s */}
+              <CouponPopup />
+
               {/* Toast notifications */}
               <Toaster
                 position="top-right"
@@ -155,6 +164,7 @@ export default function RootLayout({
             </CartProvider>
           </WishlistProvider>
         </AuthProvider>
+        </div>{/* /app-root */}
       </body>
     </html>
   );

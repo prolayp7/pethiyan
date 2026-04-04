@@ -79,8 +79,14 @@ function OrderCard({ order }: { order: ApiOrder }) {
           {previewItems.map((item) => (
             <div key={item.id} className="flex items-center gap-3 flex-1 min-w-0">
               <div className="w-12 h-12 rounded-xl overflow-hidden border border-gray-100 bg-gray-50 relative shrink-0">
-                {item.image ? (
-                  <Image src={item.image} alt={item.product_name} fill className="object-cover" />
+                {(item.image || item.product?.image) ? (
+                  <Image
+                    src={(item.image || item.product?.image) as string}
+                    alt={item.product_name}
+                    fill
+                    unoptimized
+                    className="object-cover"
+                  />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
                     <ShoppingBag className="h-5 w-5 text-gray-300" />
@@ -116,7 +122,7 @@ function OrderCard({ order }: { order: ApiOrder }) {
           </span>
         </div>
         <Link
-          href={`/account/orders/${order.id}`}
+          href={`/account/orders/${order.slug}`}
           className="flex items-center gap-1 text-sm font-bold text-(--color-primary) hover:gap-2 transition-all"
         >
           View Details <ChevronRight className="h-4 w-4" />

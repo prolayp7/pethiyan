@@ -86,6 +86,16 @@ invoice-template-previews/
 *.txt
 *.csv
 *.pdf
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.zip
+*.tar.gz
+*.log
+*.tmp
+*.swp
+*.json
 
 # Ignore all markdown files except README/REAME
 *.md

@@ -94,10 +94,16 @@
                                                    value="{{ $settings['smtpPort'] ?? '' }}" {{ $emailDemoModeEnabled ? '' : 'required' }}/>
                                         </div>
                                         <div class="mb-3">
-                                            <label class="form-label required">{{ __('labels.smtp_email') }}</label>
-                                            <input type="email" class="form-control smtp-required-field" name="smtpEmail"
-                                                   placeholder="{{ __('labels.smtp_email_placeholder') }}"
-                                                   value="{{ ($systemSettings['demoMode'] ?? false) ? Str::mask(($settings['smtpEmail'] ?? '****'), '****', 3, 8) : ($settings['smtpEmail'] ?? '') }}" {{ $emailDemoModeEnabled ? '' : 'required' }}/>
+                                            <label class="form-label required">{{ __('labels.smtp_username') }}</label>
+                                            <input type="text" class="form-control smtp-required-field" name="smtpUsername"
+                                                   placeholder="{{ __('labels.smtp_username_placeholder') }}"
+                                                   value="{{ ($systemSettings['demoMode'] ?? false) ? Str::mask(($settings['smtpUsername'] ?? ($settings['smtpEmail'] ?? '****')), '****', 3, 8) : ($settings['smtpUsername'] ?? ($settings['smtpEmail'] ?? '')) }}" {{ $emailDemoModeEnabled ? '' : 'required' }}/>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label required">{{ __('labels.smtp_from_email') }}</label>
+                                            <input type="email" class="form-control smtp-required-field" name="smtpFromEmail"
+                                                   placeholder="{{ __('labels.smtp_from_email_placeholder') }}"
+                                                   value="{{ ($systemSettings['demoMode'] ?? false) ? Str::mask(($settings['smtpFromEmail'] ?? ($settings['smtpEmail'] ?? '****')), '****', 3, 8) : ($settings['smtpFromEmail'] ?? ($settings['smtpEmail'] ?? '')) }}" {{ $emailDemoModeEnabled ? '' : 'required' }}/>
                                         </div>
                                         <div class="mb-3">
                                             <label class="form-label required">{{ __('labels.smtp_password') }}</label>

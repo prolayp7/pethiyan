@@ -3,6 +3,7 @@
 namespace App\Http\Resources\Product;
 
 use App\Models\Review;
+use App\Services\CurrencyService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -16,6 +17,7 @@ class ProductListResource extends JsonResource
     public function toArray($request): array
     {
         $reviews = Review::scopeProductRatingStats($this->id);
+        $currency = app(CurrencyService::class);
 
         return [
             'id' => $this->id,
@@ -57,6 +59,8 @@ class ProductListResource extends JsonResource
             'metadata' => $this->metadata,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
+            'currency_symbol' => $currency->getSymbol(),
+            'currency_code' => $currency->getCode(),
             'store_status' => $this->whenLoaded('variants')->first()->storeProductVariants->first()->store->checkStoreStatus() ?? [],
             'variants' => ProductVariantResource::collection($this->whenLoaded('variants')),
             'attributes' => $this->getFormattedVariantAttributes(),

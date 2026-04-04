@@ -6,6 +6,7 @@ use App\Enums\SettingTypeEnum;
 use App\Http\Controllers\Controller;
 use App\Models\Setting;
 use App\Services\SettingService;
+use App\Services\TotpService;
 use App\Types\Api\ApiResponseType;
 use App\Types\Settings\AppSettingType;
 use App\Types\Settings\AuthenticationSettingType;
@@ -23,6 +24,8 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Enum;
 use Illuminate\Validation\ValidationException;
@@ -32,11 +35,16 @@ class SettingController extends Controller
 {
     use AuthorizesRequests;
 
-    protected SettingService $settingService;
+    private const PAYMENT_UNLOCK_SESSION_KEY = 'admin_payment_settings_unlocked_at';
+    private const PAYMENT_UNLOCK_TTL_MINUTES = 10;
 
-    public function __construct(SettingService $settingService)
+    protected SettingService $settingService;
+    protected TotpService $totpService;
+
+    public function __construct(SettingService $settingService, TotpService $totpService)
     {
         $this->settingService = $settingService;
+        $this->totpService = $totpService;
     }
 
 
@@ -58,6 +66,14 @@ class SettingController extends Controller
             ]);
 
             $type = $request->input('type');
+
+            if ($type === SettingTypeEnum::PAYMENT() && !$this->isPaymentSettingsUnlocked($request)) {
+                return ApiResponseType::sendJsonResponse(
+                    success: false,
+                    message: __('Please verify admin password and authenticator code to edit payment settings.'),
+                    data: []
+                );
+            }
 
             // Map setting type to the corresponding class
             $method = match ($type) {
@@ -84,8 +100,30 @@ class SettingController extends Controller
                 );
             }
 
+            $setting = Setting::find($type);
+            $existingValues = is_array($setting?->value) ? $setting->value : [];
+            $payload = $request->all();
+
+            // Some file widgets submit existing media URLs/paths as plain strings.
+            // Strip those non-file values before validation and preserve existing value later.
+            if ($type === SettingTypeEnum::SYSTEM()) {
+                foreach (['logo', 'favicon', 'adminSignature'] as $mediaField) {
+                    if (!$request->hasFile($mediaField)) {
+                        unset($payload[$mediaField]);
+                    }
+                }
+            }
+
             // Initialize settings object from request data
-            $settings = $method::fromArray($request->all());
+            $settings = $method::fromArray($payload);
+
+            if ($type === SettingTypeEnum::SYSTEM()) {
+                foreach (['logo', 'favicon', 'adminSignature'] as $mediaField) {
+                    if (!$request->hasFile($mediaField) && !empty($existingValues[$mediaField])) {
+                        $settings->{$mediaField} = $existingValues[$mediaField];
+                    }
+                }
+            }
 
             // Handle media uploads
             $this->handleMediaUploads($request, $settings);
@@ -108,7 +146,6 @@ class SettingController extends Controller
             }
 
             // Update or create setting
-            $setting = Setting::find($type);
             if ($setting) {
                 $setting->update($data);
                 return ApiResponseType::sendJsonResponse(
@@ -244,13 +281,84 @@ class SettingController extends Controller
             $googleApiKey = $setting->value['googleApiKey'] ?? null;
             return view('admin.settings.' . $variable, [
                 'settings' => $settings,
-                'googleApiKey' => $googleApiKey
+                'googleApiKey' => $googleApiKey,
+                'paymentSettingsUnlocked' => $variable === SettingTypeEnum::PAYMENT()
+                    ? $this->isPaymentSettingsUnlocked(request())
+                    : false,
+                'paymentUnlockTtlMinutes' => self::PAYMENT_UNLOCK_TTL_MINUTES,
             ]);
         } catch (AuthorizationException $e) {
             abort(403, __('labels.unauthorized_access'));
         } catch (\Exception $e) {
             abort(500, __('labels.something_went_wrong'));
         }
+    }
+
+    public function unlockPaymentSettings(Request $request): JsonResponse
+    {
+        try {
+            $this->authorize('updateSetting', [Setting::class, SettingTypeEnum::PAYMENT()]);
+        } catch (AuthorizationException $e) {
+            return ApiResponseType::sendJsonResponse(
+                success: false,
+                message: __('labels.unauthorized_access'),
+                data: [],
+                status: 403
+            );
+        }
+
+        $validated = $request->validate([
+            'password' => 'required|string',
+            'totp_code' => 'required|string|size:6',
+        ]);
+
+        $admin = Auth::guard('admin')->user();
+        if (!$admin) {
+            return ApiResponseType::sendJsonResponse(false, __('labels.unauthorized_access'), [], 401);
+        }
+
+        if (!Hash::check($validated['password'], $admin->password)) {
+            return ApiResponseType::sendJsonResponse(false, __('Invalid password.'), [], 422);
+        }
+
+        if (!$admin->isTotpEnabled()) {
+            return ApiResponseType::sendJsonResponse(false, __('Admin TOTP is not enabled.'), [], 422);
+        }
+
+        if (!$this->totpService->verifyCode($admin->totp_secret, trim($validated['totp_code']))) {
+            return ApiResponseType::sendJsonResponse(false, __('Invalid authenticator code.'), [], 422);
+        }
+
+        $request->session()->put(self::PAYMENT_UNLOCK_SESSION_KEY, now()->timestamp);
+
+        return ApiResponseType::sendJsonResponse(true, __('Payment settings unlocked.'), [
+            'unlocked' => true,
+            'expires_in_seconds' => self::PAYMENT_UNLOCK_TTL_MINUTES * 60,
+        ]);
+    }
+
+    public function lockPaymentSettings(Request $request): JsonResponse
+    {
+        $request->session()->forget(self::PAYMENT_UNLOCK_SESSION_KEY);
+
+        return ApiResponseType::sendJsonResponse(true, __('Payment settings locked.'), [
+            'unlocked' => false,
+        ]);
+    }
+
+    private function isPaymentSettingsUnlocked(Request $request): bool
+    {
+        $unlockedAt = $request->session()->get(self::PAYMENT_UNLOCK_SESSION_KEY);
+        if (empty($unlockedAt)) {
+            return false;
+        }
+
+        $isValid = now()->timestamp <= ((int) $unlockedAt + (self::PAYMENT_UNLOCK_TTL_MINUTES * 60));
+        if (!$isValid) {
+            $request->session()->forget(self::PAYMENT_UNLOCK_SESSION_KEY);
+        }
+
+        return $isValid;
     }
 
 }

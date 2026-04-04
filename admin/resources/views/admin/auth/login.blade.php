@@ -3,7 +3,7 @@
 @section('title', __('labels.admin_login'))
 @section('content')
     <div>
-        <div class="page page-center">
+        <div class="page page-center admin-login-theme">
             @if(($systemSettings['demoMode'] ?? false))
                 <div class="container-fluid">
                     <div class="alert alert-warning mt-2" role="alert">
@@ -29,7 +29,7 @@
                 </div>
             @endif
             <div class="container container-tight py-4">
-                <div class="text-center mb-4">
+                <div class="text-center mb-4 admin-login-brand-wrap">
                     <!-- BEGIN NAVBAR LOGO -->
                     <a href="." class="navbar-brand navbar-brand-autodark">
                         @if(($systemSettings['demoMode'] ?? false))
@@ -43,10 +43,12 @@
                         @endif
                     </a>
                     <!-- END NAVBAR LOGO -->
+                    <p class="admin-login-subtitle mb-0 mt-2">Secure admin access for {{ $systemSettings['appName'] ?? config('app.name') }}</p>
                 </div>
-                <div class="card card-md">
+                <div class="card card-md admin-login-card">
                     <div class="card-body">
-                        <h2 class="h2 text-center mb-4">Login to your account</h2>
+                        <h2 class="h2 text-center mb-1">Admin Sign In</h2>
+                        <p class="text-center admin-login-caption mb-4">Use your credentials and authenticator code to continue.</p>
                         <form id="login-form" action="{{route('admin.login.post')}}" method="post"
                               autocomplete="off" novalidate>
                             <input type="hidden" name="fcm_token" value="">

@@ -407,56 +407,40 @@ function initializeVariantAttributes() {
         }
     });
 
-    // Generate variants
+    // Build variants directly from server data in edit mode.
+    // This preserves persisted variant IDs and avoids collapsing variants
+    // that may share the same title/price or even attribute combinations.
     setTimeout(() => {
-        generateVariants();
-
-        // Update variant details from productData
-        if (window.productData.variants) {
-            window.productData.variants.forEach(serverVariant => {
-
-                // Find matching variant in our local variants array
-                const matchingVariant = variants.find(v => {
-                    // Check if attributes match
-                    if (!serverVariant.attributes || !v.attributes) return false;
-
-                    // Convert server variant attributes to the same format as local variants
-                    const serverAttrs = {};
-                    serverVariant.attributes.forEach(attr => {
-                        serverAttrs[attr.global_attribute_id] = attr.global_attribute_value_id;
-                    });
-                    // Check if all attributes match
-                    for (const attrId in v.attributes) {
-                        if (serverAttrs[attrId] !== v.attributes[attrId]) {
-                            return false;
-                        }
-                    }
-                    return true;
-                });
-
-                if (matchingVariant) {
-                    // Update variant details
-                    matchingVariant.title = serverVariant.title || '';
-                    matchingVariant.capacity = serverVariant.capacity || '';
-                    matchingVariant.capacity_unit = serverVariant.capacity_unit || 'ml';
-                    matchingVariant.weight = serverVariant.weight || '';
-                    matchingVariant.weight_unit = serverVariant.weight_unit || 'kg';
-                    matchingVariant.height = serverVariant.height || '';
-                    matchingVariant.height_unit = serverVariant.height_unit || 'cm';
-                    matchingVariant.breadth = serverVariant.breadth || '';
-                    matchingVariant.breadth_unit = serverVariant.breadth_unit || 'cm';
-                    matchingVariant.length = serverVariant.length || '';
-                    matchingVariant.length_unit = serverVariant.length_unit || 'cm';
-                    matchingVariant.image = serverVariant.image || '';
-                    matchingVariant.availability = serverVariant.availability || '';
-                    matchingVariant.barcode = serverVariant.barcode || '';
-                    matchingVariant.is_default = serverVariant.is_default || '';
-                }
+        variants = window.productData.variants.map((serverVariant) => {
+            const attrs = {};
+            (serverVariant.attributes || []).forEach((attr) => {
+                attrs[String(attr.global_attribute_id)] = Number(attr.global_attribute_value_id);
             });
 
-            // Re-render variants
-            renderVariants();
-        }
+            return {
+                id: String(serverVariant.id),
+                attributes: attrs,
+                title: serverVariant.title || '',
+                capacity: serverVariant.capacity || '',
+                capacity_unit: serverVariant.capacity_unit || 'ml',
+                weight: serverVariant.weight || '',
+                weight_unit: serverVariant.weight_unit || 'kg',
+                height: serverVariant.height || '',
+                height_unit: serverVariant.height_unit || 'cm',
+                breadth: serverVariant.breadth || '',
+                breadth_unit: serverVariant.breadth_unit || 'cm',
+                length: serverVariant.length || '',
+                length_unit: serverVariant.length_unit || 'cm',
+                image: serverVariant.image || '',
+                availability: serverVariant.availability || '',
+                barcode: serverVariant.barcode || '',
+                is_default: serverVariant.is_default || '',
+            };
+        });
+
+        renderVariants();
+        document.getElementById('variantsContainer')?.classList.remove('d-none');
+        updateVariantPricing();
     }, 500);
 }
 
@@ -1725,15 +1709,23 @@ function updateVariantPricing() {
                     }
                 }
 
-                return `
-                                                <tr class="variant-pricing-row" data-store-id="${store.id}" data-store-state-code="${storeStateCode}" data-store-gst-code="${storeGstCode}">
-                                                    <td>
-                                                        ${Object.entries(variant.attributes).map(([attrId, valueId]) => {
+                const variantAttributeBadges = Object.entries(variant.attributes).map(([attrId, valueId]) => {
                     const attr = attrIdMap[attrId];
                     const attrName = attr ? attr.name : attrId;
                     const valueName = attr && attr.values[valueId] ? attr.values[valueId] : valueId;
                     return `<span class="badge bg-primary-subtle text-primary me-1">${attrName}: ${valueName}</span>`;
-                }).join('')}
+                }).join('');
+
+                const variantTitleText = (variant.title || '').trim();
+                const variantLabelHtml = variantAttributeBadges || (variantTitleText
+                    ? `<span class="badge bg-primary-subtle text-primary me-1">${variantTitleText}</span>`
+                    : '<span class="text-muted small">Variant</span>');
+
+                return `
+                                                <tr class="variant-pricing-row" data-store-id="${store.id}" data-store-state-code="${storeStateCode}" data-store-gst-code="${storeGstCode}">
+                                                    <td>
+                                                        ${variantTitleText ? `<div class="fw-semibold text-dark mb-1">${variantTitleText}</div>` : ''}
+                                                        <div>${variantLabelHtml}</div>
                                                     </td>
                                                     <td>
                                                         <div class="input-group input-group-sm">
@@ -1784,10 +1776,52 @@ function updateVariantPricing() {
 }
 
 
+function syncVariantsFromDOM() {
+    // Find the checked default radio first
+    let checkedDefaultId = null;
+    document.querySelectorAll('input[name="is_defaults"]:checked').forEach(radio => {
+        const oc = radio.getAttribute('onchange') || '';
+        const m = oc.match(/setDefaultVariant\('([^']+)'\)/);
+        if (m) checkedDefaultId = m[1];
+    });
+
+    document.querySelectorAll('#variantsList > [data-id]').forEach(card => {
+        const id = card.dataset.id;
+        const variant = variants.find(v => v.id === id);
+        if (!variant) return;
+
+        // Sync all inputs/selects that call updateVariant
+        card.querySelectorAll('[onchange]').forEach(el => {
+            const oc = el.getAttribute('onchange') || '';
+            const m = oc.match(/updateVariant\([^,]+,\s*'([^']+)'/);
+            if (m) {
+                const field = m[1];
+                if (field !== 'variant_image') {
+                    variant[field] = el.value;
+                }
+            }
+        });
+
+        // Sync custom variant color attribute from dropdown
+        const customAttrsContainer = card.querySelector(`.custom-variant-attrs[data-variant-id="${id}"]`);
+        if (customAttrsContainer) {
+            syncCustomVariantAttrs(id);
+        }
+
+        // Sync is_default from the checked radio
+        if (checkedDefaultId !== null) {
+            variant.is_default = (id === checkedDefaultId) ? 'on' : '';
+        }
+    });
+}
+
 function addVariantInputsToForm() {
     document.querySelectorAll('.variant-hidden-input').forEach(el => el.remove());
     const form = document.querySelector('#product-form-submit');
     if (!form) return;
+
+    // Sync latest DOM values into variants[] before serializing
+    syncVariantsFromDOM();
 
     // Create a simplified variants array
     const simplifiedVariants = variants.map(variant => {

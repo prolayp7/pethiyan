@@ -162,15 +162,20 @@ trait AuthTrait
                 ]);
             }
 
-            // Prevent session fixation after successful authentication.
-            $request->session()->regenerate();
+            // Prevent session fixation after successful authentication when a session exists
+            // (API routes typically don't have session middleware enabled).
+            if ($request->hasSession()) {
+                $request->session()->regenerate();
+            }
             $user = FacadesAuth::guard($guard)->user();
 
             // Verification gate: the identifier used to log in must be verified
             if ($identifierField === 'email' && is_null($user->email_verified_at)) {
                 FacadesAuth::guard($guard)->logout();
-                $request->session()->invalidate();
-                $request->session()->regenerateToken();
+                if ($request->hasSession()) {
+                    $request->session()->invalidate();
+                    $request->session()->regenerateToken();
+                }
                 return response()->json([
                     'success' => false,
                     'message' => __('labels.email_not_verified'),
@@ -180,8 +185,10 @@ trait AuthTrait
 
             if ($identifierField === 'mobile' && is_null($user->mobile_verified_at)) {
                 FacadesAuth::guard($guard)->logout();
-                $request->session()->invalidate();
-                $request->session()->regenerateToken();
+                if ($request->hasSession()) {
+                    $request->session()->invalidate();
+                    $request->session()->regenerateToken();
+                }
                 return response()->json([
                     'success' => false,
                     'message' => __('labels.mobile_not_verified'),
@@ -316,7 +323,9 @@ trait AuthTrait
         Cache::forget($challengeKey);
 
         FacadesAuth::guard('admin')->login($admin);
-        $request->session()->regenerate();
+        if ($request->hasSession()) {
+            $request->session()->regenerate();
+        }
 
         $token = $admin->createToken($admin->email ?? ('admin-token-' . $admin->id))->plainTextToken;
         event(new UserLoggedIn($admin));

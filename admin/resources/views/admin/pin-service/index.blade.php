@@ -26,6 +26,9 @@
         </div>
         <div class="col-auto ms-auto">
             <div class="d-flex gap-2">
+                <a href="{{ route('admin.pin-service.masters.index') }}" class="btn btn-outline-primary">
+                    Manage Districts/Cities
+                </a>
                 <button class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#importModal">
                     <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/><polyline points="7 9 12 4 17 9"/><line x1="12" y1="4" x2="12" y2="16"/></svg>
                     Import CSV
@@ -164,19 +167,33 @@
                     </div>
                     <div class="col-12">
                         <label class="form-label required">State</label>
-                        <input type="text" class="form-control" id="fState" placeholder="e.g. MAHARASHTRA">
+                        <select class="form-select" id="fState">
+                            <option value="">Select State</option>
+                            @foreach($states as $state)
+                                <option value="{{ $state }}">{{ $state }}</option>
+                            @endforeach
+                        </select>
                     </div>
                     <div class="col-6">
-                        <label class="form-label">District</label>
-                        <input type="text" class="form-control" id="fDistrict">
+                        <label class="form-label required">District</label>
+                        <select class="form-select" id="fDistrict" disabled>
+                            <option value="">Select District</option>
+                        </select>
                     </div>
                     <div class="col-6">
-                        <label class="form-label">City</label>
-                        <input type="text" class="form-control" id="fCity">
+                        <label class="form-label required">City</label>
+                        <select class="form-select" id="fCity" disabled>
+                            <option value="">Select City</option>
+                        </select>
                     </div>
                     <div class="col-6">
                         <label class="form-label">Region</label>
-                        <input type="text" class="form-control" id="fZone1" placeholder="e.g. North">
+                        <select class="form-select" id="fZone1">
+                            <option value="">Select Region</option>
+                            @foreach($regions as $region)
+                                <option value="{{ $region }}">{{ $region }}</option>
+                            @endforeach
+                        </select>
                     </div>
                     <div class="col-6">
                         <label class="form-label">Delivery Time</label>
@@ -242,6 +259,8 @@ window.addEventListener('load', function () {
     const deleteUrl  = (id) => `/admin/pin-service/${id}`;
     const bulkUrl    = '{{ route('admin.pin-service.bulk-toggle') }}';
     const importUrl  = '{{ route('admin.pin-service.import') }}';
+    const districtsUrl = '{{ route('admin.pin-service.districts') }}';
+    const citiesUrl    = '{{ route('admin.pin-service.cities') }}';
     const csrf       = document.querySelector('meta[name="csrf-token"]').content;
 
     const zoneBadge = { A: 'bg-green', B: 'bg-teal', C: 'bg-cyan', D: 'bg-yellow', E: 'bg-orange' };
@@ -249,6 +268,14 @@ window.addEventListener('load', function () {
     const table = $('#pinTable').DataTable({
         processing : true,
         serverSide : true,
+        dom        : "<'row g-2 align-items-center px-3 pt-3'<'col-md-6'l><'col-md-6 d-flex justify-content-md-end'f>>" +
+                     "rt" +
+                     "<'row g-2 align-items-center px-3 pb-3'<'col-md-6'i><'col-md-6 d-flex justify-content-md-end'p>>",
+        language   : {
+            lengthMenu: '_MENU_ entries per page',
+            search: 'Search:',
+            searchPlaceholder: 'Pincode, state, district, city',
+        },
         ajax       : {
             url  : dtUrl,
             data : (d) => {
@@ -338,6 +365,60 @@ window.addEventListener('load', function () {
     const addModal = document.getElementById('addModal');
     let isEdit = false;
 
+    const fState = document.getElementById('fState');
+    const fDistrict = document.getElementById('fDistrict');
+    const fCity = document.getElementById('fCity');
+
+    function setSelectOptions(selectEl, values, placeholder) {
+        const safeValues = Array.isArray(values) ? values : [];
+        selectEl.innerHTML = `<option value="">${placeholder}</option>`;
+        safeValues.forEach((value) => {
+            const opt = document.createElement('option');
+            opt.value = value;
+            opt.textContent = value;
+            selectEl.appendChild(opt);
+        });
+        selectEl.disabled = safeValues.length === 0;
+    }
+
+    async function loadDistricts(state, selectedDistrict = '') {
+        setSelectOptions(fDistrict, [], 'Loading districts...');
+        setSelectOptions(fCity, [], 'Select City');
+        if (!state) {
+            setSelectOptions(fDistrict, [], 'Select District');
+            setSelectOptions(fCity, [], 'Select City');
+            return;
+        }
+
+        const url = `${districtsUrl}?state=${encodeURIComponent(state)}`;
+        const res = await fetch(url, { headers: { Accept: 'application/json' } }).then(r => r.json()).catch(() => null);
+        const districts = res?.data ?? [];
+        setSelectOptions(fDistrict, districts, 'Select District');
+        if (selectedDistrict) fDistrict.value = selectedDistrict;
+    }
+
+    async function loadCities(state, district, selectedCity = '') {
+        setSelectOptions(fCity, [], 'Loading cities...');
+        if (!state || !district) {
+            setSelectOptions(fCity, [], 'Select City');
+            return;
+        }
+
+        const url = `${citiesUrl}?state=${encodeURIComponent(state)}&district=${encodeURIComponent(district)}`;
+        const res = await fetch(url, { headers: { Accept: 'application/json' } }).then(r => r.json()).catch(() => null);
+        const cities = res?.data ?? [];
+        setSelectOptions(fCity, cities, 'Select City');
+        if (selectedCity) fCity.value = selectedCity;
+    }
+
+    fState.addEventListener('change', async () => {
+        await loadDistricts(fState.value);
+    });
+
+    fDistrict.addEventListener('change', async () => {
+        await loadCities(fState.value, fDistrict.value);
+    });
+
     document.getElementById('saveBtn').addEventListener('click', () => {
         const id    = document.getElementById('editId').value;
         const url   = isEdit ? updateUrl(id) : storeUrl;
@@ -377,9 +458,10 @@ window.addEventListener('load', function () {
                 document.getElementById('addModalTitle').textContent = 'Edit Pincode';
                 document.getElementById('editId').value         = p.id;
                 document.getElementById('fPincode').value       = p.pincode;
-                document.getElementById('fState').value         = p.state;
-                document.getElementById('fDistrict').value      = p.district ?? '';
-                document.getElementById('fCity').value          = p.city ?? '';
+                document.getElementById('fState').value         = p.state ?? '';
+                loadDistricts(p.state ?? '', p.district ?? '').then(() => {
+                    loadCities(p.state ?? '', p.district ?? '', p.city ?? '');
+                });
                 document.getElementById('fZone').value          = p.zone;
                 document.getElementById('fZone1').value         = p.zone1 ?? '';
                 document.getElementById('fDeliveryTime').value  = p.delivery_time ?? '';
@@ -392,9 +474,11 @@ window.addEventListener('load', function () {
         isEdit = false;
         document.getElementById('addModalTitle').textContent = 'Add Pincode';
         document.getElementById('editId').value = '';
-        ['fPincode','fState','fDistrict','fCity','fZone1','fDeliveryTime'].forEach(id => {
+        ['fPincode','fState','fZone1','fDeliveryTime'].forEach(id => {
             document.getElementById(id).value = '';
         });
+        setSelectOptions(fDistrict, [], 'Select District');
+        setSelectOptions(fCity, [], 'Select City');
         document.getElementById('fZone').value          = 'A';
         document.getElementById('fServiceable').checked = true;
     });

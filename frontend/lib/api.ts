@@ -97,33 +97,52 @@ export interface ApiAddress {
   is_default: boolean;
 }
 
+export interface ApiAddressMutationResult {
+  success: boolean;
+  address?: ApiAddress;
+  message?: string;
+  errors?: Record<string, string[]>;
+}
+
 export interface ApiOrder {
   id: number;
+  slug: string;
   order_number: string;
   status: "pending" | "processing" | "shipped" | "delivered" | "cancelled";
   total: number;
+  final_total: number;
   subtotal: number;
   shipping_charge: number;
+  delivery_charge: number;
   discount?: number;
   gst_amount?: number;
+  promo_discount?: number;
+  gift_card_discount?: number;
+  currency_code?: string;
+  payment_method?: string;
+  payment_status?: string;
   created_at: string;
   updated_at: string;
   items: ApiOrderItem[];
   address?: ApiAddress;
-  payment_method?: string;
-  transaction_id?: string;
   tracking?: ApiTrackingStep[];
 }
 
 export interface ApiOrderItem {
   id: number;
   product_id: number;
+  // product_name is mapped from title or product.name
   product_name: string;
   product_slug: string;
   variant_label?: string;
   quantity: number;
   price: number;
+  subtotal?: number;
+  status?: string;
   image?: string | null;
+  product?: { id: number; name: string; slug: string; image?: string | null };
+  variant?: { id: number; title: string; slug: string; image?: string | null };
+  store?: { id: number; name: string; slug: string };
 }
 
 export interface ApiTrackingStep {
@@ -154,12 +173,25 @@ export interface ApiShippingRate {
 export interface ApiCheckoutPayload {
   address_id: number;
   shipping_rate_id: number;
+  delivery_charge?: number;   // actual charge from selected shipping rate
   coupon_code?: string;
-  payment_method: "razorpay" | "cod";
+  payment_method: "razorpay" | "easepay" | "cod";
   razorpay_payment_id?: string;
   razorpay_order_id?: string;
   razorpay_signature?: string;
   items: { product_id: number; variant_id?: number; quantity: number }[];
+}
+
+// Backend field names (mapped from ApiCheckoutPayload)
+interface OrderApiPayload {
+  address_id: number;
+  payment_type: string;         // "razorpayPayment" | "cod"
+  promo_code?: string;
+  transaction_id?: string;      // razorpay_payment_id
+  razorpay_order_id?: string;
+  razorpay_signature?: string;
+  delivery_charge?: number;
+  shipping_rate_id?: number;
 }
 
 export interface ApiRazorpayOrder {
@@ -169,11 +201,35 @@ export interface ApiRazorpayOrder {
   key: string;              // Razorpay public key
 }
 
+export interface ApiEasepayOrder {
+  txnid: string;
+  access_key: string;
+  payment_url: string;
+}
+
+export interface ApiPaymentSettings {
+  razorpayEnabled: boolean;
+  easepayEnabled: boolean;
+  codEnabled: boolean;
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function getToken(): string | null {
   if (typeof window === "undefined") return null;
   return localStorage.getItem(LS_TOKEN_KEY);
+}
+
+function normalizeMediaUrl(src?: string | null): string | null {
+  if (!src) return null;
+  const trimmed = String(src).trim();
+  if (!trimmed) return null;
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+
+  const base = API_BASE.replace(/\/+$/, "");
+  if (trimmed.startsWith("/")) return `${base}${trimmed}`;
+  if (trimmed.startsWith("storage/") || trimmed.startsWith("uploads/")) return `${base}/${trimmed}`;
+  return `${base}/storage/${trimmed}`;
 }
 
 async function apiFetch<T>(path: string, options?: RequestInit): Promise<T | null> {
@@ -214,17 +270,110 @@ async function apiAuth<T>(
   }
 }
 
+// ─── Real API Product types (actual response shape from the backend) ──────────
+
+export interface RealApiStorePricing {
+  store_id: number;
+  store_name: string;
+  store_slug: string;
+  sku: string;
+  price: number;
+  special_price: number;
+  cost: string;
+  stock: number;
+  stock_status: "in_stock" | "out_of_stock";
+  gst: {
+    taxable_amount: number;
+    gst_rate: number;
+    gst_type: "intra" | "inter" | string;
+    cgst_rate: number;
+    cgst_amount: number;
+    sgst_rate: number;
+    sgst_amount: number;
+    igst_rate: number;
+    igst_amount: number;
+    total_tax_amount: number;
+    total_amount: number;
+  };
+}
+
+export interface RealApiVariant {
+  id: number;
+  title: string;
+  slug: string;
+  image: string;
+  barcode: string;
+  is_default: boolean;
+  availability: boolean;
+  weight: number | null;
+  weight_unit: string;
+  breadth: number | null;
+  breadth_unit: string;
+  length: number | null;
+  length_unit: string;
+  attributes: Record<string, string>;
+  store_pricing: RealApiStorePricing[];
+}
+
+export interface RealApiProduct {
+  id: number;
+  uuid: string;
+  title: string;
+  slug: string;
+  type: "simple" | "variant";
+  status: string;
+  featured: string;        // "1" | "0"
+  description: string;
+  short_description: string;
+  tags: string[];
+  images: {
+    main_image: string;
+    additional_images: string[];
+    variant_images: string[];
+    all: string[];
+  };
+  features: {
+    made_in?: string;
+  };
+  policies: {
+    minimum_order_quantity: number;
+    is_returnable: boolean;
+    is_cancelable: boolean;
+  };
+  tax: {
+    gst_rate: string;
+    hsn_code: string;
+    is_inclusive_tax: boolean;
+  };
+  currency?: {
+    symbol: string;
+    code: string;
+  };
+  variants: RealApiVariant[];
+}
+
 // ─── API calls ────────────────────────────────────────────────────────────────
 
-export async function getProducts(): Promise<ApiProduct[]> {
-  const res = await apiFetch<ApiResponse<ApiProduct[]> | ApiProduct[] | PaginatedResponse<ApiProduct>>(
-    "/api/products/store-wise"
+export async function getProducts(params?: Record<string, string>): Promise<RealApiProduct[]> {
+  const query = params ? "?" + new URLSearchParams(params).toString() : "";
+  const res = await apiFetch<{ success: boolean; data: { data: RealApiProduct[] } | RealApiProduct[] }>(
+    `/api/products${query}`
   );
   if (!res) return [];
-  if (Array.isArray(res)) return res;
   if ("data" in res) {
-    if (Array.isArray(res.data)) return res.data;
+    const d = res.data;
+    if (Array.isArray(d)) return d;
+    if (d && "data" in d && Array.isArray(d.data)) return d.data;
   }
+  return [];
+}
+
+export async function getFeaturedProducts(): Promise<RealApiProduct[]> {
+  const res = await apiFetch<{ success: boolean; data: RealApiProduct[] }>(
+    "/api/products/featured"
+  );
+  if (!res) return [];
+  if ("data" in res && Array.isArray(res.data)) return res.data;
   return [];
 }
 
@@ -238,14 +387,13 @@ export async function searchProducts(keywords: string): Promise<ApiProduct[]> {
   return [];
 }
 
-export async function getProduct(slug: string): Promise<ApiProduct | null> {
-  const res = await apiFetch<ApiResponse<ApiProduct> | ApiProduct>(
-    `/api/products/${slug}`
+export async function getProduct(slug: string, customerStateCode?: string): Promise<RealApiProduct | null> {
+  const params = customerStateCode ? `?customer_state_code=${encodeURIComponent(customerStateCode)}` : "";
+  const res = await apiFetch<{ success: boolean; data: RealApiProduct }>(
+    `/api/products/${slug}${params}`
   );
   if (!res) return null;
-  if ("data" in res && typeof res.data === "object" && "id" in (res.data as object))
-    return res.data as ApiProduct;
-  if ("id" in (res as object)) return res as ApiProduct;
+  if ("data" in res && res.data && "id" in (res.data as object)) return res.data;
   return null;
 }
 
@@ -477,25 +625,148 @@ export async function updateProfile(
 export async function getAddresses(): Promise<ApiAddress[]> {
   const res = await apiAuth<ApiResponse<ApiAddress[]> | ApiAddress[]>("/api/addresses");
   if (!res) return [];
-  if (Array.isArray(res)) return res;
-  if ("data" in res && Array.isArray(res.data)) return res.data;
+  const normalize = (addr: Record<string, unknown>): ApiAddress => ({
+    id: Number(addr.id),
+    name: String(addr.name ?? ""),
+    phone: String(addr.phone ?? addr.mobile ?? ""),
+    address_line1: String(addr.address_line1 ?? ""),
+    address_line2: (addr.address_line2 as string | undefined) ?? "",
+    city: String(addr.city ?? ""),
+    state: String(addr.state ?? ""),
+    pincode: String(addr.pincode ?? addr.zipcode ?? ""),
+    is_default: Boolean(addr.is_default),
+  });
+
+  if (Array.isArray(res)) {
+    return res.map((a) => normalize(a as unknown as Record<string, unknown>));
+  }
+
+  if ("data" in res) {
+    // Shape A: { data: [...] }
+    if (Array.isArray(res.data)) {
+      return res.data.map((a) => normalize(a as unknown as Record<string, unknown>));
+    }
+
+    // Shape B (paginated): { data: { data: [...], current_page, ... } }
+    if (
+      res.data &&
+      typeof res.data === "object" &&
+      "data" in (res.data as Record<string, unknown>) &&
+      Array.isArray((res.data as Record<string, unknown>).data)
+    ) {
+      const nested = (res.data as { data: unknown[] }).data;
+      return nested.map((a) => normalize(a as Record<string, unknown>));
+    }
+  }
+
   return [];
 }
 
 export async function createAddress(
   data: Omit<ApiAddress, "id" | "is_default">
 ): Promise<ApiAddress | null> {
-  const res = await apiAuth<ApiResponse<ApiAddress>>("/api/addresses", "POST", data);
-  if (res && "data" in res) return res.data;
-  return null;
+  const result = await createAddressDetailed(data);
+  return result.success ? result.address ?? null : null;
+}
+
+export async function createAddressDetailed(
+  data: Omit<ApiAddress, "id" | "is_default">
+): Promise<ApiAddressMutationResult> {
+  const token = getToken();
+
+  // Backend expects mobile/zipcode/country/country_code.
+  const payload = {
+    name: data.name,
+    address_line1: data.address_line1,
+    address_line2: data.address_line2,
+    city: data.city,
+    state: data.state,
+    zipcode: data.pincode,
+    mobile: data.phone,
+    country: "India",
+    country_code: "IN",
+    address_type: "home",
+  };
+
+  try {
+    const res = await fetch(`${API_BASE}/api/addresses`, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      cache: "no-store",
+      body: JSON.stringify(payload),
+    });
+
+    const json = (await res.json().catch(() => null)) as
+      | { success?: boolean; message?: string; data?: Record<string, unknown> | Record<string, string[]> }
+      | null;
+
+    if (res.ok && json?.data && !Array.isArray(json.data)) {
+      const raw = json.data as Record<string, unknown>;
+      return {
+        success: true,
+        address: {
+          id: Number(raw.id),
+          name: String(raw.name ?? ""),
+          phone: String(raw.phone ?? raw.mobile ?? ""),
+          address_line1: String(raw.address_line1 ?? ""),
+          address_line2: (raw.address_line2 as string | undefined) ?? "",
+          city: String(raw.city ?? ""),
+          state: String(raw.state ?? ""),
+          pincode: String(raw.pincode ?? raw.zipcode ?? ""),
+          is_default: Boolean(raw.is_default),
+        },
+        message: json.message,
+      };
+    }
+
+    return {
+      success: false,
+      message: json?.message ?? "Failed to save address.",
+      errors:
+        json?.data && !Array.isArray(json.data)
+          ? (json.data as Record<string, string[]>)
+          : undefined,
+    };
+  } catch {
+    return { success: false, message: "Request failed. Please try again." };
+  }
 }
 
 export async function updateAddress(
   id: number,
   data: Partial<Omit<ApiAddress, "id">>
 ): Promise<ApiAddress | null> {
-  const res = await apiAuth<ApiResponse<ApiAddress>>(`/api/addresses/${id}`, "PUT", data);
-  if (res && "data" in res) return res.data;
+  const payload = {
+    ...(data.name !== undefined ? { name: data.name } : {}),
+    ...(data.address_line1 !== undefined ? { address_line1: data.address_line1 } : {}),
+    ...(data.address_line2 !== undefined ? { address_line2: data.address_line2 } : {}),
+    ...(data.city !== undefined ? { city: data.city } : {}),
+    ...(data.state !== undefined ? { state: data.state } : {}),
+    ...(data.pincode !== undefined ? { zipcode: data.pincode } : {}),
+    ...(data.phone !== undefined ? { mobile: data.phone } : {}),
+    ...(data.is_default !== undefined ? { is_default: data.is_default } : {}),
+    country: "India",
+    country_code: "IN",
+  };
+  const res = await apiAuth<ApiResponse<Record<string, unknown>>>(`/api/addresses/${id}`, "PUT", payload);
+  if (res && "data" in res && res.data) {
+    const raw = res.data;
+    return {
+      id: Number(raw.id),
+      name: String(raw.name ?? ""),
+      phone: String(raw.phone ?? raw.mobile ?? ""),
+      address_line1: String(raw.address_line1 ?? ""),
+      address_line2: (raw.address_line2 as string | undefined) ?? "",
+      city: String(raw.city ?? ""),
+      state: String(raw.state ?? ""),
+      pincode: String(raw.pincode ?? raw.zipcode ?? ""),
+      is_default: Boolean(raw.is_default),
+    };
+  }
   return null;
 }
 
@@ -506,17 +777,56 @@ export async function deleteAddress(id: number): Promise<boolean> {
 
 // ─── Orders ───────────────────────────────────────────────────────────────────
 
-export async function getOrders(): Promise<ApiOrder[]> {
-  const res = await apiAuth<ApiResponse<ApiOrder[]> | PaginatedResponse<ApiOrder>>("/api/orders");
-  if (!res) return [];
-  if ("data" in res && Array.isArray(res.data)) return res.data;
-  return [];
+function normalizeOrder(raw: Record<string, unknown>): ApiOrder {
+  const items = ((raw.items ?? []) as Record<string, unknown>[]).map((item) => ({
+    ...(item as object),
+    product_name:
+      (item.title as string) ??
+      ((item.product as Record<string, unknown>)?.name as string) ??
+      "Unknown",
+    product_slug:
+      ((item.product as Record<string, unknown>)?.slug as string) ?? "",
+    variant_label:
+      (item.variant_title as string) ??
+      ((item.variant as Record<string, unknown>)?.title as string) ??
+      undefined,
+    image:
+      normalizeMediaUrl(
+        (item.image as string) ??
+        ((item.variant as Record<string, unknown>)?.image as string) ??
+        ((item.product as Record<string, unknown>)?.image as string) ??
+        null
+      ),
+  })) as ApiOrderItem[];
+
+  return {
+    ...(raw as object),
+    order_number: (raw.slug as string) ?? String(raw.id),
+    total: parseFloat(String(raw.final_total ?? raw.total_payable ?? 0)),
+    shipping_charge: parseFloat(String(raw.delivery_charge ?? 0)),
+    items,
+  } as ApiOrder;
 }
 
 export async function getOrder(id: number | string): Promise<ApiOrder | null> {
-  const res = await apiAuth<ApiResponse<ApiOrder>>(`/api/orders/${id}`);
-  if (res && "data" in res) return res.data;
-  return null;
+  const res = await apiAuth<{ success: boolean; data: Record<string, unknown> | unknown[]; message?: string }>(
+    `/api/user/orders/${id}`
+  );
+
+  if (!res?.success) return null;
+  if (!res.data || Array.isArray(res.data) || typeof res.data !== "object") return null;
+
+  return normalizeOrder(res.data as Record<string, unknown>);
+}
+
+export async function getOrders(): Promise<ApiOrder[]> {
+  const res = await apiAuth<{ success: boolean; data: { data: Record<string, unknown>[] } }>(
+    "/api/user/orders"
+  );
+  if (!res?.success) return [];
+  const rows = res?.data?.data;
+  if (!Array.isArray(rows)) return [];
+  return rows.map(normalizeOrder);
 }
 
 export async function trackOrder(
@@ -550,19 +860,41 @@ export async function applyCoupon(
 
 export async function getShippingRates(
   pincode: string,
-  cartTotal: number
+  cartTotal: number,
+  weightGrams?: number
 ): Promise<ApiShippingRate[]> {
-  const res = await apiFetch<ApiResponse<ApiShippingRate[]> | ApiShippingRate[]>(
+  const body: Record<string, unknown> = { pincode, cart_total: cartTotal };
+  if (weightGrams != null && weightGrams > 0) body.weight = String(weightGrams);
+  const res = await apiFetch<ApiResponse<Record<string, unknown>> | ApiShippingRate[]>(
     "/api/shipping/rates",
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ pincode, cart_total: cartTotal }),
+      body: JSON.stringify(body),
     }
   );
   if (!res) return [];
+
+  // Legacy: data is already a flat array of ApiShippingRate
   if (Array.isArray(res)) return res;
-  if ("data" in res && Array.isArray(res.data)) return res.data;
+
+  // Current API shape: { success, data: { rates: [...], delivery_time, ... } }
+  if ("data" in res && res.data && typeof res.data === "object" && !Array.isArray(res.data)) {
+    const data = res.data as Record<string, unknown>;
+    const deliveryTime = String(data.delivery_time ?? "");
+    const rates = Array.isArray(data.rates) ? data.rates : [];
+    return rates.map((r: Record<string, unknown>) => ({
+      id: Number(r.delivery_partner_id ?? 0),
+      label: String(r.delivery_partner ?? ""),
+      charge: Number(r.total ?? 0),
+      estimated_days: deliveryTime,
+      is_free: Number(r.total ?? 0) === 0,
+    }));
+  }
+
+  // Fallback: data is already a flat array
+  if ("data" in res && Array.isArray(res.data)) return res.data as ApiShippingRate[];
+
   return [];
 }
 
@@ -572,7 +904,7 @@ export async function createRazorpayOrder(
   amount: number
 ): Promise<ApiRazorpayOrder | null> {
   const res = await apiAuth<ApiResponse<ApiRazorpayOrder>>(
-    "/api/payments/razorpay/create",
+    "/api/razorpay/create-order",
     "POST",
     { amount }
   );
@@ -585,24 +917,261 @@ export async function verifyRazorpayPayment(data: {
   razorpay_order_id: string;
   razorpay_signature: string;
 }): Promise<{ success: boolean; message?: string }> {
-  const res = await apiAuth<{ success: boolean; message?: string }>(
-    "/api/payments/razorpay/verify",
+  console.log("[verifyRazorpayPayment] sending:", data);
+  const token = getToken();
+  try {
+    const res = await fetch(`${API_BASE}/api/razorpay/verify-payment`, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      cache: "no-store",
+      body: JSON.stringify(data),
+    });
+    const body = await res.json();
+    console.log("[verifyRazorpayPayment] HTTP", res.status, body);
+    if (!res.ok) return { success: false, message: (body as { message?: string })?.message ?? `HTTP ${res.status}` };
+    return body as { success: boolean; message?: string };
+  } catch (err) {
+    console.error("[verifyRazorpayPayment] fetch error:", err);
+    return { success: false, message: "Network error during verification." };
+  }
+}
+
+export async function createEasepayOrder(
+  orderId: number,
+  amount: number
+): Promise<ApiEasepayOrder | null> {
+  const res = await apiAuth<ApiResponse<ApiEasepayOrder>>(
+    "/api/easepay/create-order",
     "POST",
-    data
+    { order_id: orderId, amount }
   );
-  return res ?? { success: false };
+  if (res && "data" in res) return res.data;
+  return null;
+}
+
+export async function getPaymentSettings(): Promise<ApiPaymentSettings> {
+  const fallback: ApiPaymentSettings = {
+    razorpayEnabled: true,
+    easepayEnabled: false,
+    codEnabled: true,
+  };
+
+  const res = await apiFetch<{
+    success?: boolean;
+    data?: { value?: Record<string, unknown> } | Record<string, unknown>;
+  }>("/api/settings/payment");
+
+  if (!res || !res.success || !res.data) return fallback;
+
+  const setting = ("value" in res.data ? res.data.value : res.data) as Record<string, unknown> | undefined;
+  if (!setting) return fallback;
+
+  return {
+    razorpayEnabled: Boolean(setting.razorpayPayment),
+    easepayEnabled: Boolean(setting.easepayPayment),
+    codEnabled: Boolean(setting.cod),
+  };
+}
+
+// ─── Server Cart API ──────────────────────────────────────────────────────────
+
+export async function serverCartAdd(
+  variantId: number,
+  storeId: number,
+  quantity: number
+): Promise<number | null> {
+  const token = getToken();
+  console.log("[serverCartAdd] token present:", !!token, "variantId:", variantId, "storeId:", storeId, "qty:", quantity);
+  if (!token) { console.warn("[serverCartAdd] no token, skipping"); return null; }
+  try {
+    const res = await fetch(`${API_BASE}/api/user/cart/add`, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      cache: "no-store",
+      body: JSON.stringify({ product_variant_id: variantId, store_id: storeId, quantity }),
+    });
+    const body = await res.json();
+    console.log("[serverCartAdd] HTTP", res.status, JSON.stringify(body));
+    if (!res.ok) return null;
+    const typed = body as { success?: boolean; data?: { items?: { id: number; product_variant_id: number; store_id: number }[] } };
+    if (!typed.success || !typed.data?.items) {
+      console.warn("[serverCartAdd] unexpected body shape:", body);
+      return null;
+    }
+    const item = typed.data.items.find(
+      (i) => i.product_variant_id === variantId && i.store_id === storeId
+    );
+    console.log("[serverCartAdd] matched item:", item);
+    return item?.id ?? null;
+  } catch (err) {
+    console.error("[serverCartAdd] fetch error:", err);
+    return null;
+  }
+}
+
+export async function serverCartUpdateQty(
+  cartItemId: number,
+  quantity: number
+): Promise<boolean> {
+  const token = getToken();
+  if (!token) return false;
+  try {
+    const res = await fetch(`${API_BASE}/api/user/cart/item/${cartItemId}`, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      cache: "no-store",
+      body: JSON.stringify({ quantity }),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+export async function serverCartRemove(cartItemId: number): Promise<boolean> {
+  const token = getToken();
+  if (!token) return false;
+  try {
+    const res = await fetch(`${API_BASE}/api/user/cart/item/${cartItemId}`, {
+      method: "DELETE",
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      cache: "no-store",
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+export async function serverCartClear(): Promise<boolean> {
+  const token = getToken();
+  if (!token) return false;
+  try {
+    const res = await fetch(`${API_BASE}/api/user/cart/clear-cart`, {
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      cache: "no-store",
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+export async function syncCartToServer(
+  items: { variantId: number; storeId: number; quantity: number }[]
+): Promise<{ success: boolean; message?: string }> {
+  console.log("[syncCartToServer] items:", items);
+  const token = getToken();
+  try {
+    const res = await fetch(`${API_BASE}/api/user/cart/sync`, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      cache: "no-store",
+      body: JSON.stringify({
+        items: items.map((i) => ({
+          product_variant_id: i.variantId,
+          store_id:           i.storeId,
+          quantity:           i.quantity,
+        })),
+      }),
+    });
+    const body = await res.json() as { success?: boolean; message?: string };
+    console.log("[syncCartToServer] HTTP", res.status, body);
+    return { success: !!body.success, message: body.message };
+  } catch (err) {
+    console.error("[syncCartToServer] error:", err);
+    return { success: false, message: "Cart sync failed." };
+  }
 }
 
 export async function createCheckout(
   payload: ApiCheckoutPayload
 ): Promise<{ success: boolean; order_id?: number; order_number?: string; message?: string }> {
-  const res = await apiAuth<{
-    success: boolean;
-    order_id?: number;
-    order_number?: string;
-    message?: string;
-  }>("/api/checkout", "POST", payload);
-  return res ?? { success: false, message: "Checkout failed" };
+  // Map frontend field names → backend field names
+  const mapped: OrderApiPayload = {
+    address_id:          payload.address_id,
+    payment_type:
+      payload.payment_method === "razorpay"
+        ? "razorpayPayment"
+        : payload.payment_method === "easepay"
+          ? "easepayPayment"
+          : "cod",
+    ...(payload.coupon_code          ? { promo_code: payload.coupon_code }                : {}),
+    ...(payload.razorpay_payment_id  ? { transaction_id: payload.razorpay_payment_id }    : {}),
+    ...(payload.razorpay_order_id    ? { razorpay_order_id: payload.razorpay_order_id }   : {}),
+    ...(payload.razorpay_signature   ? { razorpay_signature: payload.razorpay_signature } : {}),
+    ...(payload.delivery_charge !== undefined ? { delivery_charge: payload.delivery_charge } : {}),
+    ...(payload.shipping_rate_id     ? { shipping_rate_id: payload.shipping_rate_id }     : {}),
+  };
+
+  console.group("[createCheckout]");
+  console.log("original payload:", payload);
+  console.log("mapped to backend:", mapped);
+
+  const token = getToken();
+  console.log("auth token present:", !!token);
+
+  let httpStatus = 0;
+  let rawBody: unknown = null;
+  try {
+    const res = await fetch(`${API_BASE}/api/user/orders`, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      cache: "no-store",
+      body: JSON.stringify(mapped),
+    });
+    httpStatus = res.status;
+    rawBody = await res.json();
+    console.log("HTTP status:", httpStatus);
+    console.log("raw response:", rawBody);
+    console.groupEnd();
+
+    if (!res.ok) {
+      const msg = (rawBody as { message?: string })?.message ?? `HTTP ${httpStatus}`;
+      return { success: false, message: msg };
+    }
+
+    const data = rawBody as { success?: boolean; message?: string; data?: { id?: number; order_number?: string } };
+    if (data.success && data.data) {
+      return {
+        success: true,
+        order_id:     data.data.id,
+        order_number: data.data.order_number,
+        message:      data.message,
+      };
+    }
+    return { success: false, message: data.message ?? "Order placement failed." };
+  } catch (err) {
+    console.error("createCheckout fetch error:", err);
+    console.groupEnd();
+    return { success: false, message: "Network error. Please try again." };
+  }
 }
 
 // ─── Wishlist (server-side sync) ──────────────────────────────────────────────
@@ -616,6 +1185,159 @@ export async function syncWishlist(
     { product_ids: productIds }
   );
   return res ?? { success: false };
+}
+
+export interface AddToWishlistPayload {
+  product_id: number;
+  store_id: number;
+  product_variant_id?: number | null;
+  wishlist_title?: string;
+}
+
+export async function addToWishlist(
+  payload: AddToWishlistPayload
+): Promise<{ success: boolean; message: string }> {
+  const token = getToken();
+  if (!token) {
+    return { success: false, message: "Please login to add wishlist items." };
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/api/user/wishlists`, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      cache: "no-store",
+      body: JSON.stringify(payload),
+    });
+
+    const body = (await res.json()) as { success?: boolean; message?: string };
+    return {
+      success: !!body.success,
+      message: body.message ?? (res.ok ? "Wishlist updated." : "Failed to update wishlist."),
+    };
+  } catch {
+    return { success: false, message: "Network error while updating wishlist." };
+  }
+}
+
+export async function getWishlistSummary(): Promise<{ total_wishlists: number; total_items: number } | null> {
+  const token = getToken();
+  if (!token) return null;
+
+  try {
+    const res = await fetch(`${API_BASE}/api/user/wishlists/summary`, {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      cache: "no-store",
+    });
+
+    const body = (await res.json()) as {
+      success?: boolean;
+      data?: { total_wishlists?: number; total_items?: number };
+    };
+    if (!res.ok || !body.success || !body.data) return null;
+    return {
+      total_wishlists: Number(body.data.total_wishlists ?? 0),
+      total_items: Number(body.data.total_items ?? 0),
+    };
+  } catch {
+    return null;
+  }
+}
+
+export interface ApiWishlistItemRecord {
+  id: number;
+  wishlist_id: number;
+  product: {
+    id: number;
+    title: string;
+    slug: string;
+    image?: string | null;
+  } | null;
+  variant?: {
+    id: number;
+    price?: number | null;
+    special_price?: number | null;
+  } | null;
+}
+
+export async function getWishlistItems(): Promise<ApiWishlistItemRecord[]> {
+  const token = getToken();
+  if (!token) return [];
+
+  try {
+    const res = await fetch(`${API_BASE}/api/user/wishlists`, {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      cache: "no-store",
+    });
+    const body = (await res.json()) as {
+      success?: boolean;
+      data?: { data?: Array<{ items?: ApiWishlistItemRecord[] }> } | Array<{ items?: ApiWishlistItemRecord[] }>;
+    };
+    if (!res.ok || !body.success || !body.data) return [];
+
+    const wishlistRows = Array.isArray(body.data) ? body.data : (body.data.data ?? []);
+    return wishlistRows.flatMap((w) => w.items ?? []);
+  } catch {
+    return [];
+  }
+}
+
+export async function removeWishlistItem(itemId: number): Promise<{ success: boolean; message: string }> {
+  const token = getToken();
+  if (!token) return { success: false, message: "Please login first." };
+
+  try {
+    const res = await fetch(`${API_BASE}/api/user/wishlists/items/${itemId}`, {
+      method: "DELETE",
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      cache: "no-store",
+    });
+    const body = (await res.json()) as { success?: boolean; message?: string };
+    return {
+      success: !!body.success,
+      message: body.message ?? (res.ok ? "Removed from wishlist." : "Failed to remove item."),
+    };
+  } catch {
+    return { success: false, message: "Network error while deleting wishlist item." };
+  }
+}
+
+export async function clearAllWishlistItems(): Promise<{ success: boolean; message: string }> {
+  const token = getToken();
+  if (!token) return { success: false, message: "Please login first." };
+
+  try {
+    const res = await fetch(`${API_BASE}/api/user/wishlists/items`, {
+      method: "DELETE",
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      cache: "no-store",
+    });
+    const body = (await res.json()) as { success?: boolean; message?: string };
+    return {
+      success: !!body.success,
+      message: body.message ?? (res.ok ? "Wishlist cleared." : "Failed to clear wishlist."),
+    };
+  } catch {
+    return { success: false, message: "Network error while clearing wishlist." };
+  }
 }
 
 // ─── Hero Section ─────────────────────────────────────────────────────────────

@@ -18,6 +18,21 @@
     ];
 @endphp
 
+@php
+    $isUnlocked = (bool) ($paymentSettingsUnlocked ?? false);
+    $maskValue = static function (?string $value): string {
+        $value = trim((string) $value);
+        if ($value === '') {
+            return '';
+        }
+        $length = strlen($value);
+        if ($length <= 6) {
+            return str_repeat('•', $length);
+        }
+        return substr($value, 0, 3) . str_repeat('•', max(0, $length - 6)) . substr($value, -3);
+    };
+@endphp
+
 @section('admin-content')
     <div class="page-header d-print-none">
         <div class="row g-2 align-items-center">
@@ -48,6 +63,26 @@
                                 @csrf
                                 <input type="hidden" name="type" value="payment">
 
+                                <div class="card mb-4 border-{{ $isUnlocked ? 'green' : 'orange' }}">
+                                    <div class="card-body d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                        <div>
+                                            <h4 class="card-title mb-1">Sensitive Payment Credentials</h4>
+                                            @if($isUnlocked)
+                                                <p class="text-muted mb-0">Editing is temporarily unlocked for {{ $paymentUnlockTtlMinutes ?? 10 }} minutes.</p>
+                                            @else
+                                                <p class="text-muted mb-0">Credentials are masked and locked by default. Verify password + authenticator code to edit.</p>
+                                            @endif
+                                        </div>
+                                        <div class="d-flex gap-2">
+                                            @if($isUnlocked)
+                                                <button type="button" class="btn btn-outline-danger" id="payment-lock-btn">Lock Now</button>
+                                            @else
+                                                <button type="button" class="btn btn-primary" id="payment-unlock-btn">Unlock to Edit</button>
+                                            @endif
+                                        </div>
+                                    </div>
+                                </div>
+
                                 {{-- ============================================================ --}}
                                 {{-- Razorpay --}}
                                 {{-- ============================================================ --}}
@@ -71,7 +106,7 @@
                                              style="{{ isset($settings['razorpayPayment']) && $settings['razorpayPayment'] ? 'display: block;' : 'display: none;' }}">
                                             <div class="mb-3">
                                                 <label class="form-label required">{{ __('labels.razorpay_payment_mode') }}</label>
-                                                <select class="form-select" name="razorpayPaymentMode">
+                                                <select class="form-select sensitive-field" name="razorpayPaymentMode">
                                                     <option value="" disabled {{ !isset($settings['razorpayPaymentMode']) ? 'selected' : '' }}>{{ __('labels.razorpay_payment_mode_placeholder') }}</option>
                                                     <option value="test" {{ isset($settings['razorpayPaymentMode']) && $settings['razorpayPaymentMode'] === 'test' ? 'selected' : '' }}>Test</option>
                                                     <option value="live" {{ isset($settings['razorpayPaymentMode']) && $settings['razorpayPaymentMode'] === 'live' ? 'selected' : '' }}>Live</option>
@@ -79,21 +114,48 @@
                                             </div>
                                             <div class="mb-3">
                                                 <label class="form-label required">{{ __('labels.razorpay_key_id') }}</label>
-                                                <input type="text" class="form-control" name="razorpayKeyId"
-                                                       placeholder="{{ __('labels.razorpay_key_id_placeholder') }}"
-                                                       value="{{ $settings['razorpayKeyId'] ?? '' }}"/>
+                                                <div class="input-group">
+                                                    <input type="password" class="form-control sensitive-field revealable-field" id="razorpayKeyId" name="razorpayKeyId"
+                                                           placeholder="{{ __('labels.razorpay_key_id_placeholder') }}"
+                                                           value="{{ $isUnlocked ? ($settings['razorpayKeyId'] ?? '') : $maskValue($settings['razorpayKeyId'] ?? '') }}"/>
+                                                    <button class="btn btn-outline-secondary toggle-visibility-btn" type="button" data-target="#razorpayKeyId" title="Show/Hide">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-eye" width="18" height="18" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                                            <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                                                            <path d="M12 12m-2 0a2 2 0 1 0 4 0a2 2 0 0 0 -4 0"/>
+                                                            <path d="M22 12c-2.5 4 -5.5 6 -10 6s-7.5 -2 -10 -6c2.5 -4 5.5 -6 10 -6s7.5 2 10 6"/>
+                                                        </svg>
+                                                    </button>
+                                                </div>
                                             </div>
                                             <div class="mb-3">
                                                 <label class="form-label required">{{ __('labels.razorpay_secret_key') }}</label>
-                                                <input type="text" class="form-control" name="razorpaySecretKey"
-                                                       placeholder="{{ __('labels.razorpay_secret_key_placeholder') }}"
-                                                       value="{{ ($systemSettings['demoMode'] ?? false) ? Str::mask(($settings['razorpaySecretKey'] ?? '****'), '****', 3, 8) : ($settings['razorpaySecretKey'] ?? '') }}"/>
+                                                <div class="input-group">
+                                                    <input type="password" class="form-control sensitive-field revealable-field" id="razorpaySecretKey" name="razorpaySecretKey"
+                                                           placeholder="{{ __('labels.razorpay_secret_key_placeholder') }}"
+                                                           value="{{ $isUnlocked ? ($settings['razorpaySecretKey'] ?? '') : $maskValue($settings['razorpaySecretKey'] ?? '') }}"/>
+                                                    <button class="btn btn-outline-secondary toggle-visibility-btn" type="button" data-target="#razorpaySecretKey" title="Show/Hide">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-eye" width="18" height="18" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                                            <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                                                            <path d="M12 12m-2 0a2 2 0 1 0 4 0a2 2 0 0 0 -4 0"/>
+                                                            <path d="M22 12c-2.5 4 -5.5 6 -10 6s-7.5 -2 -10 -6c2.5 -4 5.5 -6 10 -6s7.5 2 10 6"/>
+                                                        </svg>
+                                                    </button>
+                                                </div>
                                             </div>
                                             <div class="mb-3">
                                                 <label class="form-label required">{{ __('labels.razorpay_webhook_secret') }}</label>
-                                                <input type="text" class="form-control" name="razorpayWebhookSecret"
-                                                       placeholder="{{ __('labels.razorpay_webhook_secret_placeholder') }}"
-                                                       value="{{ $settings['razorpayWebhookSecret'] ?? '' }}"/>
+                                                <div class="input-group">
+                                                    <input type="password" class="form-control sensitive-field revealable-field" id="razorpayWebhookSecret" name="razorpayWebhookSecret"
+                                                           placeholder="{{ __('labels.razorpay_webhook_secret_placeholder') }}"
+                                                           value="{{ $isUnlocked ? ($settings['razorpayWebhookSecret'] ?? '') : $maskValue($settings['razorpayWebhookSecret'] ?? '') }}"/>
+                                                    <button class="btn btn-outline-secondary toggle-visibility-btn" type="button" data-target="#razorpayWebhookSecret" title="Show/Hide">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-eye" width="18" height="18" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                                            <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                                                            <path d="M12 12m-2 0a2 2 0 1 0 4 0a2 2 0 0 0 -4 0"/>
+                                                            <path d="M22 12c-2.5 4 -5.5 6 -10 6s-7.5 -2 -10 -6c2.5 -4 5.5 -6 10 -6s7.5 2 10 6"/>
+                                                        </svg>
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -123,7 +185,7 @@
                                              style="{{ isset($settings['easepayPayment']) && $settings['easepayPayment'] ? 'display:block;' : 'display:none;' }}">
                                             <div class="mb-3">
                                                 <label class="form-label required">Payment Mode</label>
-                                                <select class="form-select" name="easepayPaymentMode">
+                                                <select class="form-select sensitive-field" name="easepayPaymentMode">
                                                     <option value="" disabled {{ !isset($settings['easepayPaymentMode']) ? 'selected' : '' }}>Select mode</option>
                                                     <option value="test" {{ ($settings['easepayPaymentMode'] ?? '') === 'test' ? 'selected' : '' }}>Test</option>
                                                     <option value="live" {{ ($settings['easepayPaymentMode'] ?? '') === 'live' ? 'selected' : '' }}>Live</option>
@@ -132,23 +194,50 @@
                                             </div>
                                             <div class="mb-3">
                                                 <label class="form-label required">Merchant Key</label>
-                                                <input type="text" class="form-control" name="easepayMerchantKey"
-                                                       placeholder="XXXXXXXXXX"
-                                                       value="{{ ($systemSettings['demoMode'] ?? false) ? \Illuminate\Support\Str::mask(($settings['easepayMerchantKey'] ?? ''), '*', 3) : ($settings['easepayMerchantKey'] ?? '') }}">
+                                                <div class="input-group">
+                                                    <input type="password" class="form-control sensitive-field revealable-field" id="easepayMerchantKey" name="easepayMerchantKey"
+                                                           placeholder="XXXXXXXXXX"
+                                                           value="{{ $isUnlocked ? ($settings['easepayMerchantKey'] ?? '') : $maskValue($settings['easepayMerchantKey'] ?? '') }}">
+                                                    <button class="btn btn-outline-secondary toggle-visibility-btn" type="button" data-target="#easepayMerchantKey" title="Show/Hide">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-eye" width="18" height="18" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                                            <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                                                            <path d="M12 12m-2 0a2 2 0 1 0 4 0a2 2 0 0 0 -4 0"/>
+                                                            <path d="M22 12c-2.5 4 -5.5 6 -10 6s-7.5 -2 -10 -6c2.5 -4 5.5 -6 10 -6s7.5 2 10 6"/>
+                                                        </svg>
+                                                    </button>
+                                                </div>
                                                 <small class="form-hint">Available in your Easebuzz merchant dashboard.</small>
                                             </div>
                                             <div class="mb-3">
                                                 <label class="form-label required">Merchant Salt</label>
-                                                <input type="password" class="form-control" name="easepayMerchantSalt"
-                                                       placeholder="••••••••••••••••"
-                                                       value="{{ ($systemSettings['demoMode'] ?? false) ? '' : ($settings['easepayMerchantSalt'] ?? '') }}">
+                                                <div class="input-group">
+                                                    <input type="password" class="form-control sensitive-field revealable-field" id="easepayMerchantSalt" name="easepayMerchantSalt"
+                                                           placeholder="••••••••••••••••"
+                                                           value="{{ $isUnlocked ? ($settings['easepayMerchantSalt'] ?? '') : $maskValue($settings['easepayMerchantSalt'] ?? '') }}">
+                                                    <button class="btn btn-outline-secondary toggle-visibility-btn" type="button" data-target="#easepayMerchantSalt" title="Show/Hide">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-eye" width="18" height="18" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                                            <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                                                            <path d="M12 12m-2 0a2 2 0 1 0 4 0a2 2 0 0 0 -4 0"/>
+                                                            <path d="M22 12c-2.5 4 -5.5 6 -10 6s-7.5 -2 -10 -6c2.5 -4 5.5 -6 10 -6s7.5 2 10 6"/>
+                                                        </svg>
+                                                    </button>
+                                                </div>
                                                 <small class="form-hint">Used to generate hash signatures for all API calls.</small>
                                             </div>
                                             <div class="mb-3">
                                                 <label class="form-label">Webhook Secret</label>
-                                                <input type="text" class="form-control" name="easepayWebhookSecret"
-                                                       placeholder="optional"
-                                                       value="{{ ($systemSettings['demoMode'] ?? false) ? '' : ($settings['easepayWebhookSecret'] ?? '') }}">
+                                                <div class="input-group">
+                                                    <input type="password" class="form-control sensitive-field revealable-field" id="easepayWebhookSecret" name="easepayWebhookSecret"
+                                                           placeholder="optional"
+                                                           value="{{ $isUnlocked ? ($settings['easepayWebhookSecret'] ?? '') : $maskValue($settings['easepayWebhookSecret'] ?? '') }}">
+                                                    <button class="btn btn-outline-secondary toggle-visibility-btn" type="button" data-target="#easepayWebhookSecret" title="Show/Hide">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-eye" width="18" height="18" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                                            <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                                                            <path d="M12 12m-2 0a2 2 0 1 0 4 0a2 2 0 0 0 -4 0"/>
+                                                            <path d="M22 12c-2.5 4 -5.5 6 -10 6s-7.5 -2 -10 -6c2.5 -4 5.5 -6 10 -6s7.5 2 10 6"/>
+                                                        </svg>
+                                                    </button>
+                                                </div>
                                                 <small class="form-hint">
                                                     Webhook URL: <code>{{ url('/api/easepay/webhook') }}</code>
                                                 </small>
@@ -184,7 +273,7 @@
                                     <div class="d-flex">
                                         @can('updateSetting', [\App\Models\Setting::class, 'payment'])
                                             <button type="submit"
-                                                    class="btn btn-primary ms-auto">{{ __('labels.submit') }}</button>
+                                                    class="btn btn-primary ms-auto" id="payment-submit-btn">{{ __('labels.submit') }}</button>
                                         @endcan
                                     </div>
                                 </div>
@@ -206,6 +295,12 @@
             const razorpayFields = document.getElementById('razorpayFields');
             const easepayToggle  = document.querySelector('input[name="easepayPayment"]');
             const easepayFields  = document.getElementById('easepayFields');
+            const sensitiveFields = document.querySelectorAll('.sensitive-field');
+            const visibilityButtons = document.querySelectorAll('.toggle-visibility-btn');
+            const paymentSubmitBtn = document.getElementById('payment-submit-btn');
+            const paymentUnlockBtn = document.getElementById('payment-unlock-btn');
+            const paymentLockBtn = document.getElementById('payment-lock-btn');
+            const unlocked = @json($isUnlocked);
 
             const toggleRazorpayFields = () => {
                 razorpayFields.style.display = razorpayToggle.checked ? 'block' : 'none';
@@ -213,9 +308,81 @@
             const toggleEasepayFields = () => {
                 easepayFields.style.display = easepayToggle.checked ? 'block' : 'none';
             };
+            const applyLockState = (isUnlockedState) => {
+                sensitiveFields.forEach((field) => {
+                    field.readOnly = !isUnlockedState && field.tagName !== 'SELECT';
+                    if (field.tagName === 'SELECT') {
+                        field.disabled = !isUnlockedState;
+                    }
+                });
+                if (razorpayToggle) {
+                    razorpayToggle.disabled = !isUnlockedState;
+                }
+                if (easepayToggle) {
+                    easepayToggle.disabled = !isUnlockedState;
+                }
+                if (paymentSubmitBtn) {
+                    paymentSubmitBtn.disabled = !isUnlockedState;
+                }
+            };
+
+            const unlockPaymentSettings = async () => {
+                const password = window.prompt('Enter your admin password');
+                if (!password) return;
+                const totp = window.prompt('Enter 6-digit authenticator code');
+                if (!totp) return;
+
+                const response = await fetch(@json(route('admin.settings.payment.unlock')), {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    },
+                    body: JSON.stringify({
+                        password: password,
+                        totp_code: totp
+                    })
+                });
+
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok || payload.success === false) {
+                    alert(payload.message || 'Failed to unlock payment settings.');
+                    return;
+                }
+                window.location.reload();
+            };
+
+            const lockPaymentSettings = async () => {
+                await fetch(@json(route('admin.settings.payment.lock')), {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    },
+                });
+                window.location.reload();
+            };
+
+            visibilityButtons.forEach((button) => {
+                button.addEventListener('click', () => {
+                    const selector = button.getAttribute('data-target');
+                    const input = selector ? document.querySelector(selector) : null;
+                    if (!input) return;
+                    input.type = input.type === 'password' ? 'text' : 'password';
+                });
+            });
 
             razorpayToggle.addEventListener('change', toggleRazorpayFields);
             easepayToggle.addEventListener('change', toggleEasepayFields);
+            if (paymentUnlockBtn) {
+                paymentUnlockBtn.addEventListener('click', unlockPaymentSettings);
+            }
+            if (paymentLockBtn) {
+                paymentLockBtn.addEventListener('click', lockPaymentSettings);
+            }
+            applyLockState(unlocked);
             toggleRazorpayFields();
             toggleEasepayFields();
         })();

@@ -72,9 +72,17 @@
                                         <div class="mb-3">
                                             <label
                                                 class="form-label required">{{ __('labels.system_timezone') }}</label>
-                                            <input type="text" class="form-control" name="systemTimezone"
-                                                   placeholder="{{ __('labels.system_timezone_placeholder') }}"
-                                                   value="{{$settings['systemTimezone'] ?? ''}}"/>
+                                            @php
+                                                $timezones = \DateTimeZone::listIdentifiers();
+                                                $selectedTimezone = $settings['systemTimezone'] ?? config('app.timezone', 'UTC');
+                                            @endphp
+                                            <select class="form-select" id="select-timezone" name="systemTimezone">
+                                                @foreach($timezones as $timezone)
+                                                    <option value="{{ $timezone }}" {{ $selectedTimezone === $timezone ? 'selected' : '' }}>
+                                                        {{ $timezone }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
                                         </div>
                                         <div class="mb-3">
                                             <label
@@ -493,12 +501,26 @@
     </div>
     <!-- END PAGE BODY -->
     <script>
-        const toggle = document.getElementById('referEarnToggle');
-        const fields = document.getElementById('referEarnFields');
-        const toggleFields = () => {
-            fields.style.display = toggle.checked ? 'block' : 'none';
-        };
-        toggle.addEventListener('change', toggleFields);
-        toggleFields(); // initial state
+        document.addEventListener('DOMContentLoaded', function () {
+            const timezoneSelect = document.getElementById('select-timezone');
+            if (timezoneSelect && window.TomSelect) {
+                new TomSelect(timezoneSelect, {
+                    create: false,
+                    maxOptions: 500,
+                    sortField: { field: 'text', direction: 'asc' },
+                    placeholder: 'Search timezone...'
+                });
+            }
+
+            const toggle = document.getElementById('referEarnToggle');
+            const fields = document.getElementById('referEarnFields');
+            if (toggle && fields) {
+                const toggleFields = () => {
+                    fields.style.display = toggle.checked ? 'block' : 'none';
+                };
+                toggle.addEventListener('change', toggleFields);
+                toggleFields();
+            }
+        });
     </script>
 @endsection

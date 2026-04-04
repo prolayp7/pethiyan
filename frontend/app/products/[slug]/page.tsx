@@ -14,10 +14,8 @@ import {
   jsonLd,
 } from "@/lib/structured-data";
 import Breadcrumb from "@/components/common/Breadcrumb";
-import ProductDetailClient from "./ProductDetailClient";
 import RelatedProducts from "@/components/product/RelatedProducts";
-
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://pethiyan.com";
+import ProductDetailIsland from "./ProductDetailIsland";
 
 // ─── Pre-render all known product slugs at build time ─────────────────────────
 
@@ -42,24 +40,26 @@ export async function generateMetadata({
 
   if (!product) return { title: "Product Not Found" };
 
-  const price = toNum(product.sale_price ?? product.price);
-  const image = product.thumbnail ?? product.images?.[0];
+  const firstVariant = product.variants?.[0];
+  const firstStorePricing = firstVariant?.store_pricing?.[0];
+  const price = toNum(firstStorePricing?.special_price ?? firstStorePricing?.price ?? 0);
+  const image = product.images?.main_image ?? product.images?.all?.[0];
+  const title = product.title ?? "Product";
+  const description =
+    product.short_description ??
+    `Buy ${title} online at Pethiyan. Premium packaging with GST invoice and fast shipping across India.`;
 
   return {
-    title: product.name,
-    description:
-      product.short_description ??
-      `Buy ${product.name} online at Pethiyan. Premium packaging with GST invoice and fast shipping across India.`,
+    title,
+    description,
     alternates: { canonical: `/products/${slug}` },
     openGraph: {
-      title: `${product.name} | Pethiyan`,
-      description:
-        product.short_description ??
-        `Buy ${product.name} online — GST invoice, fast delivery.`,
+      title: `${title} | Pethiyan`,
+      description,
       url: `/products/${slug}`,
       type: "website",
       ...(image
-        ? { images: [{ url: image, alt: product.name }] }
+        ? { images: [{ url: image, alt: title }] }
         : {}),
     },
     other: {
@@ -92,10 +92,13 @@ export default async function ProductPage({
   const bcSchema = breadcrumbSchema([
     { label: "Home", href: "/" },
     { label: "Shop", href: "/shop" },
-    ...(product.category
-      ? [{ label: product.category.name, href: `/category/${product.category.slug}` }]
+    ...((product as unknown as { category?: { name: string; slug: string } | null }).category
+      ? [{
+          label: (product as unknown as { category: { name: string } }).category.name,
+          href: `/category/${(product as unknown as { category: { slug: string } }).category.slug}`,
+        }]
       : []),
-    { label: product.name, href: `/products/${slug}` },
+    { label: product.title, href: `/products/${slug}` },
   ]);
 
   return (
@@ -111,20 +114,23 @@ export default async function ProductPage({
       <Breadcrumb
         items={[
           { label: "Shop", href: "/shop" },
-          ...(product.category
-            ? [{ label: product.category.name, href: `/category/${product.category.slug}` }]
+          ...((product as unknown as { category?: { name: string; slug: string } | null }).category
+            ? [{
+                label: (product as unknown as { category: { name: string } }).category.name,
+                href: `/category/${(product as unknown as { category: { slug: string } }).category.slug}`,
+              }]
             : []),
-          { label: product.name },
+          { label: product.title },
         ]}
       />
 
       {/* All interactive product UI */}
-      <ProductDetailClient product={product} reviews={reviews} faqs={faqs} />
+      <ProductDetailIsland product={product} reviews={reviews} faqs={faqs} />
 
       {/* Related products (server-fetched, same category) */}
-      {product.category && (
+      {(product as unknown as { category?: { slug: string } | null }).category && (
         <RelatedProducts
-          categorySlug={product.category.slug}
+          categorySlug={(product as unknown as { category: { slug: string } }).category.slug}
           currentProductId={product.id}
         />
       )}

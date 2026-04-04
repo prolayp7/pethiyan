@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Product;
 
+use App\Services\CurrencyService;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class ProductVariantResource extends JsonResource
@@ -34,6 +35,7 @@ class ProductVariantResource extends JsonResource
         }
 
         $cartItem = $this->isInUserCart();
+        $currency = app(CurrencyService::class);
 
         return [
             'id' => $this->id,
@@ -55,6 +57,8 @@ class ProductVariantResource extends JsonResource
             'store_name' => $this->storeProductVariants->first()->store->name ?? null,
             'stock' => $this->storeProductVariants->first()->stock ?? null,
             'sku' => $this->storeProductVariants->first()->sku ?? null,
+            'currency_symbol' => $currency->getSymbol(),
+            'currency_code' => $currency->getCode(),
             'attributes' => $attributes,
         ];
     }

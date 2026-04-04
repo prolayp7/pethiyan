@@ -23,6 +23,8 @@ class EmailSettingResource extends JsonResource
                 'email_demo_mode' => $this->value['email_demo_mode'] ?? false,
                 'smtpHost'        => $this->value['smtpHost']        ?? '',
                 'smtpPort'        => $this->value['smtpPort']        ?? '',
+                'smtpUsername'    => $this->value['smtpUsername']    ?? ($this->value['smtpEmail'] ?? ''),
+                'smtpFromEmail'   => $this->value['smtpFromEmail']   ?? ($this->value['smtpEmail'] ?? ''),
                 'smtpEmail'       => $this->value['smtpEmail']       ?? '',
                 'smtpEncryption'  => $this->value['smtpEncryption']  ?? '',
                 'smtpContentType' => $this->value['smtpContentType'] ?? '',

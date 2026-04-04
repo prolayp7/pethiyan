@@ -20,8 +20,10 @@ class NewOrderNotification
             $this->sendNotification(user: $customer, event: $event, sendTo: "customer");
         }
         foreach ($event->order['sellerOrders'] ?? [] as $sellerOrder) {
-            $seller = $sellerOrder->seller->user;
-            $this->sendNotification(user: $seller, event: $event, sendTo: "seller");
+            $seller = $sellerOrder->seller->user ?? null;
+            if ($seller) {
+                $this->sendNotification(user: $seller, event: $event, sendTo: "seller");
+            }
         }
     }
 

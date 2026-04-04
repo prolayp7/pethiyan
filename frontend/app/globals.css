@@ -51,6 +51,24 @@ html {
   -webkit-text-size-adjust: 100%;
 }
 
+/* Portal root — above app-root (z:0) because portal-root is z:99999 in body stacking context */
+#portal-root {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  pointer-events: none;
+}
+#portal-root > * {
+  pointer-events: auto;
+}
+
+/* App root — explicit isolated stacking context so nothing inside can exceed portal-root */
+#app-root {
+  isolation: isolate;
+  position: relative;
+  z-index: 0;
+}
+
 body {
   background: #ffffff;
   color: var(--foreground);

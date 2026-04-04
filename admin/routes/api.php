@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\BannerApiController;
 use App\Http\Controllers\Api\BrandApiController;
 use App\Http\Controllers\Api\CategoryApiController;
 use App\Http\Controllers\Api\DeliveryZoneApiController;
+use App\Http\Controllers\Api\ShippingRateApiController;
 use App\Http\Controllers\Api\FaqApiController;
 use App\Http\Controllers\Api\FeaturedSectionApiController;
 use App\Http\Controllers\Api\PaymentController;
@@ -40,6 +41,9 @@ include_once("seller-api.php");
 // Hero Section (public — consumed by Next.js frontend)
 Route::get('hero-section', [HeroSectionApiController::class, 'index'])->name('hero-section.index');
 
+// Shipping Rates (public)
+Route::post('shipping/rates', [ShippingRateApiController::class, 'index'])->name('shipping.rates');
+
 // User Auth Routes
 Route::post('register', [AuthApiController::class, 'register'])->name('register');
 Route::post('login', [AuthApiController::class, 'login'])->name('login');
@@ -69,6 +73,9 @@ Route::middleware('auth:sanctum')->group(function () {
     //logout
     Route::post('logout', [AuthApiController::class, 'logout']);
 
+    // Backward-compatible user routes (legacy paths used by frontend clients)
+    Route::apiResource('/addresses', AddressApiController::class);
+
     // users routes
     Route::prefix('user')->name('user.')->group(function () {
         // delete user account
@@ -93,16 +100,20 @@ Route::middleware('auth:sanctum')->group(function () {
         // Wishlist routes
         Route::prefix('wishlists')->name('wishlists.')->group(function () {
             Route::get('/', [WishlistApiController::class, 'index']);
+            Route::get('/summary', [WishlistApiController::class, 'summary']);
             Route::get('/titles', [WishlistApiController::class, 'getTitles']);
             Route::post('/', [WishlistApiController::class, 'store']); // Combined create wishlist and add item
             Route::post('/create', [WishlistApiController::class, 'createWishlist']); // Create wishlist only
+
+            // Wishlist items management
+            Route::delete('/items', [WishlistApiController::class, 'clearAllItems']);
+            Route::delete('/items/{itemId}', [WishlistApiController::class, 'removeItem']);
+            Route::put('/items/{itemId}/move', [WishlistApiController::class, 'moveItem']);
+
+            Route::delete('/{id}/items', [WishlistApiController::class, 'clearWishlistItems']);
             Route::get('/{id}', [WishlistApiController::class, 'show']);
             Route::put('/{id}', [WishlistApiController::class, 'update']);
             Route::delete('/{id}', [WishlistApiController::class, 'destroy']);
-
-            // Wishlist items management
-            Route::delete('/items/{itemId}', [WishlistApiController::class, 'removeItem']);
-            Route::put('/items/{itemId}/move', [WishlistApiController::class, 'moveItem']);
         });
 
         // Cart routes
@@ -225,7 +236,8 @@ Route::get('payment/variables', [PaymentController::class, 'paymentVariables']);
 
 // razorpay routes
 Route::prefix('razorpay')->group(function () {
-    Route::post('create-order', [RazorpayController::class, 'createOrder'])->middleware('auth:sanctum');
+    Route::post('create-order',    [RazorpayController::class, 'createOrder'])->middleware('auth:sanctum');
+    Route::post('verify-payment',  [RazorpayController::class, 'verifyPaymentHttp'])->middleware('auth:sanctum');
 //    Route::get('payment/{paymentId}', [RazorpayController::class, 'getPaymentDetails']);
 });
 Route::post('/webhook/razorpay', [RazorpayController::class, 'handleWebhook']);

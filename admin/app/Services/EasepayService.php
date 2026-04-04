@@ -28,9 +28,9 @@ class EasepayService
 
         $this->merchantKey  = $value['easepayMerchantKey']  ?? '';
         $this->merchantSalt = $value['easepayMerchantSalt'] ?? '';
-        $this->mode         = $value['easepayPaymentMode']  ?? PaymentModeEnum::TEST();
+        $this->mode         = $value['easepayPaymentMode']  ?? PaymentModeEnum::Test->value;
 
-        $this->baseUrl = $this->mode === PaymentModeEnum::LIVE()
+        $this->baseUrl = $this->mode === PaymentModeEnum::Live->value
             ? 'https://pay.easebuzz.in'
             : 'https://testpay.easebuzz.in';
     }
@@ -121,6 +121,9 @@ class EasepayService
             'firstname'   => $data['firstname']   ?? '',
             'email'       => $data['email']        ?? '',
             'phone'       => $data['phone']        ?? '',
+            // Easebuzz requires both success and failure return URLs.
+            'surl'        => $data['surl'] ?? rtrim(config('app.frontendUrl', config('app.url')), '/') . '/checkout?payment_status=success',
+            'furl'        => $data['furl'] ?? rtrim(config('app.frontendUrl', config('app.url')), '/') . '/checkout?payment_status=failed',
             'udf1'        => $data['udf1']         ?? '',
             'udf2'        => $data['udf2']         ?? '',
             'udf3'        => $data['udf3']         ?? '',

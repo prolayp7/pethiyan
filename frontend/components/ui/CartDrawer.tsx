@@ -12,8 +12,22 @@ import {
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/context/CartContext";
 
+function shouldBypassOptimizer(src?: string | null): boolean {
+  if (!src) return false;
+  return /^https?:\/\//i.test(src);
+}
+
 export default function CartDrawer() {
   const { isOpen, closeCart, items, total, updateQuantity, removeItem } = useCart();
+
+  // Pick currency symbol from the first cart item, fall back to ₹
+  const currencySymbol = items[0]?.currencySymbol ?? "₹";
+  const fmt = (amount: number) =>
+    `${currencySymbol}${amount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+  // Free shipping threshold in the same currency (₹999 for INR, $50 otherwise)
+  const freeShippingThreshold = currencySymbol === "₹" ? 999 : 50;
+  const shippingCharge        = currencySymbol === "₹" ? 0 : 5.99; // shown only below threshold
 
   return (
     <Sheet open={isOpen} onOpenChange={(open) => !open && closeCart()}>
@@ -67,6 +81,7 @@ export default function CartDrawer() {
                         width={64}
                         height={64}
                         className="w-full h-full object-cover"
+                        unoptimized={shouldBypassOptimizer(item.image)}
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
@@ -81,7 +96,7 @@ export default function CartDrawer() {
                       {item.name}
                     </p>
                     <p className="text-sm text-(--color-primary) font-semibold mt-0.5">
-                      ${(item.price * item.quantity).toFixed(2)}
+                      {fmt(item.price * item.quantity)}
                     </p>
 
                     {/* Quantity Controls */}
@@ -127,17 +142,17 @@ export default function CartDrawer() {
             <div className="space-y-2">
               <div className="flex justify-between text-sm text-gray-500">
                 <span>Subtotal</span>
-                <span>${total.toFixed(2)}</span>
+                <span>{fmt(total)}</span>
               </div>
               <div className="flex justify-between text-sm text-gray-500">
                 <span>Shipping</span>
                 <span className="text-green-600 font-medium">
-                  {total >= 50 ? "Free" : "$5.99"}
+                  {total >= freeShippingThreshold ? "Free" : fmt(shippingCharge)}
                 </span>
               </div>
               <div className="flex justify-between font-semibold text-gray-900 pt-2 border-t border-gray-100">
                 <span>Total</span>
-                <span>${(total >= 50 ? total : total + 5.99).toFixed(2)}</span>
+                <span>{fmt(total >= freeShippingThreshold ? total : total + shippingCharge)}</span>
               </div>
             </div>
 
@@ -155,9 +170,9 @@ export default function CartDrawer() {
               </Button>
             </div>
 
-            {total < 50 && (
+            {total < freeShippingThreshold && (
               <p className="text-xs text-center text-gray-400">
-                Add ${(50 - total).toFixed(2)} more for free shipping
+                Add {fmt(freeShippingThreshold - total)} more for free shipping
               </p>
             )}
           </div>

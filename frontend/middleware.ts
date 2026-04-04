@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 // Routes that require the user to be logged in
-const PROTECTED_PATHS = ["/account", "/checkout"];
+const PROTECTED_PATHS = ["/account"];
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -27,5 +27,5 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   // Run middleware only on matched paths — skip static files and API routes
-  matcher: ["/account/:path*", "/checkout/:path*"],
+  matcher: ["/account/:path*"],
 };

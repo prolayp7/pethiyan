@@ -43,7 +43,8 @@ class MailConfigServiceProvider extends ServiceProvider
         }
 
         $smtpHost = $emailSettings['smtpHost'] ?? null;
-        $smtpEmail = $emailSettings['smtpEmail'] ?? null;
+        $smtpUsername = $emailSettings['smtpUsername'] ?? ($emailSettings['smtpEmail'] ?? null);
+        $smtpFromEmail = $emailSettings['smtpFromEmail'] ?? ($emailSettings['smtpEmail'] ?? null);
         $smtpPortRaw = $emailSettings['smtpPort'] ?? null;
         $smtpPort = is_numeric($smtpPortRaw) ? (int) $smtpPortRaw : null;
         $smtpEncryption = $emailSettings['smtpEncryption'] ?? null;
@@ -57,9 +58,12 @@ class MailConfigServiceProvider extends ServiceProvider
             Config::set('mail.mailers.smtp.port', $smtpPort);
         }
 
-        if (!empty($smtpEmail)) {
-            Config::set('mail.mailers.smtp.username', $smtpEmail);
-            Config::set('mail.from.address', $smtpEmail);
+        if (!empty($smtpUsername)) {
+            Config::set('mail.mailers.smtp.username', $smtpUsername);
+        }
+
+        if (!empty($smtpFromEmail) && filter_var($smtpFromEmail, FILTER_VALIDATE_EMAIL)) {
+            Config::set('mail.from.address', $smtpFromEmail);
         }
 
         Config::set('mail.mailers.smtp.password', $emailSettings['smtpPassword'] ?? null);

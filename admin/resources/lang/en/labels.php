@@ -205,6 +205,10 @@ return [
     'smtp_host_placeholder' => 'Enter SMTP host (e.g., smtp.gmail.com)',
     'smtp_port' => 'SMTP Port',
     'smtp_port_placeholder' => 'Enter SMTP port (e.g., 587)',
+    'smtp_username' => 'SMTP Username',
+    'smtp_username_placeholder' => 'Enter SMTP username (for AWS SES, use the SMTP username key)',
+    'smtp_from_email' => 'From Email',
+    'smtp_from_email_placeholder' => 'Enter verified sender email address',
     'smtp_email' => 'SMTP Email',
     'smtp_email_placeholder' => 'Enter SMTP email',
     'smtp_password' => 'SMTP Password',
@@ -1528,6 +1532,7 @@ return [
     'failed_to_update_product' => 'Failed to update product.',
     'capacity' => 'Capacity',
     'select_option' => 'Select Option',
+    'default_variant_required' => 'At least one variant must be set as default.',
 
     // Language Labels
     'languages' => [

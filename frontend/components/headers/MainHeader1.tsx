@@ -10,12 +10,14 @@ import CartButton from "./CartButton";
 import UserMenu from "./UserMenu";
 import MobileMenu from "./MobileMenu";
 import { useCart } from "@/context/CartContext";
+import { useWishlist } from "@/context/WishlistContext";
 
 export default function MainHeader() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const { openCart } = useCart();
+  const { count: wishlistCount } = useWishlist();
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 8);
@@ -93,6 +95,11 @@ export default function MainHeader() {
                 aria-label="Wishlist"
               >
                 <Heart className="h-7 w-7 text-gray-700 group-hover:text-red-500 transition-colors" />
+                {wishlistCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] leading-[18px] text-center font-semibold">
+                    {wishlistCount > 99 ? "99+" : wishlistCount}
+                  </span>
+                )}
                 <span className="pointer-events-none absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-gray-900 px-2 py-1 text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity">
                   Wishlist
                 </span>

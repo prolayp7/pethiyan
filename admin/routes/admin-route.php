@@ -40,6 +40,8 @@ use App\Http\Controllers\GiftCardController;
 use App\Http\Controllers\Admin\InventoryController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\HeroSectionController;
+use App\Http\Controllers\Admin\ProductImportController;
+use App\Http\Controllers\Admin\PinLocationMasterController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('admin')->name('admin.')->group(function () {
@@ -82,6 +84,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // settings
         Route::prefix('settings')->namespace('Settings')->name('settings.')->group(function () {
             Route::get('/', [SettingController::class, 'index'])->name('index');
+            Route::post('payment/unlock', [SettingController::class, 'unlockPaymentSettings'])->name('payment.unlock');
+            Route::post('payment/lock', [SettingController::class, 'lockPaymentSettings'])->name('payment.lock');
             Route::get('{setting}', [SettingController::class, 'show'])->name('show');
             Route::post('store', [SettingController::class, 'store'])->name('store');
         });
@@ -264,7 +268,16 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // Pin Service Areas — specific routes must come before /{id}
         Route::prefix('pin-service')->name('pin-service.')->group(function () {
             Route::get('/',             [PinServiceAreaController::class, 'index'])->name('index');
+            Route::get('/masters',      [PinLocationMasterController::class, 'index'])->name('masters.index');
+            Route::post('/masters/districts', [PinLocationMasterController::class, 'storeDistrict'])->name('masters.districts.store');
+            Route::post('/masters/districts/{id}', [PinLocationMasterController::class, 'updateDistrict'])->name('masters.districts.update');
+            Route::delete('/masters/districts/{id}', [PinLocationMasterController::class, 'destroyDistrict'])->name('masters.districts.destroy');
+            Route::post('/masters/cities', [PinLocationMasterController::class, 'storeCity'])->name('masters.cities.store');
+            Route::post('/masters/cities/{id}', [PinLocationMasterController::class, 'updateCity'])->name('masters.cities.update');
+            Route::delete('/masters/cities/{id}', [PinLocationMasterController::class, 'destroyCity'])->name('masters.cities.destroy');
             Route::get('/datatable',    [PinServiceAreaController::class, 'datatable'])->name('datatable');
+            Route::get('/districts',    [PinServiceAreaController::class, 'districts'])->name('districts');
+            Route::get('/cities',       [PinServiceAreaController::class, 'cities'])->name('cities');
             Route::post('/',            [PinServiceAreaController::class, 'store'])->name('store');
             Route::post('/bulk-toggle', [PinServiceAreaController::class, 'bulkToggle'])->name('bulk-toggle');
             Route::post('/import',      [PinServiceAreaController::class, 'importCsv'])->name('import');
@@ -279,6 +292,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/', [StateShippingRateController::class, 'index'])->name('index');
             Route::post('/', [StateShippingRateController::class, 'store'])->name('store');
             Route::get('/datatable', [StateShippingRateController::class, 'datatable'])->name('datatable');
+            Route::post('/partners/{id}/toggle', [StateShippingRateController::class, 'togglePartnerStatus'])->name('partners.toggle');
             Route::get('/{id}', [StateShippingRateController::class, 'show'])->name('show');
             Route::post('/{id}', [StateShippingRateController::class, 'update'])->name('update');
             Route::delete('/{id}', [StateShippingRateController::class, 'destroy'])->name('delete');
@@ -439,6 +453,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/', [ProductController::class, 'index'])->name('index');
             Route::get('/create', [ProductController::class, 'create'])->name('create');
             Route::post('/', [ProductController::class, 'store'])->name('store');
+            Route::get('/import/template', [ProductImportController::class, 'downloadTemplate'])->name('import.template');
+            Route::post('/import', [ProductImportController::class, 'import'])->name('import.store');
+            Route::get('/import/status/{jobId}', [ProductImportController::class, 'status'])->name('import.status');
+            Route::get('/import/failed-report/{reportId}', [ProductImportController::class, 'downloadFailedReport'])->name('import.failed-report');
             Route::get('/datatable', [ProductController::class, 'getProducts'])->name('datatable');
             Route::get('/search', [ProductController::class, 'search'])->name('search');
             Route::get('/{id}/edit', [ProductController::class, 'edit'])->name('edit');

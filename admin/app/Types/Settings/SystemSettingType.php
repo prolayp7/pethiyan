@@ -70,8 +70,9 @@ class SystemSettingType implements SettingInterface
             'sellerSupportNumber' => ['nullable', 'regex:/^\+?[1-9]\d{1,14}$/'],
             'systemTimezone' => ['required'],
             'copyrightDetails' => ['required', 'max:255'],
-            'logo' => ['required', 'image', 'mimes:png,webp'],
-            'favicon' => ['required', 'image', 'mimes:png,jpg,jpeg,webp'],
+            // Optional on update: validate only when a new file is uploaded.
+            'logo' => ['nullable', 'image', 'mimes:png,webp'],
+            'favicon' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp'],
             // New settings
             'companyAddress' => ['nullable', 'string', 'max:500'],
             'adminSignature' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp'],

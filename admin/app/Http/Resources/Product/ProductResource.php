@@ -4,6 +4,7 @@ namespace App\Http\Resources\Product;
 
 use App\Models\Review;
 use App\Models\SellerFeedback;
+use App\Services\CurrencyService;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class ProductResource extends JsonResource
@@ -13,6 +14,7 @@ class ProductResource extends JsonResource
     {
         $reviews = Review::scopeProductRatingStats($this->id);
         $stats = SellerFeedback::getSellerFeedbackStatistics($this->seller_id);
+        $currency = app(CurrencyService::class);
 
         return [
             'id' => $this->id,
@@ -60,6 +62,8 @@ class ProductResource extends JsonResource
             'metadata' => $this->metadata,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
+            'currency_symbol' => $currency->getSymbol(),
+            'currency_code' => $currency->getCode(),
             'seller_ratings' => $stats,
             'store_status' => optional(
                     $this->variants->first()?->storeProductVariants->first()?->store

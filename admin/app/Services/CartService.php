@@ -11,6 +11,7 @@ use App\Events\Cart\ItemRemovedFromCart;
 use App\Events\Cart\CartUpdatedByLocation;
 use App\Models\Cart;
 use App\Models\CartItem;
+use App\Models\CartSaveForLaterItem;
 use App\Models\OrderPromoLine;
 use App\Models\Promo;
 use App\Models\StoreProductVariant;
@@ -64,6 +65,11 @@ class CartService
                 ->where('product_variant_id', $data['product_variant_id'])
                 ->where('store_id', $data['store_id'])
                 ->first();
+            $saveForLaterItem = CartSaveForLaterItem::where('cart_id', $cart->id)
+                ->where('product_id', $storeProductVariant['productVariant']['product_id'])
+                ->where('product_variant_id', $data['product_variant_id'])
+                ->where('store_id', $data['store_id'])
+                ->first();
             $userCart = $this->getUserCart($user);
 
             // Validate checkout type (single or multi store) similar to OrderService::validateCartAndSettings
@@ -94,30 +100,48 @@ class CartService
             DB::beginTransaction();
             if ($cartItem) {
                 if ($cartItem->save_for_later === true) {
-                    $res = $this->validateCartMaxItems($userCart);
-                    if (!$res) {
-                        return [
-                            'success' => false,
-                            'message' => __('messages.maximum_items_allowed_in_cart_reached'),
-                            'data' => []
-                        ];
-                    }
                     $cartItem->update(['save_for_later' => '0']);
-                } else {
-                    // Update quantity
-                    $newQuantity = $cartItem->quantity + $requestedQuantity;
-
-                    // Check if requested quantity is available
-                    if ($newQuantity > $storeProductVariant->stock) {
-                        return [
-                            'success' => false,
-                            'message' => __('messages.insufficient_stock_available'),
-                            'data' => ['available_stock' => $storeProductVariant->stock]
-                        ];
-                    }
-
-                    $cartItem->update(['quantity' => $newQuantity]);
                 }
+                // Update quantity
+                $newQuantity = $cartItem->quantity + $requestedQuantity;
+
+                // Check if requested quantity is available
+                if ($newQuantity > $storeProductVariant->stock) {
+                    return [
+                        'success' => false,
+                        'message' => __('messages.insufficient_stock_available'),
+                        'data' => ['available_stock' => $storeProductVariant->stock]
+                    ];
+                }
+
+                $cartItem->update(['quantity' => $newQuantity]);
+            } elseif ($saveForLaterItem) {
+                $res = $this->validateCartMaxItems($userCart);
+                if (!$res) {
+                    return [
+                        'success' => false,
+                        'message' => __('messages.maximum_items_allowed_in_cart_reached'),
+                        'data' => []
+                    ];
+                }
+
+                if ($saveForLaterItem->quantity > $storeProductVariant->stock) {
+                    return [
+                        'success' => false,
+                        'message' => __('messages.insufficient_stock_available'),
+                        'data' => ['available_stock' => $storeProductVariant->stock]
+                    ];
+                }
+
+                $cartItem = CartItem::create([
+                    'cart_id' => $cart->id,
+                    'product_id' => $saveForLaterItem->product_id,
+                    'product_variant_id' => $saveForLaterItem->product_variant_id,
+                    'store_id' => $saveForLaterItem->store_id,
+                    'quantity' => $saveForLaterItem->quantity,
+                    'save_for_later' => '0',
+                ]);
+                $saveForLaterItem->delete();
             } else {
                 // Check if requested quantity is available
                 if ($requestedQuantity > $storeProductVariant->stock) {
@@ -174,9 +198,16 @@ class CartService
     {
         $settingService = new SettingService();
         $setting = $settingService->getSettingByVariable(SettingTypeEnum::SYSTEM());
-        $maxCartItems = $setting->value['maximumItemsAllowedInCart'] ?? 1;
+        $maxCartItems = (float) ($setting->value['maximumItemsAllowedInCart'] ?? 0);
 
-        $itemCount = $cart->items->count() ?? 0;
+        // 0 means unlimited — admin has not configured a cap
+        if ($maxCartItems <= 0) {
+            return true;
+        }
+
+        $itemCount = ($cart && $cart->relationLoaded('items'))
+            ? $cart->items->count()
+            : (($cart && $cart->items) ? $cart->items->count() : 0);
         if ($itemCount >= $maxCartItems) {
             return false;
         }
@@ -316,14 +347,15 @@ class CartService
      * @param string|null $promoCode Promo code to apply discount
      * @return array Cart data with success status and message
      */
-    public function getCart(User $user, float $latitude = null, float $longitude = null, bool $isRushDelivery = false, bool $useWallet = false, string $promoCode = null, $addressId = null): array
+    public function getCart(User $user, ?float $latitude = null, ?float $longitude = null, bool $isRushDelivery = false, bool $useWallet = false, ?string $promoCode = null, $addressId = null): array
     {
         try {
             DB::beginTransaction();
 
             // Get and validate user's cart
             $cart = $this->getUserCart($user);
-            if ($cart->items->isEmpty()) {
+            if (!$cart || $cart->items->isEmpty()) {
+                DB::rollBack();
                 return [
                     'success' => false,
                     'message' => __('messages.cart_is_empty'),
@@ -367,8 +399,12 @@ class CartService
             // Prepare and return the response
             return $this->prepareCartResponse($cart, $removedItems, $zone);
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             DB::rollBack();
+            Log::error('CartService::getCart failed', [
+                'user_id' => $user->id ?? null,
+                'error' => $e->getMessage(),
+            ]);
             return [
                 'success' => false,
                 'message' => __('labels.something_went_wrong'),
@@ -391,12 +427,21 @@ class CartService
             ->where('user_id', $user->id)->first();
     }
 
-    public function getSaveForLaterCart(User $user): Cart
+    public function getSaveForLaterCart(User $user): ?Cart
     {
-        return Cart::with(['items' => function ($query) {
-            $query->where('save_for_later', "1");
-        }, 'items.product', 'items.variant', 'items.store'])
-            ->where('user_id', $user->id)->first();
+        $cart = Cart::with([
+            'saveForLaterItems.product',
+            'saveForLaterItems.variant',
+            'saveForLaterItems.store',
+        ])->where('user_id', $user->id)->first();
+
+        if (!$cart) {
+            return null;
+        }
+
+        // Keep CartResource response shape unchanged by mapping saveForLaterItems as items.
+        $cart->setRelation('items', $cart->saveForLaterItems);
+        return $cart;
     }
 
     public static function cartStoreCount(User $user): int
@@ -406,7 +451,7 @@ class CartService
             $query->groupBy('store_id');
         }])
             ->where('user_id', $user->id)->first();
-        return $cart->items->count() ?? 0;
+        return $cart?->items?->count() ?? 0;
     }
 
     /**
@@ -504,7 +549,7 @@ class CartService
      * @param string|null $promoCode Promo code to apply discount
      * @return Cart Cart with payment summary attached
      */
-    private function calculateCartPaymentSummary(Cart $cart, bool $isRushDelivery, bool $useWallet, array $removedItems, User $user, float $latitude = null, float $longitude = null, string $promoCode = null): Cart
+    private function calculateCartPaymentSummary(Cart $cart, bool $isRushDelivery, bool $useWallet, array $removedItems, User $user, ?float $latitude = null, ?float $longitude = null, ?string $promoCode = null): Cart
     {
         try {
             if ($latitude !== null && $longitude !== null) {
@@ -525,7 +570,7 @@ class CartService
                 $cart->payment_summary = $this->createDefaultPaymentSummary($cart, $isRushDelivery, $useWallet);
             }
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Error getting payment summary: ' . $e->getMessage());
             // Set empty payment summary to avoid null reference
             $cart->payment_summary = $this->createDefaultPaymentSummary($cart, $isRushDelivery, $useWallet);
@@ -566,55 +611,26 @@ class CartService
      * @param string|null $promoCode Promo code to apply discount
      * @return array Payment summary details
      */
-    public function getPaymentSummary(Cart $cart, float $latitude, float $longitude, bool $isRushDelivery = false, bool $useWallet = false, string $promoCode = null): array
+    public function getPaymentSummary(Cart $cart, float $deliveryCharge = 0, bool $isRushDelivery = false, bool $useWallet = false, string $promoCode = null): array
     {
         try {
-            $zone = DeliveryZoneService::getZonesAtPoint($latitude, $longitude);
-            $isRushDeliveryAvailable = $this->isRushDeliveryAvailable($zone);
-
-            // If rush delivery is requested but not available, use regular delivery
-            if ($isRushDelivery && !$isRushDeliveryAvailable) {
-                $isRushDelivery = false;
-            }
-
-            $this->validateZoneData($zone, $isRushDelivery);
-
             $totalsResult = $this->calculateCartTotals($cart);
-            $itemsTotal = $totalsResult['items_total'];
-            $storeIds = $totalsResult['store_ids'];
-            $totalStores = count($storeIds);
+            $itemsTotal   = $totalsResult['items_total'];
 
-            $perStoreDropOffFee = $zone['per_store_drop_off_fee'] * $totalStores;
-            $handlingCharges = $zone['handling_charges'];
-
-            // Determine which delivery charges to use based on rush delivery flag
-            $deliveryCharges = $isRushDelivery
-                ? $zone['rush_delivery_charges']
-                : $zone['regular_delivery_charges'];
-
-            // Calculate delivery distance information
-            $distanceInfo = $this->calculateDeliveryDistanceInfo($storeIds, $zone, $latitude, $longitude);
-            $deliveryDistanceKm = $distanceInfo['distance_km'];
-            $deliveryDistanceCharges = $distanceInfo['distance_charges'];
-
-            // Calculate delivery charges
-            // For rush delivery, free delivery is not allowed
-            $totalDeliveryCharges = ($itemsTotal >= $zone['free_delivery_amount'] && !$isRushDelivery)
-                ? 0
-                : ($deliveryCharges + $deliveryDistanceCharges);
+            $totalDeliveryCharges = $deliveryCharge;
 
             // Calculate payable amount
-            $payableAmount = $itemsTotal + $handlingCharges + $totalDeliveryCharges + $perStoreDropOffFee;
+            $payableAmount = $itemsTotal + $totalDeliveryCharges;
 
             // Apply promo code discount if provided
-            $promoDiscount = 0;
-            $promoCodeApplied = null;
+            $promoDiscount      = 0;
+            $promoCodeApplied   = null;
             $promoValidationError = null;
 
             if (!empty($promoCode)) {
                 $promoResult = $this->validateAndApplyPromoCode(promoCode: $promoCode, user: $cart->user, cartTotal: $itemsTotal, deliveryCharge: $totalDeliveryCharges);
                 if ($promoResult['success']) {
-                    $promoDiscount = $promoResult['discount'];
+                    $promoDiscount    = $promoResult['discount'];
                     $promoCodeApplied = $promoResult['promo'];
                     if ($promoCodeApplied['promo_mode'] === PromoModeEnum::INSTANT()) {
                         $payableAmount = max(0, $payableAmount - $promoDiscount);
@@ -624,49 +640,39 @@ class CartService
                 }
             }
 
-            // Calculate estimated delivery time
-            $estimatedDeliveryTime = $this->calculateEstimatedDeliveryTime(
-                $cart,
-                $zone,
-                $deliveryDistanceKm,
-                $isRushDelivery
-            );
-
             // Get wallet balance if using wallet
             $walletAmountUsed = 0;
-            $orderTotal = $payableAmount;
-            $wallet = $cart->user->wallet()->first();
-            $walletBalance = !empty($wallet) ? $wallet->balance : 0;
-            if ($useWallet) {
-                if ($wallet) {
-                    $walletAmountUsed = min($walletBalance, $payableAmount);
-                    $payableAmount = $payableAmount - $walletAmountUsed;
-                }
+            $orderTotal       = $payableAmount;
+            $wallet           = $cart->user->wallet()->first();
+            $walletBalance    = !empty($wallet) ? $wallet->balance : 0;
+            if ($useWallet && $wallet) {
+                $walletAmountUsed = min($walletBalance, $payableAmount);
+                $payableAmount    = $payableAmount - $walletAmountUsed;
             }
 
             return [
-                'items_total' => (float)$itemsTotal,
-                'per_store_drop_off_fee' => (float)$perStoreDropOffFee,
-                'is_rush_delivery' => $isRushDelivery,
-                'is_rush_delivery_available' => $isRushDeliveryAvailable,
-                'delivery_charges' => (float)$deliveryCharges,
-                'handling_charges' => (float)$handlingCharges,
-                'delivery_distance_charges' => (float)$deliveryDistanceCharges,
-                'delivery_distance_km' => (float)$deliveryDistanceKm,
-                'total_stores' => (float)$totalStores,
-                'total_delivery_charges' => (float)$totalDeliveryCharges,
-                'estimated_delivery_time' => (float)$estimatedDeliveryTime,
-                'promo_code' => $promoCode,
-                'promo_discount' => (float)$promoDiscount,
-                'promo_applied' => $promoCodeApplied,
-                'promo_error' => $promoValidationError,
-                'use_wallet' => $useWallet,
-                'wallet_balance' => (float)$walletBalance,
-                'wallet_amount_used' => (float)$walletAmountUsed,
-                'payable_amount' => (float)$payableAmount,
-                'order_total' => (float)$orderTotal
+                'items_total'              => (float) $itemsTotal,
+                'per_store_drop_off_fee'   => 0.0,
+                'is_rush_delivery'         => $isRushDelivery,
+                'is_rush_delivery_available' => false,
+                'delivery_charges'         => (float) $deliveryCharge,
+                'handling_charges'         => 0.0,
+                'delivery_distance_charges'=> 0.0,
+                'delivery_distance_km'     => 0.0,
+                'total_stores'             => 0.0,
+                'total_delivery_charges'   => (float) $totalDeliveryCharges,
+                'estimated_delivery_time'  => 0.0,
+                'promo_code'               => $promoCode,
+                'promo_discount'           => (float) $promoDiscount,
+                'promo_applied'            => $promoCodeApplied,
+                'promo_error'              => $promoValidationError,
+                'use_wallet'               => $useWallet,
+                'wallet_balance'           => (float) $walletBalance,
+                'wallet_amount_used'       => (float) $walletAmountUsed,
+                'payable_amount'           => (float) $payableAmount,
+                'order_total'              => (float) $orderTotal,
             ];
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Error calculating payment summary: ' . $e->getMessage());
             return $this->createDefaultPaymentSummary($cart, $isRushDelivery, $useWallet);
         }
@@ -891,12 +897,33 @@ class CartService
                 ];
             }
 
-            // Load relationships before deletion
+            // Load relationships before move
             $cartItem->load(['product', 'variant', 'store']);
             $cart = $cartItem->cart;
 
-            // Delete the item
-            $cartItem->update(['save_for_later' => true]);
+            $existingSaveItem = CartSaveForLaterItem::where('cart_id', $cart->id)
+                ->where('product_id', $cartItem->product_id)
+                ->where('product_variant_id', $cartItem->product_variant_id)
+                ->where('store_id', $cartItem->store_id)
+                ->first();
+
+            if ($existingSaveItem) {
+                $existingSaveItem->update([
+                    'quantity' => $existingSaveItem->quantity + $cartItem->quantity,
+                    'save_for_later' => '1',
+                ]);
+            } else {
+                CartSaveForLaterItem::create([
+                    'cart_id' => $cart->id,
+                    'product_id' => $cartItem->product_id,
+                    'product_variant_id' => $cartItem->product_variant_id,
+                    'store_id' => $cartItem->store_id,
+                    'quantity' => $cartItem->quantity,
+                    'save_for_later' => '1',
+                ]);
+            }
+
+            $cartItem->delete();
 
             // Fire event
             event(new ItemRemovedFromCart($cart, $cartItem, $user));

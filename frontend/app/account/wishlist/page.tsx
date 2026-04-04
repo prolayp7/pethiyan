@@ -2,15 +2,30 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 import { Heart, ShoppingCart, Trash2, ArrowRight, ShoppingBag } from "lucide-react";
 import toast from "react-hot-toast";
 import { useWishlist } from "@/context/WishlistContext";
 import { useCart } from "@/context/CartContext";
+import { API_BASE, clearAllWishlistItems, getWishlistItems, removeWishlistItem } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 
 function fmt(n: number) {
   return new Intl.NumberFormat("en-IN", {
     style: "currency", currency: "INR", maximumFractionDigits: 0,
   }).format(n);
+}
+
+function normalizeImageUrl(src?: string | null): string | null {
+  if (!src) return null;
+  const trimmed = String(src).trim();
+  if (!trimmed) return null;
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+
+  const base = API_BASE.replace(/\/+$/, "");
+  if (trimmed.startsWith("/")) return `${base}${trimmed}`;
+  if (trimmed.startsWith("storage/") || trimmed.startsWith("uploads/")) return `${base}/${trimmed}`;
+  return `${base}/storage/${trimmed}`;
 }
 
 function EmptyWishlist() {
@@ -37,8 +52,67 @@ function EmptyWishlist() {
 export default function WishlistPage() {
   const { items, remove, clear } = useWishlist();
   const { addItem, openCart }    = useCart();
+  const { isLoggedIn, token } = useAuth();
+  const [serverItems, setServerItems] = useState<Array<{
+    wishlistItemId: number;
+    id: number;
+    name: string;
+    slug: string;
+    image?: string | null;
+    price: number;
+  }>>([]);
+  const [busy, setBusy] = useState(false);
 
-  function handleAddToCart(item: typeof items[0]) {
+  useEffect(() => {
+    let active = true;
+    const run = async () => {
+      if (!isLoggedIn || !token) {
+        if (active) setServerItems([]);
+        return;
+      }
+      const rows = await getWishlistItems();
+      if (!active) return;
+      const dedupByProduct = new Map<number, {
+        wishlistItemId: number;
+        id: number;
+        name: string;
+        slug: string;
+        image?: string | null;
+        price: number;
+      }>();
+      rows.forEach((row) => {
+        if (!row.product) return;
+        if (dedupByProduct.has(row.product.id)) return;
+        const price = Number(row.variant?.special_price ?? row.variant?.price ?? 0);
+        dedupByProduct.set(row.product.id, {
+          wishlistItemId: row.id,
+          id: row.product.id,
+          name: row.product.title,
+          slug: row.product.slug,
+          image: row.product.image ?? null,
+          price,
+        });
+      });
+      setServerItems(Array.from(dedupByProduct.values()));
+    };
+
+    void run();
+    return () => { active = false; };
+  }, [isLoggedIn, token]);
+
+  const displayItems = useMemo(() => {
+    if (isLoggedIn) return serverItems;
+    return items.map((item) => ({
+      wishlistItemId: item.id,
+      id: item.id,
+      name: item.name,
+      slug: item.slug,
+      image: item.image ?? null,
+      price: item.price,
+    }));
+  }, [isLoggedIn, items, serverItems]);
+
+  function handleAddToCart(item: typeof displayItems[0]) {
     addItem({
       id: String(item.id),
       productId: item.id,
@@ -50,6 +124,47 @@ export default function WishlistPage() {
     openCart();
   }
 
+  async function handleRemove(item: (typeof displayItems)[number]) {
+    if (!isLoggedIn) {
+      remove(item.id);
+      toast("Removed from wishlist", { icon: "🗑️" });
+      return;
+    }
+
+    setBusy(true);
+    const res = await removeWishlistItem(item.wishlistItemId);
+    setBusy(false);
+
+    if (!res.success) {
+      toast.error(res.message || "Failed to remove wishlist item");
+      return;
+    }
+
+    setServerItems((prev) => prev.filter((it) => it.wishlistItemId !== item.wishlistItemId));
+    remove(item.id);
+    toast.success("Removed from wishlist");
+  }
+
+  async function handleClearAll() {
+    if (!isLoggedIn) {
+      clear();
+      return;
+    }
+
+    setBusy(true);
+    const res = await clearAllWishlistItems();
+    setBusy(false);
+
+    if (!res.success) {
+      toast.error(res.message || "Failed to clear wishlist");
+      return;
+    }
+
+    setServerItems([]);
+    clear();
+    toast.success("Wishlist cleared");
+  }
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
@@ -57,16 +172,17 @@ export default function WishlistPage() {
           <Heart className="h-5 w-5 text-red-400 fill-red-400" />
           <h1 className="text-xl font-extrabold text-(--color-secondary)">
             Wishlist
-            {items.length > 0 && (
+            {displayItems.length > 0 && (
               <span className="ml-2 text-sm font-semibold text-gray-400">
-                ({items.length} {items.length === 1 ? "item" : "items"})
+                ({displayItems.length} {displayItems.length === 1 ? "item" : "items"})
               </span>
             )}
           </h1>
         </div>
-        {items.length > 0 && (
+        {displayItems.length > 0 && (
           <button
-            onClick={clear}
+            onClick={handleClearAll}
+            disabled={busy}
             className="text-xs font-semibold text-red-500 hover:text-red-700 transition-colors"
           >
             Clear all
@@ -74,24 +190,25 @@ export default function WishlistPage() {
         )}
       </div>
 
-      {items.length === 0 ? (
+      {displayItems.length === 0 ? (
         <EmptyWishlist />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-          {items.map((item) => (
+          {displayItems.map((item) => (
             <div
-              key={item.id}
+              key={item.wishlistItemId}
               className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden group"
             >
               {/* Image */}
               <Link href={`/products/${item.slug}`} className="block relative aspect-square overflow-hidden bg-gray-50">
-                {item.image ? (
+                {normalizeImageUrl(item.image) ? (
                   <Image
-                    src={item.image}
+                    src={normalizeImageUrl(item.image) as string}
                     alt={item.name}
                     fill
                     className="object-cover group-hover:scale-105 transition-transform duration-300"
                     sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                    unoptimized
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
@@ -100,7 +217,8 @@ export default function WishlistPage() {
                 )}
                 {/* Remove button overlay */}
                 <button
-                  onClick={(e) => { e.preventDefault(); remove(item.id); toast("Removed from wishlist", { icon: "🗑️" }); }}
+                  onClick={(e) => { e.preventDefault(); void handleRemove(item); }}
+                  disabled={busy}
                   className="absolute top-2 right-2 w-8 h-8 rounded-full bg-white shadow-md flex items-center justify-center text-red-400 hover:text-red-600 transition-colors opacity-0 group-hover:opacity-100"
                   aria-label="Remove from wishlist"
                 >
@@ -123,6 +241,7 @@ export default function WishlistPage() {
                 <div className="flex gap-2 mt-3">
                   <button
                     onClick={() => handleAddToCart(item)}
+                    disabled={busy}
                     className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-bold text-white transition-all hover:-translate-y-0.5"
                     style={{ background: "linear-gradient(135deg,#1f4f8a,#0f2f5f)" }}
                   >
@@ -130,7 +249,8 @@ export default function WishlistPage() {
                     Add to Cart
                   </button>
                   <button
-                    onClick={() => { remove(item.id); toast("Removed from wishlist", { icon: "🗑️" }); }}
+                    onClick={() => { void handleRemove(item); }}
+                    disabled={busy}
                     className="w-10 flex items-center justify-center rounded-xl border border-red-200 text-red-400 hover:bg-red-50 hover:text-red-600 transition-colors"
                     aria-label="Remove"
                   >

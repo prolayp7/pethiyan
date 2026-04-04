@@ -182,9 +182,42 @@ class OrderController extends Controller
 
     private function getOrderReturnData($sellerOrderItem): array
     {
-        $variantTitle = $sellerOrderItem->product->type === ProductTypeEnum::SIMPLE() ? "" : ($sellerOrderItem->variant->title ?? "");
-        $storeName = $sellerOrderItem->orderItem->store ? $sellerOrderItem->orderItem->store->name : 'N/A';
-        $orderNote = !empty($sellerOrderItem->sellerOrder->order->order_note) ? "<textarea class='form-control' rows='1' readonly disabled>order note:- {$sellerOrderItem->sellerOrder->order->order_note}</textarea>" : null;
+        $product = $sellerOrderItem->product;
+        $variant = $sellerOrderItem->variant;
+        $orderItem = $sellerOrderItem->orderItem;
+        $sellerOrder = $sellerOrderItem->sellerOrder;
+        $order = $sellerOrder?->order;
+        $orderNo = $order?->slug ?: $order?->order_id ?: $sellerOrder?->order_id;
+        $orderNoDisplay = $orderNo ? '#' . ltrim((string)$orderNo, '#') : 'N/A';
+
+        $variantTitle = $product && $product->type !== ProductTypeEnum::SIMPLE() ? ($variant?->title ?? "") : "";
+        $storeName = $orderItem?->store?->name ?? 'N/A';
+        $orderNote = !empty($order?->order_note) ? "<textarea class='form-control' rows='1' readonly disabled>order note:- {$order->order_note}</textarea>" : null;
+        $productImage = !empty($variant?->image) ? $variant->image : ($product?->main_image ?? null);
+        $orderSubtotal = (float)($order?->subtotal ?? $order?->sub_total ?? 0);
+        $orderShipping = (float)($order?->delivery_charge ?? 0);
+        $orderHandling = (float)($order?->handling_charges ?? 0);
+        $orderDropOff = (float)($order?->per_store_drop_off_fee ?? 0);
+        $orderGst = (float)($order?->total_gst ?? 0);
+        $orderPromo = (float)($order?->promo_discount ?? 0);
+        $orderGift = (float)($order?->gift_card_discount ?? 0);
+        $orderTotalPayable = (float)($order?->total_payable ?? $order?->final_total ?? 0);
+
+        $amountBreakdownHtml = "<div class='mt-1'>
+                        <p class='m-0'>" . __('labels.subtotal') . ": " . $this->currencyService->format($orderSubtotal) . "</p>
+                        <p class='m-0'>Shipping Cost: " . $this->currencyService->format($orderShipping) . "</p>" .
+                        ($orderHandling > 0 ? "<p class='m-0'>" . __('labels.handling_charges') . ": " . $this->currencyService->format($orderHandling) . "</p>" : "") .
+                        ($orderDropOff > 0 ? "<p class='m-0'>" . __('labels.per_store_drop_off_fee') . ": " . $this->currencyService->format($orderDropOff) . "</p>" : "") .
+                        ($orderGst > 0 ? "<p class='m-0'>GST: " . $this->currencyService->format($orderGst) . "</p>" : "") .
+                        ($orderPromo > 0 ? "<p class='m-0'>" . __('labels.promo_discount') . ": - " . $this->currencyService->format($orderPromo) . "</p>" : "") .
+                        ($orderGift > 0 ? "<p class='m-0'>Gift Card Discount: - " . $this->currencyService->format($orderGift) . "</p>" : "") . "
+                        <p class='m-0 fw-bold'>" . __('labels.total_payable') . ": " . $this->currencyService->format($orderTotalPayable) . "</p>
+                        </div>";
+
+        $orderRoute = $this->getPanel() === 'seller'
+            ? ($sellerOrder?->id ?? $sellerOrderItem->seller_order_id)
+            : ($sellerOrder?->order_id ?? $sellerOrderItem->seller_order_id);
+
         return [
             'id' => $sellerOrderItem->order_item_id,
             'order_date' =>
@@ -193,35 +226,39 @@ class OrderController extends Controller
                         </div>",
             'order_details' => "<div class='d-flex justify-content-start align-items-center'><div class='pe-2'>" .
                 view('partials.image', [
-                    'image' => !empty($sellerOrderItem->variant->image) ? $sellerOrderItem->variant->image : $sellerOrderItem->product->main_image,
+                    'image' => $productImage,
                 ])->render() .
                 "</div><div>
-                        <p class='m-0 fw-medium text-primary'>" . __('labels.order_id') . ": {$sellerOrderItem->sellerOrder->order_id}</p>
-                        <p class='m-0'>" . __('labels.buyer_name') . ": " . e($sellerOrderItem->sellerOrder->order->shipping_name) . "</p>
-                        <p class='m-0'>" . __('labels.payment_method') . ": " . e($sellerOrderItem->sellerOrder->order->payment_method) . "</p>
-                        <p class='m-0'>" . __('labels.is_rush_order') . ": " . ($sellerOrderItem->sellerOrder->order->is_rush_order ? 'Yes' : 'No') . "</p>
-                        <p class='m-0'>" . __('labels.order_status') . ": " . Str::ucfirst(Str::replace("_", " ", $sellerOrderItem->sellerOrder->order->status)) . "</p>"
+                        <p class='m-0 fw-medium text-primary'>" . __('labels.order_number') . ": " . e($orderNoDisplay) . "</p>
+                        <p class='m-0 fw-medium text-primary'>" . __('labels.order_id') . ": " . e($sellerOrder?->order_id ?? 'N/A') . "</p>
+                        <p class='m-0'>" . __('labels.buyer_name') . ": " . e($order?->shipping_name ?? 'N/A') . "</p>
+                        <p class='m-0'>" . __('labels.payment_method') . ": " . e($order?->payment_method ?? 'N/A') . "</p>
+                        <p class='m-0'>" . __('labels.is_rush_order') . ": " . (($order?->is_rush_order ?? false) ? 'Yes' : 'No') . "</p>
+                        <p class='m-0'>" . __('labels.order_status') . ": " . Str::ucfirst(Str::replace("_", " ", $order?->status ?? 'pending')) . "</p>" .
+                        $amountBreakdownHtml
                         . $orderNote .
                         "</div></div>",
-            'product_details' => "<div>
-                        <a href='" . route($this->getPanel() . '.products.show', ['id' => $sellerOrderItem->product->id]) . "' class='m-0 fw-medium text-primary'>" . __('labels.product_name') . ": {$sellerOrderItem->product->title}</a>
+            'product_details' => "<div>" .
+                        ($product
+                            ? "<a href='" . route($this->getPanel() . '.products.show', ['id' => $product->id]) . "' class='m-0 fw-medium text-primary'>" . __('labels.product_name') . ": {$product->title}</a>"
+                            : "<p class='m-0 fw-medium text-primary'>" . __('labels.product_name') . ": N/A</p>") . "
                         <p class='m-0 fw-medium text-primary'>" . __('labels.variant_name') . ": $variantTitle</p>
                         <p class='m-0 fw-medium text-capitalize'>" . __('labels.store_name') . ": $storeName</p>
-                        <p class='m-0'>" . __('labels.sku') . ": {$sellerOrderItem->orderItem->sku}</p>
-                        <p class='m-0 fw-medium'>" . __('labels.quantity') . ": {$sellerOrderItem->orderItem->quantity}</p>
-                        <p class='m-0 fw-medium'>" . __('labels.item_sub_total') . ": " . $this->currencyService->format($sellerOrderItem->orderItem->subtotal) . "</p>
+                        <p class='m-0'>" . __('labels.sku') . ": " . e($orderItem?->sku ?? 'N/A') . "</p>
+                        <p class='m-0 fw-medium'>" . __('labels.quantity') . ": " . e((string)($orderItem?->quantity ?? 0)) . "</p>
+                        <p class='m-0 fw-medium'>" . __('labels.item_sub_total') . ": " . $this->currencyService->format($orderItem?->subtotal ?? 0) . "</p>
                         </div>",
             'status' => view('partials.order-status', [
-                'status' => $sellerOrderItem->orderItem->status,
+                'status' => $orderItem?->status ?? OrderItemStatusEnum::PENDING(),
             ])->render(),
             'actions' => view('partials.order-actions', [
                 'panel' => $this->getPanel(),
-                'uuid' => $sellerOrderItem->sellerOrder->order->uuid,
-                'id' => $sellerOrderItem->orderItem->id,
+                'uuid' => $order?->uuid ?? '',
+                'id' => $orderItem?->id ?? $sellerOrderItem->order_item_id,
                 'hierarchy' => OrderItem::getStatusHierarchy(),
-                'route' => route($this->panelView('orders.show'), $this->getPanel() === 'seller' ? $sellerOrderItem->sellerOrder->id : $sellerOrderItem->sellerOrder->order_id),
-                'title' => __('labels.edit_order') . $sellerOrderItem->sellerOrder->id,
-                'status' => $sellerOrderItem->orderItem->status,
+                'route' => route($this->panelView('orders.show'), $orderRoute),
+                'title' => __('labels.edit_order') . ($sellerOrder?->id ?? ''),
+                'status' => $orderItem?->status ?? OrderItemStatusEnum::PENDING(),
                 'editPermission' => $this->getPanel() === 'admin' ? false : $this->editPermission,
             ])->render(),
         ];
@@ -412,9 +449,10 @@ class OrderController extends Controller
                 }
             }
 
-            $order          = $sellerOrder->first()->order;
-            $systemSettings = app(\App\Services\SettingService::class)
-                ->getSystemSettings();
+            $order = $sellerOrder->first()->order;
+            $systemSettingResource = app(\App\Services\SettingService::class)
+                ->getSettingByVariable('system');
+            $systemSettings = $systemSettingResource?->toArray(request())['value'] ?? [];
 
             $pdf = Pdf::loadView('layouts.order-invoice', [
                 'order'          => $order,

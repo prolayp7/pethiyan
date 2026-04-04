@@ -110,25 +110,30 @@ class RazorpayController extends Controller
     {
         try {
             $input = $request->validate([
-                'amount' => 'required|numeric|min:1',
-                'currency' => 'required|string|in:INR',
-                'receipt' => 'required|string'
+                'amount'   => 'required|numeric|min:1', // amount in paise
+                'currency' => 'nullable|string|in:INR',
+                'receipt'  => 'nullable|string',
             ]);
 
             $order = $this->razorpayApi->order->create([
-                'amount' => (int)$input['amount'] * 100, // Convert to paisa
-                'currency' => $input['currency'],
-                'receipt' => $input['receipt'],
+                'amount'          => (int) $input['amount'], // already in paise
+                'currency'        => $input['currency'] ?? 'INR',
+                'receipt'         => $input['receipt'] ?? ('rcpt_' . auth()->id() . '_' . time()),
                 'payment_capture' => 1,
-                'notes' => [
-                    'user_id' => auth()->id(),
-                ],
+                'notes'           => ['user_id' => auth()->id()],
             ]);
+
+            $orderData = $order->toArray();
 
             return ApiResponseType::sendJsonResponse(
                 success: true,
                 message: 'Razorpay Order created successfully',
-                data: $order->toArray()
+                data: [
+                    'razorpay_order_id' => $orderData['id'],
+                    'amount'            => $orderData['amount'],
+                    'currency'          => $orderData['currency'],
+                    'key'               => $this->keyId,
+                ]
             );
 
         } catch (Exception $e) {
@@ -184,7 +189,31 @@ class RazorpayController extends Controller
     }
 
     /**
-     * Verify Razorpay payment signature
+     * HTTP endpoint: verify Razorpay payment signature
+     */
+    public function verifyPaymentHttp(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'razorpay_payment_id' => 'required|string',
+            'razorpay_order_id'   => 'required|string',
+            'razorpay_signature'  => 'required|string',
+        ]);
+
+        $result = $this->verifyPayment([
+            'transaction_id'     => $data['razorpay_payment_id'],
+            'razorpay_order_id'  => $data['razorpay_order_id'],
+            'razorpay_signature' => $data['razorpay_signature'],
+        ]);
+
+        return ApiResponseType::sendJsonResponse(
+            success: $result['success'],
+            message: $result['message'],
+            data: $result['data'] ?? []
+        );
+    }
+
+    /**
+     * Verify Razorpay payment signature (internal use)
      */
     public function verifyPayment(array $data): array
     {

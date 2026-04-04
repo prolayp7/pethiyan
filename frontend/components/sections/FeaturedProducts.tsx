@@ -1,135 +1,105 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import Container from "@/components/layout/Container";
-import ProductCard, { type Product } from "@/components/ui/ProductCard";
-import type { ApiProduct } from "@/lib/api";
-import { toNum } from "@/lib/api";
+import FeaturedProductCard, { type FallbackProduct } from "@/components/ui/FeaturedProductCard";
+import type { RealApiProduct, RealApiVariant } from "@/lib/api";
 
-// ─── Static fallback data (used when API returns nothing) ─────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const staticProducts: Product[] = [
-  {
-    id: "sp-001",
-    name: "Matte Standup Pouch — 500g",
-    price: 129,
-    originalPrice: 179,
-    rating: 5,
-    reviewCount: 124,
-    badge: "Sale",
-    category: "standup",
-    href: "/products/matte-standup-pouch-500g",
-  },
-  {
-    id: "zl-001",
-    name: "Resealable Ziplock Bag — Clear 250ml",
-    price: 84,
-    rating: 4,
-    reviewCount: 89,
-    badge: "New",
-    category: "ziplock",
-    href: "/products/resealable-ziplock-clear-250ml",
-  },
-  {
-    id: "cp-001",
-    name: "Custom Printed Pouch — Full Colour",
-    price: 249,
-    originalPrice: 299,
-    rating: 5,
-    reviewCount: 56,
-    badge: "Hot",
-    category: "custom",
-    href: "/products/custom-printed-pouch-full-colour",
-  },
-  {
-    id: "ep-001",
-    name: "Kraft Paper Eco Bag — 1kg",
-    price: 149,
-    rating: 4,
-    reviewCount: 203,
-    badge: "New",
-    category: "eco",
-    href: "/products/kraft-paper-eco-bag-1kg",
-  },
-  {
-    id: "sp-002",
-    name: "Glossy Standup Pouch — 1kg Window",
-    price: 154,
-    originalPrice: 199,
-    rating: 4,
-    reviewCount: 77,
-    category: "standup",
-    href: "/products/glossy-standup-pouch-1kg-window",
-  },
-  {
-    id: "pb-001",
-    name: "Heavy Duty Packaging Bag — 2kg",
-    price: 99,
-    rating: 4,
-    reviewCount: 44,
-    category: "bags",
-    href: "/products/heavy-duty-packaging-bag-2kg",
-  },
-  {
-    id: "zl-002",
-    name: "Frosted Ziplock Bag — 100ml (Pack of 50)",
-    price: 119,
-    originalPrice: 149,
-    rating: 5,
-    reviewCount: 161,
-    badge: "Sale",
-    category: "ziplock",
-    href: "/products/frosted-ziplock-bag-100ml-pack50",
-  },
-  {
-    id: "ep-002",
-    name: "Biodegradable Compostable Mailer Bag",
-    price: 189,
-    rating: 5,
-    reviewCount: 92,
-    badge: "New",
-    category: "eco",
-    href: "/products/biodegradable-compostable-mailer",
-  },
+function getDefaultVariant(variants: RealApiVariant[]): RealApiVariant | null {
+  return variants.find((v) => v.is_default) ?? variants[0] ?? null;
+}
+
+function getBestPricing(variant: RealApiVariant) {
+  return (
+    variant.store_pricing.find((s) => s.stock_status === "in_stock") ??
+    variant.store_pricing[0] ??
+    null
+  );
+}
+
+function getMinPrice(variants: RealApiVariant[]): number {
+  const prices = variants
+    .flatMap((v) => v.store_pricing.map((s) => s.special_price ?? s.price))
+    .filter(Boolean);
+  return prices.length ? Math.min(...prices) : 0;
+}
+
+function getColors(variants: RealApiVariant[]): string[] {
+  const seen = new Set<string>();
+  const colors: string[] = [];
+  for (const v of variants) {
+    const c = v.attributes?.color;
+    if (c && !seen.has(c)) { seen.add(c); colors.push(c); }
+  }
+  return colors;
+}
+
+// ─── Static fallback data ─────────────────────────────────────────────────────
+
+const staticProducts: FallbackProduct[] = [
+  { id: "sp-001", name: "Matte Standup Pouch — 500g",        price: 129, originalPrice: 179, badge: "Sale", href: "/products/matte-standup-pouch-500g",        minQty: 10, gstRate: "18", colors: [],              variantCount: 3, inStock: true  },
+  { id: "zl-001", name: "Resealable Ziplock Bag — 250ml",    price: 84,                      badge: "New",  href: "/products/resealable-ziplock-clear-250ml",   minQty: 20, gstRate: "12", colors: ["Transparent"], variantCount: 2, inStock: true  },
+  { id: "cp-001", name: "Custom Printed Pouch — Full Colour", price: 249, originalPrice: 299, badge: "Hot",  href: "/products/custom-printed-pouch-full-colour", minQty: 50, gstRate: "18", colors: [],              variantCount: 5, inStock: true  },
+  { id: "ep-001", name: "Kraft Paper Eco Bag — 1kg",         price: 149,                     badge: "New",  href: "/products/kraft-paper-eco-bag-1kg",          minQty: 10, gstRate: "5",  colors: ["Brown"],       variantCount: 2, inStock: true  },
+  { id: "sp-002", name: "Glossy Standup Pouch — 1kg Window", price: 154, originalPrice: 199,                href: "/products/glossy-standup-pouch-1kg-window",  minQty: 10, gstRate: "18", colors: [],              variantCount: 4, inStock: true  },
+  { id: "pb-001", name: "Heavy Duty Packaging Bag — 2kg",    price: 99,                                     href: "/products/heavy-duty-packaging-bag-2kg",     minQty: 5,  gstRate: "12", colors: [],              variantCount: 1, inStock: true  },
+  { id: "zl-002", name: "Frosted Ziplock Bag — 100ml × 50",  price: 119, originalPrice: 149, badge: "Sale", href: "/products/frosted-ziplock-bag-100ml-pack50", minQty: 20, gstRate: "12", colors: ["Transparent"], variantCount: 2, inStock: false },
+  { id: "ep-002", name: "Biodegradable Compostable Mailer",   price: 189,                     badge: "New",  href: "/products/biodegradable-compostable-mailer", minQty: 25, gstRate: "5",  colors: [],              variantCount: 3, inStock: true  },
 ];
 
-// ─── Adapter: ApiProduct → Product ───────────────────────────────────────────
+// ─── Adapter: RealApiProduct → FallbackProduct ────────────────────────────────
 
-function toProduct(p: ApiProduct): Product {
-  const price = toNum(p.sale_price ?? p.price);
-  const comparePrice = toNum(p.compare_price);
+function adapt(p: RealApiProduct): FallbackProduct {
+  const defaultVariant = getDefaultVariant(p.variants);
+  const pricing        = defaultVariant ? getBestPricing(defaultVariant) : null;
+  const minPrice       = getMinPrice(p.variants);
+  const colors         = getColors(p.variants);
 
-  // Determine badge
-  let badge: Product["badge"] = undefined;
-  if (p.sale_price && toNum(p.sale_price) < toNum(p.price)) badge = "Sale";
-  else if (p.tags?.includes("new")) badge = "New";
-  else if (p.tags?.includes("hot")) badge = "Hot";
+  const price     = pricing?.special_price ?? pricing?.price ?? minPrice;
+  const origPrice = pricing && pricing.price > pricing.special_price
+    ? pricing.price : undefined;
+
+  let badge: FallbackProduct["badge"] = undefined;
+  if (origPrice && origPrice > price)  badge = "Sale";
+  else if (p.tags?.includes("new"))    badge = "New";
+  else if (p.tags?.includes("hot"))    badge = "Hot";
+
+  const inStock = p.variants.some((v) =>
+    v.store_pricing.some((s) => s.stock_status === "in_stock")
+  );
+
+  const image = defaultVariant?.image ?? p.images.main_image;
 
   return {
-    id: String(p.id),
-    name: p.name,
+    id:               String(p.id),
+    name:             p.title,
     price,
-    originalPrice: comparePrice > 0 ? comparePrice : undefined,
-    rating: p.rating ?? 0,
-    reviewCount: p.reviews_count ?? 0,
+    originalPrice:    origPrice,
     badge,
-    category: p.category?.slug ?? "bags",
-    href: `/products/${p.slug}`,
-    image: p.thumbnail ?? (p.images?.[0] ?? null),
+    image,
+    unoptimizedImage: /^https?:\/\/(localhost|127\.0\.0\.1)/.test(image ?? ""),
+    href:             `/products/${p.slug}`,
+    minQty:           p.policies.minimum_order_quantity,
+    gstRate:          p.tax.gst_rate,
+    colors,
+    variantCount:     p.variants.length,
+    inStock,
   };
 }
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface FeaturedProductsProps {
-  apiProducts?: ApiProduct[];
+  apiProducts?: RealApiProduct[];
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
+// ─── Section ──────────────────────────────────────────────────────────────────
 
 export default function FeaturedProducts({ apiProducts = [] }: FeaturedProductsProps) {
-  const products: Product[] =
+  const products: FallbackProduct[] =
     apiProducts.length > 0
-      ? apiProducts.slice(0, 8).map(toProduct)
+      ? apiProducts.slice(0, 8).map(adapt)
       : staticProducts;
 
   return (
@@ -152,16 +122,15 @@ export default function FeaturedProducts({ apiProducts = [] }: FeaturedProductsP
           backgroundSize: "10px 10px, 10px 10px, 50px 50px, 50px 50px",
         }}
       />
+
       <Container className="relative z-10">
+        {/* Header */}
         <div className="flex items-end justify-between mb-10">
           <div>
-            <p className="text-sm font-semibold text-(--color-primary) uppercase tracking-wider mb-2">
+            <p className="text-sm font-semibold uppercase tracking-wider mb-2" style={{ color: "#4ea85f" }}>
               Bestsellers
             </p>
-            <h2
-              id="featured-heading"
-              className="text-3xl sm:text-4xl font-extrabold text-white"
-            >
+            <h2 id="featured-heading" className="text-3xl sm:text-4xl font-extrabold text-white">
               Featured Products
             </h2>
             <p className="mt-2 text-white/50">
@@ -170,16 +139,18 @@ export default function FeaturedProducts({ apiProducts = [] }: FeaturedProductsP
           </div>
           <Link
             href="/shop"
-            className="hidden sm:flex items-center gap-1.5 text-sm font-semibold text-(--color-primary) hover:gap-2.5 transition-all"
+            className="hidden sm:flex items-center gap-1.5 text-sm font-semibold transition-all hover:gap-2.5"
+            style={{ color: "#6ea8d8" }}
           >
             View All
             <ArrowRight className="h-4 w-4" aria-hidden="true" />
           </Link>
         </div>
 
+        {/* Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          {products.map((product) => (
-            <ProductCard key={product.id} product={product} />
+          {products.map((p) => (
+            <FeaturedProductCard key={p.id} p={p} />
           ))}
         </div>
 
@@ -187,7 +158,8 @@ export default function FeaturedProducts({ apiProducts = [] }: FeaturedProductsP
         <div className="mt-8 text-center sm:hidden">
           <Link
             href="/shop"
-            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full border-2 border-(--color-primary) text-(--color-primary) text-sm font-semibold hover:bg-(--color-primary) hover:text-white transition-all"
+            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full border-2 text-sm font-semibold transition-all"
+            style={{ borderColor: "#6ea8d8", color: "#6ea8d8" }}
           >
             View All Products
             <ArrowRight className="h-4 w-4" />

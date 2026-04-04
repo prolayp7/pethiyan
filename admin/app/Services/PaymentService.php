@@ -152,6 +152,7 @@ class PaymentService
                 }
                 return $verifiedResponse;
             case PaymentTypeEnum::COD():
+            case PaymentTypeEnum::EASEPAY():
             case PaymentTypeEnum::FLUTTERWAVE():
             case PaymentTypeEnum::WALLET():
                 return $verifiedResponse;

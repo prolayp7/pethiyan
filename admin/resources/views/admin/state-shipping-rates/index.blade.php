@@ -1,15 +1,15 @@
 @extends('layouts.admin.app', ['page' => $menuAdmin['state_shipping_rates']['active'] ?? '', 'sub_page' => ''])
 
-@section('title', 'State Shipping Rates')
+@section('title', 'Shipping Tariffs')
 
 @section('header_data')
-    @php $page_title = 'State Shipping Rates'; $page_pretitle = 'Logistics'; @endphp
+    @php $page_title = 'Shipping Tariffs'; $page_pretitle = 'Logistics'; @endphp
 @endsection
 
 @php
 $breadcrumbs = [
     ['title' => __('labels.home'), 'url' => route('admin.dashboard')],
-    ['title' => 'State Shipping Rates', 'url' => null],
+    ['title' => 'Shipping Tariffs', 'url' => null],
 ];
 @endphp
 
@@ -17,13 +17,13 @@ $breadcrumbs = [
 <div class="page-header d-print-none">
     <div class="row g-2 align-items-center">
         <div class="col">
-            <h2 class="page-title">State Shipping Rates</h2>
+            <h2 class="page-title">Shipping Tariffs</h2>
             <x-breadcrumb :items="$breadcrumbs"/>
         </div>
         <div class="col-auto ms-auto">
             <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addRateModal">
                 <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                Add Shipping Rate
+                Add Shipping Tariff
             </button>
         </div>
     </div>
@@ -38,15 +38,61 @@ $breadcrumbs = [
                     <svg xmlns="http://www.w3.org/2000/svg" class="icon alert-icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12.01" y2="8"/><polyline points="11 12 12 12 12 16 13 16"/></svg>
                 </div>
                 <div>
-                    Define state-wise flat shipping rates. If a customer's delivery state matches a rate, it will override the default delivery zone charges.
-                    The <strong>Free Shipping Above</strong> threshold waives the shipping fee entirely if the order total exceeds it.
+                    Configure shipping tariffs by <strong>delivery partner + pin zone</strong>. These values can be used for courier-cost estimation and checkout shipping logic.
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header">
+                <h4 class="card-title">Delivery Partners</h4>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-vcenter card-table">
+                        <thead>
+                            <tr>
+                                <th>Partner</th>
+                                <th>Status</th>
+                                <th class="text-end">Toggle</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($partners as $partner)
+                                <tr>
+                                    <td>{{ $partner->name }}</td>
+                                    <td>
+                                        @if($partner->is_active)
+                                            <span class="badge bg-success">Active</span>
+                                        @else
+                                            <span class="badge bg-secondary">Inactive</span>
+                                        @endif
+                                    </td>
+                                    <td class="text-end">
+                                        <label class="form-check form-switch m-0 d-inline-block">
+                                            <input
+                                                class="form-check-input js-partner-toggle"
+                                                type="checkbox"
+                                                data-id="{{ $partner->id }}"
+                                                @checked($partner->is_active)
+                                            >
+                                        </label>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="3" class="text-muted">No delivery partners found.</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
 
         <div class="card">
             <div class="card-header">
-                <h4 class="card-title">All State Rates</h4>
+                <h4 class="card-title">All Shipping Tariffs</h4>
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
@@ -70,17 +116,17 @@ $breadcrumbs = [
     <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Add Shipping Rate</h5>
+                <h5 class="modal-title">Add Shipping Tariff</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form id="addRateForm" class="form-submit" action="{{ route('admin.state-shipping-rates.store') }}" method="POST">
                 @csrf
                 <div class="modal-body">
-                    @include('admin.state-shipping-rates._form', ['rate' => null, 'states' => $states])
+                    @include('admin.state-shipping-rates._form', ['rate' => null, 'partners' => $partners, 'zones' => $zones])
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Save Rate</button>
+                    <button type="submit" class="btn btn-primary">Save Tariff</button>
                 </div>
             </form>
         </div>
@@ -92,17 +138,17 @@ $breadcrumbs = [
     <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Edit Shipping Rate</h5>
+                <h5 class="modal-title">Edit Shipping Tariff</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form id="editRateForm" class="form-submit" method="POST">
                 @csrf
                 <div class="modal-body" id="editRateBody">
-                    @include('admin.state-shipping-rates._form', ['rate' => null, 'states' => $states])
+                    @include('admin.state-shipping-rates._form', ['rate' => null, 'partners' => $partners, 'zones' => $zones])
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Update Rate</button>
+                    <button type="submit" class="btn btn-primary">Update Tariff</button>
                 </div>
             </form>
         </div>
@@ -137,11 +183,17 @@ document.addEventListener('click', function(e) {
     form.action = `/admin/state-shipping-rates/${d.id}`;
 
     Object.entries({
-        state_name: d.state_name, state_code: d.state_code,
-        base_rate: d.base_rate, per_kg_rate: d.per_kg_rate,
-        free_shipping_above: d.free_shipping_above,
-        estimated_days_min: d.estimated_days_min,
-        estimated_days_max: d.estimated_days_max,
+        delivery_partner_id: d.delivery_partner_id,
+        zone_id: d.zone_id,
+        upto_250: d.upto_250,
+        upto_500: d.upto_500,
+        every_500: d.every_500,
+        per_kg: d.per_kg,
+        kg_2: d.kg_2,
+        above_5_surface: d.above_5_surface,
+        above_5_air: d.above_5_air,
+        fuel_surcharge_percent: d.fuel_surcharge_percent,
+        gst_percent: d.gst_percent,
         is_active: d.is_active, notes: d.notes,
     }).forEach(([k, v]) => {
         const el = form.querySelector(`[name="${k}"]`);
@@ -157,7 +209,7 @@ document.addEventListener('click', function(e) {
 document.addEventListener('click', function(e) {
     const btn = e.target.closest('.btn-delete-rate');
     if (!btn) return;
-    if (!confirm(`Delete shipping rate for "${btn.dataset.name}"?`)) return;
+    if (!confirm(`Delete shipping tariff for "${btn.dataset.name}"?`)) return;
 
     fetch(`/admin/state-shipping-rates/${btn.dataset.id}`, {
         method: 'DELETE',
@@ -165,6 +217,30 @@ document.addEventListener('click', function(e) {
     }).then(r => r.json()).then(res => {
         if (res.success) { table.ajax.reload(); }
         else { alert(res.message || 'Delete failed.'); }
+    });
+});
+
+// ---- Partner status toggle ----
+document.addEventListener('change', function (e) {
+    const toggle = e.target.closest('.js-partner-toggle');
+    if (!toggle) return;
+
+    const previous = !toggle.checked;
+    fetch(`/admin/state-shipping-rates/partners/${toggle.dataset.id}/toggle`, {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+        },
+    }).then(r => r.json()).then((res) => {
+        if (!res.success) {
+            toggle.checked = previous;
+            alert(res.message || 'Failed to update partner status.');
+            return;
+        }
+        location.reload();
+    }).catch(() => {
+        toggle.checked = previous;
+        alert('Failed to update partner status.');
     });
 });
 
@@ -181,7 +257,7 @@ document.querySelectorAll('.form-submit').forEach(form => {
                     table.ajax.reload();
                     form.reset();
                 } else {
-                    alert(res.message || 'Error saving rate.');
+                    alert(res.message || 'Error saving tariff.');
                 }
             });
     });

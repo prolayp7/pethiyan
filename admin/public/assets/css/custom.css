@@ -311,3 +311,154 @@ div.dt-button-collection .dropdown-menu {
 .step__item.active .step__icon, .step__item.active~.step__divider, .step__item.active~.step__item .step__icon{
     background-color: var(--tblr-primary) !important;
 }
+
+/* Admin Sidebar Theme (Pethiyan palette) */
+aside.navbar.navbar-vertical {
+    --sidebar-bg: #0b2f5f;
+    --sidebar-bg-soft: #123e78;
+    --sidebar-text: #e7f0ff;
+    --sidebar-text-muted: #b8cceb;
+    --sidebar-accent: #4aa334;
+    --sidebar-active: #1a5fb4;
+    background: linear-gradient(180deg, var(--sidebar-bg) 0%, #0a2a54 100%);
+    border-right: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+aside.navbar.navbar-vertical .navbar-brand {
+    background: #ffffff;
+    border-radius: 10px;
+    padding: 8px 10px;
+    margin: 12px 8px 6px;
+}
+
+aside.navbar.navbar-vertical .navbar-brand img {
+    max-height: 44px;
+    width: auto;
+}
+
+aside.navbar.navbar-vertical .nav-link,
+aside.navbar.navbar-vertical .dropdown-item {
+    color: var(--sidebar-text-muted) !important;
+    border-radius: 10px;
+}
+
+aside.navbar.navbar-vertical .nav-link .nav-link-title,
+aside.navbar.navbar-vertical .nav-link .nav-link-icon i,
+aside.navbar.navbar-vertical .dropdown-item {
+    color: inherit !important;
+}
+
+aside.navbar.navbar-vertical .nav-item .nav-link:hover,
+aside.navbar.navbar-vertical .dropdown-item:hover {
+    background: rgba(255, 255, 255, 0.08) !important;
+    color: var(--sidebar-text) !important;
+}
+
+aside.navbar.navbar-vertical .nav-item.active > .nav-link,
+aside.navbar.navbar-vertical .nav-link.active,
+aside.navbar.navbar-vertical .dropdown-item.active {
+    background: linear-gradient(90deg, var(--sidebar-active) 0%, var(--sidebar-bg-soft) 100%) !important;
+    color: #ffffff !important;
+    box-shadow: inset 3px 0 0 var(--sidebar-accent);
+    border-radius: 0 !important;
+}
+
+aside.navbar.navbar-vertical .dropdown-menu {
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+}
+
+aside.navbar.navbar-vertical .dropdown-menu .dropdown-item {
+    margin: 2px 8px;
+    border-radius: 8px;
+    padding-left: 14px;
+}
+
+aside.navbar.navbar-vertical .nav-item.active > .dropdown-menu .dropdown-item.active {
+    background: rgba(255, 255, 255, 0.16) !important;
+    box-shadow: none;
+    border-left: 3px solid var(--sidebar-accent);
+    padding-left: 11px;
+}
+
+/* Admin Login Theme */
+.admin-login-theme {
+    position: relative;
+    min-height: 100vh;
+    background:
+        radial-gradient(900px 420px at -10% -10%, rgba(36, 117, 208, 0.18), transparent 65%),
+        radial-gradient(700px 360px at 110% 110%, rgba(76, 166, 56, 0.16), transparent 60%),
+        linear-gradient(145deg, #f5f8ff 0%, #ecf3ff 52%, #f4f7fb 100%);
+}
+
+.admin-login-theme .container-tight {
+    max-width: 430px;
+}
+
+.admin-login-theme .admin-login-brand-wrap .navbar-brand {
+    margin: 0;
+}
+
+.admin-login-theme .admin-login-brand-wrap .navbar-brand img {
+    width: 180px;
+    max-width: 100%;
+    height: auto;
+}
+
+.admin-login-theme .admin-login-subtitle {
+    color: #1f4f8f;
+    font-weight: 500;
+    letter-spacing: .1px;
+}
+
+.admin-login-theme .admin-login-card {
+    border: 1px solid #d6e2f4;
+    border-radius: 18px;
+    box-shadow: 0 20px 45px rgba(12, 55, 113, 0.16);
+}
+
+.admin-login-theme .admin-login-card .card-body {
+    padding: 2rem;
+}
+
+.admin-login-theme .admin-login-card h2 {
+    color: #0f3f7f;
+    font-weight: 700;
+}
+
+.admin-login-theme .admin-login-caption {
+    color: #4f6f97;
+}
+
+.admin-login-theme .form-label {
+    color: #204d87;
+    font-weight: 600;
+}
+
+.admin-login-theme .form-control {
+    border-radius: 10px;
+    border-color: #cddbf0;
+}
+
+.admin-login-theme .form-control:focus {
+    border-color: #1d63b4;
+    box-shadow: 0 0 0 0.18rem rgba(29, 99, 180, 0.15);
+}
+
+.admin-login-theme .input-group-text {
+    border-color: #cddbf0;
+    border-radius: 0 10px 10px 0;
+}
+
+.admin-login-theme .btn-primary {
+    border: 0;
+    border-radius: 12px;
+    background: linear-gradient(90deg, #0f4ea2 0%, #1f6bd5 60%, #389c2e 100%);
+    box-shadow: 0 10px 22px rgba(23, 87, 171, 0.28);
+}
+
+.admin-login-theme .btn-primary:hover,
+.admin-login-theme .btn-primary:focus {
+    background: linear-gradient(90deg, #0d478f 0%, #195bb3 58%, #2f8727 100%);
+}

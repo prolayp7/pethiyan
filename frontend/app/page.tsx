@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getProducts, getCategories, getHeroSection } from "@/lib/api";
+import { getCategories, getHeroSection, getFeaturedProducts } from "@/lib/api";
 import HeroSection10 from "@/components/hero/HeroSection10";
 import TrustBadges from "@/components/sections/TrustBadges";
 import CategoryGrid from "@/components/sections/CategoryGrid";
@@ -36,15 +36,11 @@ function withTimeout<T>(p: Promise<T>, fallback: T, ms = 5000): Promise<T> {
 export default async function HomePage() {
   // Fetch data in parallel — both calls are independent
   // withTimeout ensures a slow/unreachable backend never hangs the page
-  const [products, categories, heroData] = await Promise.all([
-    withTimeout(getProducts(), []),
+  const [featuredProducts, categories, heroData] = await Promise.all([
+    withTimeout(getFeaturedProducts(), []),
     withTimeout(getCategories(), []),
     withTimeout(getHeroSection(), null),
   ]);
-
-  // Featured: prefer is_featured=true, fallback to first 8
-  const featured = products.filter((p) => p.is_featured);
-  const displayProducts = featured.length >= 4 ? featured.slice(0, 8) : products.slice(0, 8);
 
   return (
     <>
@@ -55,7 +51,7 @@ export default async function HomePage() {
       />
       <TrustBadges />
       <CategoryGrid categories={categories} />
-      <FeaturedProducts apiProducts={displayProducts} />
+      <FeaturedProducts apiProducts={featuredProducts} />
       
       <VideoCarouselGrid />
       

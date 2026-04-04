@@ -3,19 +3,21 @@
 @section('title', __('labels.forgot_password'))
 @section('content')
     <div>
-        <div class="page page-center">
+        <div class="page page-center admin-login-theme">
             <div class="container container-tight py-4">
-                <div class="text-center mb-4">
+                <div class="text-center mb-4 admin-login-brand-wrap">
                     <!-- BEGIN NAVBAR LOGO -->
                     <a href="." class="navbar-brand navbar-brand-autodark">
-                        <img src="{{$systemSettings['logo']}}" alt="{{$systemSettings['appName']}}" width="150px">
+                        <img src="{{ !empty($systemSettings['logo']) ? $systemSettings['logo'] : asset('logos/hyper-local-logo.png') }}"
+                             alt="{{ $systemSettings['appName'] ?? '' }}" width="150px">
                     </a>
                     <!-- END NAVBAR LOGO -->
+                    <p class="admin-login-subtitle mb-0 mt-2">Account recovery for {{ $systemSettings['appName'] ?? config('app.name') }}</p>
                 </div>
-                <div class="card card-md">
+                <div class="card card-md admin-login-card">
                     <div class="card-body">
-                        <h2 class="h2 text-center mb-4">Forgot your password?</h2>
-                        <p class="text-muted mb-4">Enter your email address and we'll send you a link to reset your password.</p>
+                        <h2 class="h2 text-center mb-1">Forgot your password?</h2>
+                        <p class="text-center admin-login-caption mb-4">Enter your email and we’ll send a secure reset link.</p>
 
                         @if (session('status'))
                             <div class="alert alert-success" role="alert">

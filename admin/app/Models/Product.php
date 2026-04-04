@@ -382,7 +382,7 @@ class Product extends Model implements HasMedia
                 break;
 
             case 'featured':
-                $query->where('featured', 1)->orderBy('id', 'desc');
+                $query->where('featured', '1')->orderBy('id', 'desc');
                 break;
 
             case 'relevance':

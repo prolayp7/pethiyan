@@ -23,8 +23,8 @@ class GetProductsByLocationRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'latitude' => 'required|numeric',
-            'longitude' => 'required|numeric',
+            'latitude' => 'nullable|numeric',
+            'longitude' => 'nullable|numeric',
             'per_page' => 'integer|min:1|max:100',
             'page' => 'integer|min:1',
             'categories' => 'string|nullable',

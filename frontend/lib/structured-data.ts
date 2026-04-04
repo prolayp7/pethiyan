@@ -1,4 +1,4 @@
-import type { ApiProduct, ApiReview, ApiFaq } from "./api";
+import type { ApiProduct, ApiReview, ApiFaq, RealApiProduct } from "./api";
 
 const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://pethiyan.com";
@@ -84,44 +84,72 @@ export function breadcrumbSchema(items: BreadcrumbItem[]) {
 
 // ─── Product ──────────────────────────────────────────────────────────────────
 
-export function productSchema(product: ApiProduct, reviews: ApiReview[] = []) {
-  const price =
-    typeof product.sale_price === "number" || typeof product.sale_price === "string"
-      ? Number(product.sale_price) || Number(product.price)
-      : Number(product.price);
+export function productSchema(product: ApiProduct | RealApiProduct, reviews: ApiReview[] = []) {
+  const productName = ((product as Partial<ApiProduct>).name ?? (product as Partial<RealApiProduct>).title ?? "Product").trim();
+  const productSlug = (product as Partial<ApiProduct>).slug ?? (product as Partial<RealApiProduct>).slug ?? "";
+  const productDescription =
+    (product as Partial<ApiProduct>).short_description ??
+    (product as Partial<RealApiProduct>).short_description ??
+    (product as Partial<ApiProduct>).description ??
+    (product as Partial<RealApiProduct>).description ??
+    "";
+
+  const storePrice =
+    (product as Partial<RealApiProduct>).variants?.[0]?.store_pricing?.[0]?.special_price ??
+    (product as Partial<RealApiProduct>).variants?.[0]?.store_pricing?.[0]?.price ??
+    0;
+
+  const fallbackPrice =
+    typeof (product as Partial<ApiProduct>).sale_price === "number" ||
+    typeof (product as Partial<ApiProduct>).sale_price === "string"
+      ? Number((product as Partial<ApiProduct>).sale_price) || Number((product as Partial<ApiProduct>).price)
+      : Number((product as Partial<ApiProduct>).price);
+
+  const price = Number.isFinite(storePrice) && storePrice > 0 ? storePrice : fallbackPrice;
+
+  const imageList = (product as Partial<RealApiProduct>).images?.all?.length
+    ? (product as Partial<RealApiProduct>).images?.all
+    : (product as Partial<ApiProduct>).images?.length
+    ? (product as Partial<ApiProduct>).images
+    : (product as Partial<RealApiProduct>).images?.main_image
+    ? [(product as Partial<RealApiProduct>).images?.main_image as string]
+    : (product as Partial<ApiProduct>).thumbnail
+    ? [(product as Partial<ApiProduct>).thumbnail as string]
+    : undefined;
+
+  const stock =
+    (product as Partial<RealApiProduct>).variants?.[0]?.store_pricing?.[0]?.stock ??
+    (product as Partial<ApiProduct>).stock ??
+    null;
 
   const schema: Record<string, unknown> = {
     "@context": "https://schema.org",
     "@type": "Product",
-    name: product.name,
-    description: product.short_description ?? product.description ?? "",
+    name: productName,
+    description: productDescription,
     sku: String(product.id),
-    brand: product.brand
-      ? { "@type": "Brand", name: product.brand.name }
+    brand: (product as Partial<ApiProduct>).brand
+      ? { "@type": "Brand", name: (product as Partial<ApiProduct>).brand?.name }
       : undefined,
-    image: product.thumbnail
-      ? [product.thumbnail]
-      : product.images?.length
-      ? product.images
-      : undefined,
+    image: imageList,
     offers: {
       "@type": "Offer",
-      url: `${SITE_URL}/products/${product.slug}`,
+      url: `${SITE_URL}/products/${productSlug}`,
       priceCurrency: "INR",
       price: price.toFixed(2),
       availability:
-        product.stock == null || product.stock > 0
+        stock == null || stock > 0
           ? "https://schema.org/InStock"
           : "https://schema.org/OutOfStock",
       seller: { "@type": "Organization", name: SITE_NAME },
     },
   };
 
-  if (product.rating != null && product.reviews_count != null) {
+  if ((product as Partial<ApiProduct>).rating != null && (product as Partial<ApiProduct>).reviews_count != null) {
     schema.aggregateRating = {
       "@type": "AggregateRating",
-      ratingValue: product.rating,
-      reviewCount: product.reviews_count,
+      ratingValue: (product as Partial<ApiProduct>).rating,
+      reviewCount: (product as Partial<ApiProduct>).reviews_count,
     };
   }
 

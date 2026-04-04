@@ -30,6 +30,7 @@ use App\Models\Promo;
 use App\Models\Review;
 use App\Models\SellerOrder;
 use App\Models\SellerOrderItem;
+use App\Models\PinServiceArea;
 use App\Models\StoreProductVariant;
 use App\Models\User;
 use App\Types\Api\ApiResponseType;
@@ -220,7 +221,7 @@ class OrderService
         $paymentSettings = $transformedSetting->toArray(request())['value'] ?? [];
         $paymentMethodEnabled = $paymentSettings[$data['payment_type']] ?? false;
 
-        if ($paymentSettings['wallet'] === false && $data['use_wallet'] === '1') {
+        if ($paymentSettings['wallet'] === false && ($data['use_wallet'] ?? '0') === '1') {
             return [
                 'success' => false,
                 'message' => __('labels.wallet_not_enabled'),
@@ -267,15 +268,21 @@ class OrderService
         }
         $data['address'] = $address;
 
-        $zone = DeliveryZoneService::getZonesAtPoint($data['address']['latitude'], $data['address']['longitude']);
-        if ($zone['exists'] === false) {
+        // Pincode-based serviceability check (replaces lat/long zone system)
+        $pincode = $address->zipcode;
+        $serviceable = PinServiceArea::where('pincode', $pincode)
+            ->where('is_serviceable', true)
+            ->exists();
+
+        if (!$serviceable) {
             return [
                 'success' => false,
-                'message' => __('messages.delivery_zone_not_found'),
+                'message' => 'Delivery is not available at pincode ' . $pincode . '. Please check your address.',
                 'data' => []
             ];
         }
-        $data['zone_id'] = $zone['zone_id'];
+
+        $data['zone_id'] = null; // delivery_zone_id is nullable; managed separately via pin_zones
 
         return [
             'success' => true,
@@ -298,22 +305,8 @@ class OrderService
             return $stockVerification;
         }
 
-        // Check if all cart items are deliverable to the address location
-        $deliveryCheck = DeliveryZoneService::checkDeliveryAvailability($cart, $address->latitude, $address->longitude);
-        if (!empty($deliveryCheck['removed_items'])) {
-            $undeliverableItems = array_map(function ($item) {
-                return $item['product_name'] . ' from ' . $item['store_name'];
-            }, $deliveryCheck['removed_items']);
-
-            return [
-                'success' => false,
-                'message' => __('messages.items_not_deliverable_to_address'),
-                'data' => [
-                    'undeliverable_items' => $undeliverableItems,
-                    'details' => $deliveryCheck['removed_items']
-                ]
-            ];
-        }
+        // Delivery availability is validated via pincode in validateAddressAndDeliveryZone().
+        // Lat/long-based zone checks are not used in this system.
 
         return ['success' => true];
     }
@@ -328,7 +321,9 @@ class OrderService
      */
     private function processOrderCreation(User $user, Cart $cart, array $data): Order
     {
-        $data['minimumCartAmount'] = $setting->value['minimumCartAmount'] ?? 1;
+        $settingService = app(SettingService::class);
+        $setting = $settingService->getSettingByVariable(SettingTypeEnum::SYSTEM());
+        $data['minimumCartAmount'] = (float)($setting?->value['minimumCartAmount'] ?? 0);
         return $this->createOrderFromCart($user, $cart, $data);
     }
 
@@ -343,7 +338,7 @@ class OrderService
     private function processPaymentTransactions(User $user, Order $order, array $data): array
     {
         // Create payment transaction for online payments
-        if ($data['use_wallet'] === '1') {
+        if (($data['use_wallet'] ?? '0') === '1') {
             $walletPaymentData = [
                 'order_id' => $order->id,
                 'amount' => $data['payment_type'] == PaymentTypeEnum::WALLET() ? $order->total_payable :$order->wallet_balance,
@@ -464,9 +459,10 @@ class OrderService
     private
     function createOrderFromCart(User $user, Cart $cart, array $data): mixed
     {
-        // Calculate cart totals
+        // Calculate cart totals using the delivery charge selected at checkout
         $cartService = app(CartService::class);
-        $paymentSummary = $cartService->getPaymentSummary(cart: $cart, latitude: $data['address']['latitude'], longitude: $data['address']['longitude'], isRushDelivery: $data['rush_delivery'] ?? false, useWallet: $data['use_wallet'] ?? false, promoCode: $data['promo_code'] ?? null);
+        $deliveryCharge = (float)($data['delivery_charge'] ?? 0);
+        $paymentSummary = $cartService->getPaymentSummary(cart: $cart, deliveryCharge: $deliveryCharge, isRushDelivery: $data['rush_delivery'] ?? false, useWallet: $data['use_wallet'] ?? false, promoCode: $data['promo_code'] ?? null);
 
         if ($paymentSummary['payable_amount'] < $data['minimumCartAmount'] && $data['payment_type'] !== PaymentTypeEnum::WALLET()) {
             throw new Exception(__('labels.minimum_cart_amount_not_met', ['amount' => $data['minimumCartAmount']]));
@@ -479,12 +475,12 @@ class OrderService
             'slug' => Str::slug('order-' . time() . '-' . $user->id),
             'email' => $user->email,
             'ip_address' => request()->ip(),
-            'currency_code' => 'USD', // This should be dynamic based on settings
-            'currency_rate' => 1, // This should be dynamic based on settings
+            'currency_code' => $this->getSystemCurrencyCode(),
+            'currency_rate' => 1,
             'payment_method' => $data['payment_type'],
             'payment_status' => PaymentStatusEnum::PENDING(),
             'fulfillment_type' => 'hyperlocal',
-            'is_rush_order' => (bool)$data['rush_delivery'] ?? false,
+            'is_rush_order' => (bool)($data['rush_delivery'] ?? false),
             'estimated_delivery_time' => $paymentSummary['estimated_delivery_time'] ?? null,
             'delivery_time_slot_id' => $data['delivery_time_slot_id'] ?? null,
             'delivery_zone_id' => $data['zone_id'] ?? null,
@@ -509,8 +505,8 @@ class OrderService
             'billing_zip' => $data['address']['zipcode'],
             'billing_phone' => $data['address']['mobile'],
             'billing_address_type' => $data['address']['address_type'],
-            'billing_latitude' => $data['address']['latitude'],
-            'billing_longitude' => $data['address']['longitude'],
+            'billing_latitude' => $data['address']['latitude'] ?? null,
+            'billing_longitude' => $data['address']['longitude'] ?? null,
             'billing_city' => $data['address']['city'],
             'billing_state' => $data['address']['state'],
             'billing_country' => $data['address']['country'],
@@ -524,8 +520,8 @@ class OrderService
             'shipping_zip' => $data['address']['zipcode'],
             'shipping_phone' => $data['address']['mobile'],
             'shipping_address_type' => $data['address']['address_type'],
-            'shipping_latitude' => $data['address']['latitude'],
-            'shipping_longitude' => $data['address']['longitude'],
+            'shipping_latitude' => $data['address']['latitude'] ?? null,
+            'shipping_longitude' => $data['address']['longitude'] ?? null,
             'shipping_city' => $data['address']['city'],
             'shipping_state' => $data['address']['state'],
             'shipping_country' => $data['address']['country'],
@@ -796,6 +792,17 @@ class OrderService
      * Reverse-lookup a 2-letter Indian state code from a state name string.
      * Falls back to null when the name cannot be matched.
      */
+    private function getSystemCurrencyCode(): string
+    {
+        try {
+            $settingService = app(SettingService::class);
+            $setting = $settingService->getSettingByVariable(SettingTypeEnum::SYSTEM());
+            return $setting?->value['currency'] ?? 'INR';
+        } catch (\Throwable $e) {
+            return 'INR';
+        }
+    }
+
     private function resolveStateCode(?string $stateName): ?string
     {
         if (empty($stateName)) {

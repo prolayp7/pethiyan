@@ -23,6 +23,27 @@ use Illuminate\Validation\ValidationException;
 class WishlistApiController extends Controller
 {
     /**
+     * Get wishlist summary for header badges / quick stats.
+     */
+    public function summary(): JsonResponse
+    {
+        $userId = auth()->id();
+        $totalWishlists = Wishlist::where('user_id', $userId)->count();
+        $totalItems = WishlistItem::whereHas('wishlist', function ($query) use ($userId) {
+            $query->where('user_id', $userId);
+        })->count();
+
+        return ApiResponseType::sendJsonResponse(
+            success: true,
+            message: __('labels.wishlist_fetched_successfully'),
+            data: [
+                'total_wishlists' => $totalWishlists,
+                'total_items' => $totalItems,
+            ]
+        );
+    }
+
+    /**
      * Get all user wishlists with their items.
      */
     #[QueryParameter('page', description: 'Page number for pagination.', type: 'int', default: 1, example: 1)]
@@ -131,26 +152,28 @@ class WishlistApiController extends Controller
             $message = __('labels.wishlist_created_successfully');
 
             // If product_id is provided, add item to wishlist
-            if ($validatedData['product_id']) {
-                // Check if an item already exists in the wishlist
-                $existingItem = WishlistItem::where('wishlist_id', $wishlist->id)
-                    ->where('product_id', $validatedData['product_id'])
-                    ->where('product_variant_id', $validatedData['product_variant_id'] ?? null)
-                    ->where('store_id', $validatedData['store_id'])
+            $productId = $validatedData['product_id'] ?? null;
+            if ($productId !== null) {
+                // Enforce one-product-once-per-user across all user wishlists.
+                $existingItem = WishlistItem::where('product_id', $productId)
+                    ->whereHas('wishlist', function ($query) {
+                        $query->where('user_id', auth()->id());
+                    })
                     ->first();
 
                 if ($existingItem) {
+                    DB::commit();
                     return ApiResponseType::sendJsonResponse(
-                        success: false,
+                        success: true,
                         message: __('labels.item_already_in_wishlist'),
-                        data: []
+                        data: new WishlistItemResource($existingItem->load(['product', 'variant', 'store', 'wishlist']))
                     );
                 }
 
                 // Add item to the wishlist
                 $wishlistItem = WishlistItem::create([
                     'wishlist_id' => $wishlist->id,
-                    'product_id' => $validatedData['product_id'],
+                    'product_id' => $productId,
                     'product_variant_id' => $validatedData['product_variant_id'] ?? null,
                     'store_id' => $validatedData['store_id'],
                 ]);
@@ -239,6 +262,7 @@ class WishlistApiController extends Controller
             // Check if a wishlist with the same slug already exists for this user
             $existingWishlist = Wishlist::where(['slug'=> $slug, 'user_id' => auth()->id()])->first();
             if ($existingWishlist) {
+                DB::commit();
                 return ApiResponseType::sendJsonResponse(
                     success: false,
                     message: __('labels.wishlist_already_exists'),
@@ -327,13 +351,93 @@ class WishlistApiController extends Controller
             );
         }
 
+        $wishlistId = $wishlistItem->wishlist_id;
         $wishlistItem->delete();
+
+        // If wishlist has no items left, remove the wishlist row as well.
+        $deletedWishlist = false;
+        $hasAnyItems = WishlistItem::where('wishlist_id', $wishlistId)->exists();
+        if (!$hasAnyItems) {
+            $deletedWishlist = (bool) Wishlist::where('id', $wishlistId)
+                ->where('user_id', auth()->id())
+                ->delete();
+        }
 
         return ApiResponseType::sendJsonResponse(
             success: true,
             message: __('labels.item_removed_from_wishlist'),
-            data: []
+            data: [
+                'deleted_item_id' => (int) $itemId,
+                'deleted_wishlist' => $deletedWishlist,
+            ]
         );
+    }
+
+    /**
+     * Clear all items from a specific wishlist.
+     */
+    public function clearWishlistItems($id): JsonResponse
+    {
+        $wishlist = Wishlist::where('user_id', auth()->id())->find($id);
+
+        if (!$wishlist) {
+            return ApiResponseType::sendJsonResponse(
+                success: false,
+                message: __('labels.wishlist_not_found'),
+                data: []
+            );
+        }
+
+        $deletedCount = WishlistItem::where('wishlist_id', $wishlist->id)->delete();
+
+        return ApiResponseType::sendJsonResponse(
+            success: true,
+            message: 'Wishlist items cleared successfully',
+            data: [
+                'wishlist_id' => $wishlist->id,
+                'deleted_count' => $deletedCount,
+            ]
+        );
+    }
+
+    /**
+     * Clear all wishlist items across all wishlists for logged-in user.
+     */
+    public function clearAllItems(): JsonResponse
+    {
+        $userId = auth()->id();
+
+        DB::beginTransaction();
+        try {
+            $wishlistIds = Wishlist::where('user_id', $userId)->pluck('id');
+
+            $deletedItemsCount = 0;
+            $deletedWishlistsCount = 0;
+
+            if ($wishlistIds->isNotEmpty()) {
+                $deletedItemsCount = WishlistItem::whereIn('wishlist_id', $wishlistIds)->delete();
+                $deletedWishlistsCount = Wishlist::whereIn('id', $wishlistIds)->delete();
+            }
+
+            DB::commit();
+
+            return ApiResponseType::sendJsonResponse(
+                success: true,
+                message: 'All wishlists and wishlist items cleared successfully',
+                data: [
+                    'deleted_items_count' => $deletedItemsCount,
+                    'deleted_wishlists_count' => $deletedWishlistsCount,
+                ]
+            );
+        } catch (Exception $e) {
+            DB::rollBack();
+
+            return ApiResponseType::sendJsonResponse(
+                success: false,
+                message: __('labels.something_went_wrong'),
+                data: []
+            );
+        }
     }
 
     /**
@@ -373,8 +477,6 @@ class WishlistApiController extends Controller
             // Check if item already exists in target wishlist
             $existingItem = WishlistItem::where('wishlist_id', $targetWishlist->id)
                 ->where('product_id', $wishlistItem->product_id)
-                ->where('product_variant_id', $wishlistItem->product_variant_id)
-                ->where('store_id', $wishlistItem->store_id)
                 ->first();
 
             if ($existingItem) {

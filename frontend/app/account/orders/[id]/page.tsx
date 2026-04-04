@@ -23,6 +23,11 @@ function fmtDate(dateStr: string) {
   });
 }
 
+function shouldBypassOptimizer(src?: string | null): boolean {
+  if (!src) return false;
+  return /^https?:\/\//i.test(src);
+}
+
 const STATUS_MAP: Record<ApiOrder["status"], { label: string; cls: string }> = {
   pending:    { label: "Pending",    cls: "bg-amber-100 text-amber-700"  },
   processing: { label: "Processing", cls: "bg-blue-100 text-blue-700"    },
@@ -213,7 +218,13 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                 <div key={item.id} className="flex items-center gap-3">
                   <div className="w-14 h-14 rounded-xl overflow-hidden border border-gray-100 bg-gray-50 relative shrink-0">
                     {item.image ? (
-                      <Image src={item.image} alt={item.product_name} fill className="object-cover" />
+                      <Image
+                        src={item.image}
+                        alt={item.product_name}
+                        fill
+                        className="object-cover"
+                        unoptimized={shouldBypassOptimizer(item.image)}
+                      />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
                         <ShoppingBag className="h-6 w-6 text-gray-300" />
@@ -280,7 +291,11 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
               <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500">
                 <span>Payment</span>
                 <span className="font-semibold capitalize">
-                  {order.payment_method === "cod" ? "Cash on Delivery" : "Online (Razorpay)"}
+                  {order.payment_method === "cod"
+                    ? "Cash on Delivery"
+                    : order.payment_method === "easepayPayment"
+                      ? "Online (Easepay)"
+                      : "Online (Razorpay)"}
                 </span>
               </div>
             )}

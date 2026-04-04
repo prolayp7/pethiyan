@@ -169,14 +169,21 @@ class AddressApiController extends Controller
                 'address_type' => ['sometimes', 'required', new Enum(AddressTypeEnum::class)],
                 'country' => 'required|string|max:100',
                 'country_code' => 'required|string|max:3',
-                'latitude' => 'nullable|numeric|between:-90,90',
-                'longitude' => 'nullable|numeric|between:-180,180',
+                'latitude' => 'nullable|numeric|between:-90,90|required_with:longitude',
+                'longitude' => 'nullable|numeric|between:-180,180|required_with:latitude',
             ]);
-            $isExist = DeliveryZoneService::existsAtPoint($validatedData['latitude'], $validatedData['longitude']);
-            if (!$isExist) {
-                return ApiResponseType::sendJsonResponse(
-                    success: false, message: __('labels.delivery_zone_not_found')
+
+            if (isset($validatedData['latitude']) && isset($validatedData['longitude'])) {
+                $isExist = DeliveryZoneService::existsAtPoint(
+                    (float) $validatedData['latitude'],
+                    (float) $validatedData['longitude']
                 );
+
+                if (!$isExist) {
+                    return ApiResponseType::sendJsonResponse(
+                        success: false, message: __('labels.delivery_zone_not_found')
+                    );
+                }
             }
 
             $validatedData['user_id'] = Auth::id();
@@ -270,9 +277,22 @@ class AddressApiController extends Controller
                 'address_type' => ['required', new Enum(AddressTypeEnum::class)],
                 'country' => 'sometimes|required|string|max:100',
                 'country_code' => 'sometimes|required|string|max:5',
-                'latitude' => 'nullable|numeric|between:-90,90',
-                'longitude' => 'nullable|numeric|between:-180,180',
+                'latitude' => 'nullable|numeric|between:-90,90|required_with:longitude',
+                'longitude' => 'nullable|numeric|between:-180,180|required_with:latitude',
             ]);
+
+            if (isset($validatedData['latitude']) && isset($validatedData['longitude'])) {
+                $isExist = DeliveryZoneService::existsAtPoint(
+                    (float) $validatedData['latitude'],
+                    (float) $validatedData['longitude']
+                );
+
+                if (!$isExist) {
+                    return ApiResponseType::sendJsonResponse(
+                        success: false, message: __('labels.delivery_zone_not_found')
+                    );
+                }
+            }
 
             $address->update($validatedData);
 

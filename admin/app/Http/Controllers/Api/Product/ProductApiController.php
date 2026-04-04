@@ -25,113 +25,123 @@ class ProductApiController extends Controller
 {
 
     /**
-     * Get products Based on location.
+     * Get all products with full store pricing (no location required).
      */
     #[QueryParameter('page', description: 'Page number for pagination.', type: 'int', default: 1, example: 1)]
     #[QueryParameter('per_page', description: 'Products Per Page', type: 'int', default: 15, example: 15)]
-    #[QueryParameter('latitude', description: 'Latitude of the user location', required: true, type: 'float', example: 23.11684540)]
-    #[QueryParameter('longitude', description: 'Longitude of the user location', required: true, type: 'float', example: 70.02805670)]
-    #[QueryParameter('categories', description: 'Comma-separated list of category slugs to filter products', type: 'string', example: 'apple,samsung')]
-    #[QueryParameter('brands', description: 'Comma-separated list of brand slugs to filter products', type: 'string', example: 'mobile,electronics')]
-    #[QueryParameter('exclude_product', description: 'Comma-separated list of product slugs to exclude from response', type: 'string', example: 'iphone-14,iphone-14-pro')]
-    #[QueryParameter('sort', description: 'Enter sort filter', type: 'string', example: 'price_asc, price_desc, relevance, avg_rated, best_seller, featured',)]
-    #[QueryParameter('store', description: 'Enter Store Slug to filter products', type: 'string', example: 'my-store')]
-    #[QueryParameter('search', description: 'Search term to filter products by name, description, category name, or tags', type: 'string', example: 'smartphone')]
-    #[QueryParameter('include_child_categories', description: 'Include products from child categories when filtering by categories', type: 'boolean', default: false, example: true)]
-    public function index(GetProductsByLocationRequest $request): JsonResponse
+    #[QueryParameter('categories', description: 'Comma-separated list of category slugs to filter products', type: 'string', example: 'standup-pouches,ziplock-bags')]
+    #[QueryParameter('brands', description: 'Comma-separated list of brand slugs to filter products', type: 'string', example: 'pethiyan')]
+    #[QueryParameter('exclude_product', description: 'Comma-separated list of product slugs to exclude', type: 'string', example: 'adhesive-tape')]
+    #[QueryParameter('sort', description: 'Sort order', type: 'string', example: 'price_asc, price_desc, featured, avg_rated, best_seller')]
+    #[QueryParameter('store', description: 'Filter by store slug', type: 'string', example: 'pethiyan-main-store-1')]
+    #[QueryParameter('search', description: 'Search term', type: 'string', example: 'tape')]
+    #[QueryParameter('include_child_categories', description: 'Include child category products', type: 'boolean', default: false)]
+    #[QueryParameter('customer_state_code', description: 'Customer state code for GST calculation', type: 'string', example: 'TN')]
+    public function index(Request $request): JsonResponse
     {
         try {
-            $validated = $request->validated();
-            $filter = [];
-            if ($validated['categories'] ?? null) {
-                $filter['categories'] = is_string($validated['categories']) ? explode(',', $validated['categories']) : null;
-            }
-            if ($validated['brands'] ?? null) {
-                $filter['brands'] = is_string($validated['brands']) ? explode(',', $validated['brands']) : null;
-            }
-            if ($validated['exclude_product'] ?? null) {
-                // Normalize exclude_product into an array of unique slugs
-                $excludeSlugs = is_string($validated['exclude_product'])
-                    ? array_values(array_filter(array_map('trim', explode(',', $validated['exclude_product']))))
-                    : [];
+            $validated = $request->validate([
+                'per_page'                 => 'nullable|integer|min:1|max:100',
+                'page'                     => 'nullable|integer|min:1',
+                'categories'               => 'nullable|string',
+                'brands'                   => 'nullable|string',
+                'exclude_product'          => 'nullable|string',
+                'sort'                     => ['nullable', 'string', \Illuminate\Validation\Rule::in(['price_asc', 'price_desc', 'relevance', 'avg_rated', 'best_seller', 'featured'])],
+                'store'                    => 'nullable|string|max:255',
+                'search'                   => 'nullable|string|min:2|max:255',
+                'include_child_categories' => 'nullable|boolean',
+                'customer_state_code'      => 'nullable|string|max:10',
+            ]);
 
-                if (!empty($excludeSlugs)) {
-                    $filter['exclude_product'] = $excludeSlugs;
+            $perPage = (int) ($validated['per_page'] ?? 15);
 
-                    // If categories are not provided, infer them from the excluded products' categories
-                    if (empty($filter['categories'])) {
-                        $categoryIds = Product::query()
-                            ->whereIn('slug', $excludeSlugs)
-                            ->pluck('category_id')
-                            ->filter()
-                            ->unique()
-                            ->values()
-                            ->toArray();
+            $query = Product::query()
+                ->where('verification_status', ProductVarificationStatusEnum::APPROVED->value)
+                ->where('status', ProductStatusEnum::ACTIVE->value)
+                ->with([
+                    'taxClasses:id,title',
+                    'taxClasses.taxRates:id,title,rate',
+                    'variants.attributes.attribute:id,title,slug',
+                    'variants.attributes.attributeValue:id,title,swatche_value',
+                    'variants.storeProductVariants.store:id,name,slug,state_code,state_name',
+                ]);
 
-                        if (!empty($categoryIds)) {
-                            $categorySlugs = Category::query()
-                                ->whereIn('id', $categoryIds)
-                                ->pluck('slug')
-                                ->filter()
-                                ->unique()
-                                ->values()
-                                ->toArray();
+            // Category filter
+            if (!empty($validated['categories'])) {
+                $categorySlugs = array_filter(array_map('trim', explode(',', $validated['categories'])));
+                $categoryIds   = Category::whereIn('slug', $categorySlugs)->pluck('id')->toArray();
 
-                            if (!empty($categorySlugs)) {
-                                $filter['categories'] = $categorySlugs;
-                            }
-                        }
+                if (!empty($validated['include_child_categories'])) {
+                    $allIds = $categoryIds;
+                    foreach ($categoryIds as $cid) {
+                        $allIds = array_merge($allIds, Product::getAllChildCategoryIds($cid));
                     }
+                    $categoryIds = array_unique($allIds);
+                }
+                $query->whereIn('category_id', $categoryIds);
+            }
+
+            // Brand filter
+            if (!empty($validated['brands'])) {
+                $brandSlugs = array_filter(array_map('trim', explode(',', $validated['brands'])));
+                $brandIds   = \App\Models\Brand::whereIn('slug', $brandSlugs)->pluck('id')->toArray();
+                $query->whereIn('brand_id', $brandIds);
+            }
+
+            // Exclude products
+            if (!empty($validated['exclude_product'])) {
+                $excludeSlugs = array_values(array_filter(array_map('trim', explode(',', $validated['exclude_product']))));
+                $query->whereNotIn('slug', $excludeSlugs);
+            }
+
+            // Store filter
+            if (!empty($validated['store'])) {
+                $store = \App\Models\Store::where('slug', $validated['store'])->first();
+                if ($store) {
+                    $query->whereHas('variants.storeProductVariants', fn($q) => $q->where('store_id', $store->id));
                 }
             }
-            if ($validated['sort'] ?? null) {
-                $filter['sort'] = $validated['sort'];
+
+            // Search
+            if (!empty($validated['search'])) {
+                $term = $validated['search'];
+                $query->where(function ($q) use ($term) {
+                    $q->where('title', 'LIKE', "%{$term}%")
+                      ->orWhere('short_description', 'LIKE', "%{$term}%")
+                      ->orWhere('tags', 'LIKE', "%{$term}%")
+                      ->orWhereHas('category', fn($cq) => $cq->where('title', 'LIKE', "%{$term}%"))
+                      ->orWhereHas('brand',    fn($bq) => $bq->where('title', 'LIKE', "%{$term}%"));
+                });
             }
-            if ($validated['search'] ?? null) {
-                $filter['search'] = $validated['search'];
-            }
-            if ($validated['store'] ?? null) {
-                $filter['store'] = $validated['store'];
-            }
-            if ($validated['include_child_categories'] ?? null) {
-                $filter['include_child_categories'] = $validated['include_child_categories'];
-            }
-            $products = Product::getProductsByLocation(latitude: $validated['latitude'], longitude: $validated['longitude'], perPage: $validated['per_page'] ?? 15, filter: $filter);
-            if ($products->isEmpty()) {
-                return ApiResponseType::sendJsonResponse(
-                    success: true,
-                    message: 'labels.products_not_found',
-                    data: []
-                );
-            }
-            $products->getCollection()->transform(fn($product) => new ProductListResource($product));
+
+            // Sort
+            match ($validated['sort'] ?? null) {
+                'price_asc'  => $query->orderBy('title'),
+                'price_desc' => $query->orderByDesc('title'),
+                'featured'   => $query->orderByDesc('featured')->orderByDesc('id'),
+                'avg_rated'  => $query->orderByDesc('id'),
+                default      => $query->orderByDesc('id'),
+            };
+
+            $products = $query->paginate($perPage);
+            $products->getCollection()->transform(fn($p) => new ProductCatalogResource($p));
+
             return ApiResponseType::sendJsonResponse(
                 success: true,
                 message: 'labels.products_fetched_successfully',
                 data: [
                     'current_page' => $products->currentPage(),
-                    'last_page' => $products->lastPage(),
-                    'per_page' => $products->perPage(),
-                    'total' => $products->total(),
-                    'keywords' => $products->related_keywords ?? [],
-                    'data' => $products->items(),
+                    'last_page'    => $products->lastPage(),
+                    'per_page'     => $products->perPage(),
+                    'total'        => $products->total(),
+                    'data'         => $products->items(),
                 ]
             );
         } catch (ValidationException $e) {
-            return ApiResponseType::sendJsonResponse(
-                success: false,
-                message: 'labels.validation_error',
-                data: $e->errors()
-            );
+            return ApiResponseType::sendJsonResponse(false, 'labels.validation_error', $e->errors());
         } catch (\Exception $e) {
-            Log::error('Products index API failed.', [
-                'message' => $e->getMessage(),
-            ]);
-            return ApiResponseType::sendJsonResponse(
-                success: false,
-                message: 'labels.error_fetching_products',
-                data: []
-            );
+            Log::error('Products index API failed.', ['message' => $e->getMessage()]);
+            return ApiResponseType::sendJsonResponse(false, 'labels.error_fetching_products', []);
         }
     }
 
@@ -182,8 +192,8 @@ class ProductApiController extends Controller
             'variantAttributes.attributeValue'
         ]);
 
-        $query->where('verification_status', ProductVarificationStatusEnum::APPROVED());
-        $query->where('status', ProductStatusEnum::ACTIVE());
+        $query->where('verification_status', ProductVarificationStatusEnum::APPROVED->value);
+        $query->where('status', ProductStatusEnum::ACTIVE->value);
 
         $query->whereHas('variants.storeProductVariants', function ($q) use ($storeId) {
             $q->where('store_id', $storeId);
@@ -201,43 +211,37 @@ class ProductApiController extends Controller
     }
 
     /**
-     * Get product by Slug.
+     * Get product by Slug — returns full store pricing for all stores.
      */
+    #[QueryParameter('customer_state_code', description: 'Optional customer state code for GST split (intra/inter).', type: 'string', example: 'TN')]
     public function show(Request $request, $slug): JsonResponse
     {
         try {
-            $validated = $request->validate([
-                'latitude' => 'required|numeric',
-                'longitude' => 'required|numeric',
-            ]);
-            $product = Product::select('id')->where('slug', $slug)->first();
+            $product = Product::query()
+                ->where('slug', $slug)
+                ->where('verification_status', ProductVarificationStatusEnum::APPROVED->value)
+                ->where('status', ProductStatusEnum::ACTIVE->value)
+                ->with([
+                    'taxClasses:id,title',
+                    'taxClasses.taxRates:id,title,rate',
+                    'variants.attributes.attribute:id,title,slug',
+                    'variants.attributes.attributeValue:id,title,swatche_value',
+                    'variants.storeProductVariants.store:id,name,slug,state_code,state_name',
+                ])
+                ->first();
+
             if (!$product) {
-                return ApiResponseType::sendJsonResponse(success: false, message: __('labels.product_not_found_with_slug'), data: []);
+                return ApiResponseType::sendJsonResponse(false, __('labels.product_not_found_with_slug'), []);
             }
-            $id = $product->id;
-            $product = Product::getProductByLocation(latitude: $validated['latitude'], longitude: $validated['longitude'], id: $id);
-            if (!$product) {
-                return ApiResponseType::sendJsonResponse(
-                    success: false,
-                    message: 'labels.product_not_found',
-                    data: []
-                );
-            }
-            $product = new ProductResource($product);
+
             return ApiResponseType::sendJsonResponse(
                 success: true,
                 message: 'labels.product_fetched_successfully',
-                data: $product
-            );
-        } catch (ValidationException $e) {
-            return ApiResponseType::sendJsonResponse(
-                success: false,
-                message: 'labels.validation_error',
-                data: $e->errors()
+                data: new ProductCatalogResource($product)
             );
         } catch (\Exception $e) {
             Log::error('Products show API failed.', [
-                'slug' => $slug,
+                'slug'    => $slug,
                 'message' => $e->getMessage(),
             ]);
             return ApiResponseType::sendJsonResponse(
@@ -271,8 +275,8 @@ class ProductApiController extends Controller
             $search = trim((string) ($validated['search'] ?? ''));
 
             $query = Product::query()
-                ->where('verification_status', ProductVarificationStatusEnum::APPROVED())
-                ->where('status', ProductStatusEnum::ACTIVE())
+                ->where('verification_status', ProductVarificationStatusEnum::APPROVED->value)
+                ->where('status', ProductStatusEnum::ACTIVE->value)
                 ->with([
                     'category:id,title,slug',
                     'brand:id,title,slug',
@@ -345,9 +349,9 @@ class ProductApiController extends Controller
             ]);
 
             $query = Product::query()
-                ->where('verification_status', ProductVarificationStatusEnum::APPROVED())
-                ->where('status', ProductStatusEnum::ACTIVE())
-                ->where('featured', 1)
+                ->where('verification_status', ProductVarificationStatusEnum::APPROVED->value)
+                ->where('status', ProductStatusEnum::ACTIVE->value)
+                ->where('featured', '1')
                 ->with([
                     'category:id,title,slug',
                     'brand:id,title,slug',

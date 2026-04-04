@@ -34,7 +34,9 @@ class CreateOrderRequest extends FormRequest
             'rush_delivery' => ['boolean', 'nullable'],
             'use_wallet' => ['boolean', 'nullable'],
             'order_note' => ['nullable', 'string', 'max:500'],
-            'redirect_url' => ['nullable'],
+            'redirect_url'    => ['nullable'],
+            'delivery_charge' => ['nullable', 'numeric', 'min:0'],
+            'shipping_rate_id'=> ['nullable', 'integer'],
 
             // Attachments structure: attchment[productId][] or attachments[productId][]
             'attachments' => ['nullable', 'array'],

@@ -152,8 +152,12 @@ class ProductService
             $variant = null;
             $imageName = 'variant_image' . $variantData['id'];
 
+            if ($mode === 'update' && $this->isPersistedVariantId($variantData['id'] ?? null)) {
+                $variant = $existingVariants->firstWhere('id', (int)$variantData['id']);
+            }
+
             // Try to find matching variant if updating
-            if ($mode === 'update' && !empty($variantData['attributes'])) {
+            if ($mode === 'update' && !$variant && !empty($variantData['attributes']) && $this->shouldMatchExistingVariant($variantData)) {
                 $variant = $this->findMatchingVariant($existingVariants, $variantData, $newVariantIds);
             }
             if ($variant) {
@@ -232,6 +236,29 @@ class ProductService
         }
     }
 
+    /**
+     * Custom variants created from the "Add Variant" button use ids like "v_custom_*".
+     * They must always be treated as new variants in update mode and should not be matched
+     * against existing variants by attribute combination.
+     */
+    private function shouldMatchExistingVariant(array $variantData): bool
+    {
+        $variantId = (string)($variantData['id'] ?? '');
+        if ($variantId === '') {
+            return true;
+        }
+
+        return !str_starts_with($variantId, 'v_custom_');
+    }
+
+    private function isPersistedVariantId($variantId): bool
+    {
+        if ($variantId === null) {
+            return false;
+        }
+        return ctype_digit((string)$variantId);
+    }
+
     private function findMatchingVariant($existingVariants, $variantData, $alreadyMatchedIds)
     {
         // Create a map of attribute_id => value_id for easier comparison
@@ -287,7 +314,7 @@ class ProductService
         // Find pricing data for this variant
         $variantPricing = array_filter(
             $pricingData['variant_pricing'],
-            fn($vp) => isset($vp['variant_id']) && $vp['variant_id'] === $variantData['id']
+            fn($vp) => isset($vp['variant_id']) && (string)$vp['variant_id'] === (string)$variantData['id']
         );
 
         // Create new store pricing

@@ -13,11 +13,14 @@ import Container from "@/components/layout/Container";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function fmt(n: number) {
-  return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(n);
+// fmt is defined inside CartPage to capture currencySymbol from cart state
+
+function shouldBypassOptimizer(src?: string | null): boolean {
+  if (!src) return false;
+  return /^https?:\/\//i.test(src);
 }
 
-const FREE_SHIPPING_THRESHOLD = 999;
+// FREE_SHIPPING_THRESHOLD is derived per-currency inside CartPage
 
 // ─── Empty Cart ───────────────────────────────────────────────────────────────
 
@@ -47,6 +50,11 @@ function EmptyCart() {
 
 export default function CartPage() {
   const { items, updateQuantity, removeItem, total, clearCart } = useCart();
+
+  const currencySymbol = items[0]?.currencySymbol ?? "₹";
+  const fmt = (n: number) =>
+    `${currencySymbol}${n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const FREE_SHIPPING_THRESHOLD = currencySymbol === "₹" ? 999 : 50;
 
   const [couponCode, setCouponCode] = useState("");
   const [couponResult, setCouponResult] = useState<ApiCouponResult | null>(null);
@@ -132,7 +140,13 @@ export default function CartPage() {
                   className="shrink-0 w-20 h-20 rounded-xl overflow-hidden border border-gray-100 bg-gray-50 relative"
                 >
                   {item.image ? (
-                    <Image src={item.image} alt={item.name} fill className="object-cover" />
+                    <Image
+                      src={item.image}
+                      alt={item.name}
+                      fill
+                      className="object-cover"
+                      unoptimized={shouldBypassOptimizer(item.image)}
+                    />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
                       <ShoppingBag className="h-8 w-8 text-gray-300" />
@@ -203,6 +217,23 @@ export default function CartPage() {
                       Min. order: {item.minQty} units
                     </p>
                   )}
+
+                  {/* Total weight */}
+                  {item.weight != null && item.weight > 0 && (() => {
+                    const unit = (item.weightUnit ?? "g").toLowerCase();
+                    const unitGrams = unit === "kg" ? item.weight * 1000 : item.weight;
+                    const totalGrams = unitGrams * item.quantity;
+                    const fmtWeight = (g: number) =>
+                      g >= 1000
+                        ? `${(g / 1000).toFixed(2).replace(/\.?0+$/, "")} kg`
+                        : `${g} g`;
+                    return (
+                      <p className="text-[11px] text-gray-400 mt-1">
+                        Total weight: <strong className="text-gray-500">{fmtWeight(totalGrams)}</strong>
+                        <span className="ml-1">({fmtWeight(unitGrams)} × {item.quantity})</span>
+                      </p>
+                    );
+                  })()}
                 </div>
               </div>
             ))}

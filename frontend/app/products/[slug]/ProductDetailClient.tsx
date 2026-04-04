@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Image from "next/image";
+import { usePathname, useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 import {
   Star,
   Heart,
@@ -22,20 +24,52 @@ import {
   CheckCircle2,
   AlertCircle,
   Info,
+  Store,
+  Palette,
+  Layers,
 } from "lucide-react";
 import Container from "@/components/layout/Container";
 import { useCart } from "@/context/CartContext";
+import { useAuth } from "@/context/AuthContext";
+import { useWishlist } from "@/context/WishlistContext";
 import {
-  getProductVariants,
   toNum,
-  type ApiProduct,
   type ApiReview,
   type ApiFaq,
-  type ApiVariantAttribute,
-  type ApiProductVariant,
+  type RealApiProduct,
+  type RealApiStorePricing,
+  type RealApiVariant,
+  addToWishlist,
+  getProductReviews,
+  getProductFaqs,
 } from "@/lib/api";
 
-// ─── Gallery ──────────────────────────────────────────────────────────────────
+function formatCurrency(amount: number | null | undefined, symbol = "₹"): string {
+  const value = toNum(amount);
+  return `${symbol}${value.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function uniqueStrings(values: Array<string | null | undefined>): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  values.forEach((value) => {
+    const v = (value ?? "").trim();
+    if (!v || seen.has(v)) return;
+    seen.add(v);
+    out.push(v);
+  });
+  return out;
+}
+
+function isVideoLink(url?: string | null): boolean {
+  if (!url) return false;
+  return /\.(mp4|webm|ogg)(\?|$)/i.test(url);
+}
+
+function shouldBypassOptimizer(src?: string | null): boolean {
+  if (!src) return false;
+  return /^https?:\/\//i.test(src);
+}
 
 function Gallery({
   images,
@@ -51,7 +85,7 @@ function Gallery({
 
   const allThumbs = [
     ...images.map((src) => ({ type: "image" as const, src })),
-    ...(videoUrl ? [{ type: "video" as const, src: videoUrl }] : []),
+    ...(videoUrl && isVideoLink(videoUrl) ? [{ type: "video" as const, src: videoUrl }] : []),
   ];
 
   const isVideo = allThumbs[active]?.type === "video";
@@ -66,7 +100,6 @@ function Gallery({
 
   return (
     <div className="flex flex-col gap-3">
-      {/* Main image */}
       <div
         className="relative aspect-square rounded-2xl overflow-hidden bg-gray-50 border border-(--color-border) cursor-zoom-in group"
         onMouseEnter={() => setZoomed(true)}
@@ -74,11 +107,7 @@ function Gallery({
       >
         {isVideo ? (
           <div className="absolute inset-0 flex items-center justify-center bg-black">
-            <video
-              src={allThumbs[active].src}
-              controls
-              className="max-h-full max-w-full"
-            />
+            <video src={allThumbs[active].src} controls className="max-h-full max-w-full" />
           </div>
         ) : (
           <>
@@ -86,13 +115,11 @@ function Gallery({
               src={images[active] ?? images[0]}
               alt={`${name} — image ${active + 1}`}
               fill
-              className={`object-contain transition-transform duration-500 ${
-                zoomed ? "scale-110" : "scale-100"
-              }`}
+              className={`object-contain transition-transform duration-500 ${zoomed ? "scale-110" : "scale-100"}`}
               sizes="(max-width: 768px) 100vw, 50vw"
               priority
+              unoptimized={shouldBypassOptimizer(images[active] ?? images[0])}
             />
-            {/* Zoom hint */}
             <div className="absolute bottom-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
               <div className="bg-black/50 text-white rounded-full p-1.5">
                 <ZoomIn className="h-3.5 w-3.5" aria-hidden="true" />
@@ -102,13 +129,11 @@ function Gallery({
         )}
       </div>
 
-      {/* Thumbnail strip */}
       {allThumbs.length > 1 && (
         <div className="flex gap-2 overflow-x-auto pb-1" role="list" aria-label="Product images">
           {allThumbs.map((thumb, i) => (
             <button
-              key={i}
-              role="listitem"
+              key={`${thumb.type}-${thumb.src}-${i}`}
               onClick={() => setActive(i)}
               className={`relative flex-shrink-0 w-16 h-16 rounded-xl overflow-hidden border-2 transition-all ${
                 active === i
@@ -129,6 +154,7 @@ function Gallery({
                   fill
                   className="object-cover"
                   sizes="64px"
+                  unoptimized={shouldBypassOptimizer(thumb.src)}
                 />
               )}
             </button>
@@ -139,8 +165,6 @@ function Gallery({
   );
 }
 
-// ─── Star Rating ──────────────────────────────────────────────────────────────
-
 function StarRating({ rating, size = "sm" }: { rating: number; size?: "sm" | "md" | "lg" }) {
   const cls = size === "lg" ? "h-5 w-5" : size === "md" ? "h-4 w-4" : "h-3 w-3";
   return (
@@ -148,7 +172,13 @@ function StarRating({ rating, size = "sm" }: { rating: number; size?: "sm" | "md
       {Array.from({ length: 5 }).map((_, i) => (
         <Star
           key={i}
-          className={`${cls} ${i < Math.floor(rating) ? "fill-amber-400 text-amber-400" : i < rating ? "fill-amber-200 text-amber-400" : "text-gray-200"}`}
+          className={`${cls} ${
+            i < Math.floor(rating)
+              ? "fill-amber-400 text-amber-400"
+              : i < rating
+              ? "fill-amber-200 text-amber-400"
+              : "text-gray-200"
+          }`}
           aria-hidden="true"
         />
       ))}
@@ -156,85 +186,7 @@ function StarRating({ rating, size = "sm" }: { rating: number; size?: "sm" | "md
   );
 }
 
-// ─── Variant Selector ─────────────────────────────────────────────────────────
-
-function VariantSelector({
-  attributes,
-  variants,
-  selected,
-  onSelect,
-}: {
-  attributes: ApiVariantAttribute[];
-  variants: ApiProductVariant[];
-  selected: Record<number, number>;
-  onSelect: (attrId: number, valueId: number) => void;
-}) {
-  if (attributes.length === 0) return null;
-
-  // Check if a value is in stock for a given attribute when combined with current selections
-  const isValueAvailable = (attrId: number, valueId: number): boolean => {
-    const testSelection = { ...selected, [attrId]: valueId };
-    return variants.some((v) =>
-      v.attribute_values.every(
-        (av) =>
-          testSelection[av.attribute_id] === undefined ||
-          testSelection[av.attribute_id] === av.value_id
-      ) && (v.stock == null || v.stock > 0)
-    );
-  };
-
-  return (
-    <div className="space-y-4 mt-5">
-      {attributes.map((attr) => {
-        const selectedValue = attr.values.find((v) => v.id === selected[attr.id]);
-        return (
-          <div key={attr.id}>
-            <p className="text-sm font-semibold text-(--color-secondary) mb-2">
-              {attr.name}
-              {selectedValue && (
-                <span className="font-normal text-(--color-primary) ml-1.5">
-                  : {selectedValue.value}
-                </span>
-              )}
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {attr.values.map((val) => {
-                const isSelected = selected[attr.id] === val.id;
-                const available = isValueAvailable(attr.id, val.id);
-                return (
-                  <button
-                    key={val.id}
-                    onClick={() => available && onSelect(attr.id, val.id)}
-                    disabled={!available}
-                    className={`px-3 py-1.5 rounded-lg text-sm font-medium border-2 transition-all ${
-                      isSelected
-                        ? "border-(--color-primary) bg-(--color-primary) text-white"
-                        : available
-                        ? "border-(--color-border) text-(--color-secondary) hover:border-(--color-primary)/60"
-                        : "border-gray-100 text-gray-300 cursor-not-allowed line-through"
-                    }`}
-                    aria-pressed={isSelected}
-                    aria-disabled={!available}
-                  >
-                    {val.value}
-                    {val.price_modifier && val.price_modifier > 0 && (
-                      <span className="ml-1 text-[10px] opacity-70">+₹{val.price_modifier}</span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-// ─── Reviews tab ──────────────────────────────────────────────────────────────
-
 function ReviewsTab({ reviews, rating }: { reviews: ApiReview[]; rating: number }) {
-  // Star distribution
   const dist = [5, 4, 3, 2, 1].map((star) => ({
     star,
     count: reviews.filter((r) => Math.round(r.rating) === star).length,
@@ -245,23 +197,18 @@ function ReviewsTab({ reviews, rating }: { reviews: ApiReview[]; rating: number 
     <div>
       {reviews.length > 0 && (
         <div className="flex flex-col sm:flex-row gap-8 mb-8 p-6 bg-(--color-muted) rounded-2xl">
-          {/* Average */}
           <div className="text-center shrink-0">
             <p className="text-5xl font-extrabold text-(--color-primary)">{rating.toFixed(1)}</p>
             <StarRating rating={rating} size="md" />
             <p className="text-xs text-gray-500 mt-1">{reviews.length} review{reviews.length !== 1 ? "s" : ""}</p>
           </div>
-          {/* Distribution */}
           <div className="flex-1 space-y-1.5">
             {dist.map(({ star, count }) => (
               <div key={star} className="flex items-center gap-2">
                 <span className="text-xs text-gray-500 w-3">{star}</span>
                 <Star className="h-3 w-3 fill-amber-400 text-amber-400 shrink-0" aria-hidden="true" />
                 <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-amber-400 rounded-full transition-all duration-500"
-                    style={{ width: `${(count / maxCount) * 100}%` }}
-                  />
+                  <div className="h-full bg-amber-400 rounded-full transition-all duration-500" style={{ width: `${(count / maxCount) * 100}%` }} />
                 </div>
                 <span className="text-xs text-gray-400 w-4 text-right">{count}</span>
               </div>
@@ -285,16 +232,10 @@ function ReviewsTab({ reviews, rating }: { reviews: ApiReview[]; rating: number 
               </div>
               <div className="flex-1">
                 <div className="flex flex-wrap items-center gap-2 mb-1">
-                  <span className="text-sm font-semibold text-(--color-secondary)">
-                    {r.user?.name ?? "Verified Buyer"}
-                  </span>
+                  <span className="text-sm font-semibold text-(--color-secondary)">{r.user?.name ?? "Verified Buyer"}</span>
                   <StarRating rating={r.rating} />
                   <span className="text-xs text-gray-400">
-                    {new Date(r.created_at).toLocaleDateString("en-IN", {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                    })}
+                    {new Date(r.created_at).toLocaleDateString("en-IN", { month: "short", day: "numeric", year: "numeric" })}
                   </span>
                 </div>
                 <p className="text-sm text-gray-600 leading-relaxed">{r.comment}</p>
@@ -307,17 +248,11 @@ function ReviewsTab({ reviews, rating }: { reviews: ApiReview[]; rating: number 
   );
 }
 
-// ─── FAQs tab ─────────────────────────────────────────────────────────────────
-
 function FaqsTab({ faqs }: { faqs: ApiFaq[] }) {
   const [open, setOpen] = useState<number | null>(null);
 
   if (faqs.length === 0) {
-    return (
-      <p className="text-center text-gray-400 py-12 text-sm">
-        No FAQs for this product.
-      </p>
-    );
+    return <p className="text-center text-gray-400 py-12 text-sm">No FAQs for this product.</p>;
   }
 
   return (
@@ -325,28 +260,17 @@ function FaqsTab({ faqs }: { faqs: ApiFaq[] }) {
       {faqs.map((faq) => {
         const isOpen = open === faq.id;
         return (
-          <div
-            key={faq.id}
-            className="border border-(--color-border) rounded-xl overflow-hidden"
-          >
+          <div key={faq.id} className="border border-(--color-border) rounded-xl overflow-hidden">
             <button
               onClick={() => setOpen(isOpen ? null : faq.id)}
               className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-(--color-muted) transition-colors"
               aria-expanded={isOpen}
             >
-              <span className="text-sm font-semibold text-(--color-secondary) pr-4">
-                {faq.question}
-              </span>
-              {isOpen ? (
-                <ChevronUp className="h-4 w-4 text-gray-400 shrink-0" aria-hidden="true" />
-              ) : (
-                <ChevronDown className="h-4 w-4 text-gray-400 shrink-0" aria-hidden="true" />
-              )}
+              <span className="text-sm font-semibold text-(--color-secondary) pr-4">{faq.question}</span>
+              {isOpen ? <ChevronUp className="h-4 w-4 text-gray-400 shrink-0" aria-hidden="true" /> : <ChevronDown className="h-4 w-4 text-gray-400 shrink-0" aria-hidden="true" />}
             </button>
             {isOpen && (
-              <div className="px-5 pb-5 text-sm text-gray-600 leading-relaxed border-t border-(--color-border) pt-4">
-                {faq.answer}
-              </div>
+              <div className="px-5 pb-5 text-sm text-gray-600 leading-relaxed border-t border-(--color-border) pt-4">{faq.answer}</div>
             )}
           </div>
         );
@@ -355,131 +279,156 @@ function FaqsTab({ faqs }: { faqs: ApiFaq[] }) {
   );
 }
 
-// ─── Page skeleton ─────────────────────────────────────────────────────────────
-
-function ProductSkeleton() {
-  return (
-    <Container>
-      <div className="py-10 animate-pulse">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-          <div className="aspect-square rounded-2xl bg-gray-100" />
-          <div className="space-y-4">
-            <div className="h-3 w-24 bg-gray-100 rounded-full" />
-            <div className="h-8 w-3/4 bg-gray-100 rounded-full" />
-            <div className="h-4 w-32 bg-gray-100 rounded-full" />
-            <div className="h-10 w-28 bg-gray-100 rounded-full" />
-            <div className="space-y-2 mt-4">
-              <div className="h-4 w-full bg-gray-100 rounded-full" />
-              <div className="h-4 w-5/6 bg-gray-100 rounded-full" />
-            </div>
-            <div className="h-12 w-full bg-gray-100 rounded-xl mt-6" />
-          </div>
-        </div>
-      </div>
-    </Container>
-  );
-}
-
-// ─── Props ────────────────────────────────────────────────────────────────────
-
 interface ProductDetailClientProps {
-  product: ApiProduct;
+  product: RealApiProduct;
   reviews: ApiReview[];
   faqs: ApiFaq[];
 }
 
-// ─── Main Client Component ────────────────────────────────────────────────────
+export default function ProductDetailClient({ product, reviews: initialReviews, faqs: initialFaqs }: ProductDetailClientProps) {
+  const { addItem, openCart, items } = useCart();
+  const { isLoggedIn } = useAuth();
+  const { isWishlisted, add } = useWishlist();
+  const router = useRouter();
+  const pathname = usePathname();
 
-export default function ProductDetailClient({
-  product,
-  reviews,
-  faqs,
-}: ProductDetailClientProps) {
-  const { addItem, openCart } = useCart();
-
-  // Variant state
-  const [attributes, setAttributes] = useState<ApiVariantAttribute[]>([]);
-  const [variants, setVariants] = useState<ApiProductVariant[]>([]);
-  const [selectedAttrs, setSelectedAttrs] = useState<Record<number, number>>({});
-  const [variantsLoading, setVariantsLoading] = useState(false);
-
-  // UI state
-  const moq = product.min_order_qty ?? 1;
-  const [qty, setQty] = useState(moq);
-  const [wishlisted, setWishlisted] = useState(false);
+  const [reviews, setReviews] = useState<ApiReview[]>(initialReviews ?? []);
+  const [faqs, setFaqs] = useState<ApiFaq[]>(initialFaqs ?? []);
+  const [selectedVariantId, setSelectedVariantId] = useState<number | null>(null);
+  const [selectedStoreId, setSelectedStoreId] = useState<number | null>(null);
+  const [qty, setQty] = useState(Math.max(product.policies?.minimum_order_quantity ?? 1, 1));
+  const [wishlistBusy, setWishlistBusy] = useState(false);
   const [addedToCart, setAddedToCart] = useState(false);
-  const [activeTab, setActiveTab] = useState<"description" | "specs" | "reviews" | "faqs">(
-    "description"
-  );
+  const [activeTab, setActiveTab] = useState<"description" | "specs" | "reviews" | "faqs">("description");
 
-  // Fetch variants
+  const productName = product.title ?? "Product";
+  const variantList = useMemo(() => product.variants ?? [], [product.variants]);
+
   useEffect(() => {
-    setVariantsLoading(true);
-    getProductVariants(product.slug).then(({ attributes: attrs, variants: vars }) => {
-      setAttributes(attrs);
-      setVariants(vars);
-      // Pre-select first value of each attribute
-      const defaults: Record<number, number> = {};
-      attrs.forEach((a) => {
-        if (a.values.length > 0) defaults[a.id] = a.values[0].id;
-      });
-      setSelectedAttrs(defaults);
-      setVariantsLoading(false);
-    });
-  }, [product.slug]);
+    if (initialReviews.length === 0) {
+      getProductReviews(product.slug).then((data) => setReviews(data));
+    }
+    if (initialFaqs.length === 0) {
+      getProductFaqs(product.slug).then((data) => setFaqs(data));
+    }
+  }, [product.slug, initialReviews.length, initialFaqs.length]);
 
-  // Compute active variant
-  const activeVariant = variants.find((v) =>
-    v.attribute_values.every(
-      (av) => selectedAttrs[av.attribute_id] === av.value_id
-    )
+  const selectedVariantIdSafe = useMemo(() => {
+    if (variantList.length === 0) return null;
+    if (selectedVariantId && variantList.some((v) => v.id === selectedVariantId)) return selectedVariantId;
+    const def = variantList.find((v) => v.is_default);
+    return def?.id ?? variantList[0].id;
+  }, [selectedVariantId, variantList]);
+
+  const selectedVariant: RealApiVariant | undefined = useMemo(() => {
+    if (!selectedVariantIdSafe) return variantList[0];
+    return variantList.find((v) => v.id === selectedVariantIdSafe) ?? variantList[0];
+  }, [variantList, selectedVariantIdSafe]);
+
+  const selectedVariantStorePricing = useMemo(
+    () => selectedVariant?.store_pricing ?? [],
+    [selectedVariant?.store_pricing]
   );
 
-  // Price: prefer active variant price > sale_price > price
-  const basePrice = toNum(product.sale_price ?? product.price);
-  const effectivePrice = activeVariant?.price ?? basePrice;
-  const comparePrice = toNum(product.compare_price);
-  const hasDiscount = comparePrice > effectivePrice;
-  const discount = hasDiscount
-    ? Math.round(((comparePrice - effectivePrice) / comparePrice) * 100)
-    : null;
+  const selectedStoreIdSafe = useMemo(() => {
+    if (selectedVariantStorePricing.length === 0) return null;
+    if (selectedStoreId && selectedVariantStorePricing.some((s) => s.store_id === selectedStoreId)) return selectedStoreId;
+    const firstInStock = selectedVariantStorePricing.find((s) => s.stock_status === "in_stock" && s.stock > 0);
+    return firstInStock?.store_id ?? selectedVariantStorePricing[0].store_id;
+  }, [selectedStoreId, selectedVariantStorePricing]);
 
-  // Stock
-  const stockQty = activeVariant?.stock ?? product.stock;
-  const inStock = stockQty == null || stockQty > 0;
-  const lowStock = stockQty != null && stockQty > 0 && stockQty <= 10;
+  const selectedStorePricing: RealApiStorePricing | undefined = useMemo(() => {
+    if (!selectedStoreIdSafe) return selectedVariantStorePricing[0];
+    return selectedVariantStorePricing.find((s) => s.store_id === selectedStoreIdSafe) ?? selectedVariantStorePricing[0];
+  }, [selectedVariantStorePricing, selectedStoreIdSafe]);
 
-  // Gallery images
-  const images = product.images?.length
-    ? product.images
-    : product.thumbnail
-    ? [product.thumbnail]
-    : [];
+  const colorOptions = useMemo(() => {
+    const map = new Map<string, number>();
+    variantList.forEach((variant) => {
+      const color = variant.attributes?.color;
+      if (color && !map.has(color)) map.set(color, variant.id);
+    });
+    return Array.from(map.entries()).map(([color, variantId]) => ({ color, variantId }));
+  }, [variantList]);
 
-  const rating = product.rating ?? 0;
-  const reviewCount = product.reviews_count ?? reviews.length;
+  const galleryImages = useMemo(() => {
+    return uniqueStrings([
+      selectedVariant?.image,
+      product.images?.main_image,
+      ...(product.images?.additional_images ?? []),
+      ...(product.images?.variant_images ?? []),
+      ...(product.images?.all ?? []),
+    ]);
+  }, [selectedVariant?.image, product.images]);
 
-  const handleAttrSelect = useCallback((attrId: number, valueId: number) => {
-    setSelectedAttrs((prev) => ({ ...prev, [attrId]: valueId }));
-  }, []);
+  const basePrice = toNum(selectedStorePricing?.price ?? selectedStorePricing?.special_price ?? 0);
+  const effectivePrice = toNum(selectedStorePricing?.special_price ?? selectedStorePricing?.price ?? 0);
+  const hasDiscount = basePrice > 0 && effectivePrice > 0 && effectivePrice < basePrice;
+  const discount = hasDiscount ? Math.round(((basePrice - effectivePrice) / basePrice) * 100) : null;
+
+  const stockQty = selectedStorePricing?.stock ?? 0;
+  const inStock = (selectedStorePricing?.stock_status === "in_stock") && stockQty > 0;
+  const lowStock = inStock && stockQty <= 10;
+
+  const currencySymbol = product.currency?.symbol ?? "₹";
+
+  const moq = Math.max(product.policies?.minimum_order_quantity ?? 1, 1);
+  const stepSize = Math.max(product.policies?.quantity_step_size ?? 1, 1);
+
+  const qtySafe = Math.max(qty, moq);
+
+  const rating = 0;
+  const reviewCount = reviews.length;
+
+  const specs: Array<{ key: string; value: string }> = [
+    { key: "Product Type", value: product.type },
+    { key: "HSN Code", value: product.tax?.hsn_code || "-" },
+    { key: "GST Rate", value: product.tax?.gst_rate ? `${product.tax.gst_rate}%` : "-" },
+    { key: "Tax Group", value: (product.tax?.tax_groups ?? []).join(", ") || "-" },
+    { key: "Made In", value: product.features?.made_in || "-" },
+    { key: "Warranty", value: product.features?.warranty_period || "-" },
+    { key: "Guarantee", value: product.features?.guarantee_period || "-" },
+    { key: "MOQ", value: String(moq) },
+    { key: "Quantity Step", value: String(stepSize) },
+    { key: "Returnable", value: product.policies?.is_returnable ? "Yes" : "No" },
+    { key: "Cancelable", value: product.policies?.is_cancelable ? "Yes" : "No" },
+    { key: "Requires OTP", value: product.policies?.requires_otp ? "Yes" : "No" },
+    { key: "Variant Barcode", value: selectedVariant?.barcode || "-" },
+    { key: "Weight", value: selectedVariant?.weight != null ? `${selectedVariant.weight} ${selectedVariant.weight_unit}` : "-" },
+    { key: "Height", value: selectedVariant?.height != null ? `${selectedVariant.height} ${selectedVariant.height_unit}` : "-" },
+    { key: "Breadth", value: selectedVariant?.breadth != null ? `${selectedVariant.breadth} ${selectedVariant.breadth_unit}` : "-" },
+    { key: "Length", value: selectedVariant?.length != null ? `${selectedVariant.length} ${selectedVariant.length_unit}` : "-" },
+    { key: "Capacity", value: selectedVariant?.capacity != null ? `${selectedVariant.capacity} ${selectedVariant.capacity_unit}` : "-" },
+  ];
 
   const handleAddToCart = () => {
-    if (!inStock) return;
-    addItem({
-      id: activeVariant ? `${product.id}-${activeVariant.id}` : String(product.id),
-      name: product.name,
-      price: effectivePrice,
-      image: product.thumbnail ?? undefined,
-    });
-    // Cart addItem adds qty=1 each call — call qty times
-    for (let i = 1; i < qty; i++) {
+    if (!selectedVariant || !selectedStorePricing || !inStock) return;
+
+    const itemId = `${product.id}-${selectedVariant.id}-${selectedStorePricing.store_id}`;
+    const safeQty = qtySafe;
+    const existsInCart = items.some((item) => item.id === itemId);
+    const addCalls = existsInCart
+      ? safeQty
+      : Math.max(safeQty - moq + 1, 1);
+
+    for (let i = 0; i < addCalls; i++) {
       addItem({
-        id: activeVariant ? `${product.id}-${activeVariant.id}` : String(product.id),
-        name: product.name,
+        id: itemId,
+        productId: product.id,
+        slug: product.slug,
+        variantId: selectedVariant.id,
+        variantLabel: selectedVariant.title,
+        minQty: moq,
+        name: selectedVariant.title || productName,
         price: effectivePrice,
-        image: product.thumbnail ?? undefined,
+        image: selectedVariant.image || product.images?.main_image || null,
+        currencySymbol,
+        weight: selectedVariant.weight ?? undefined,
+        weightUnit: selectedVariant.weight_unit ?? undefined,
+        storeId: selectedStoreIdSafe ?? undefined,
       });
     }
+
     setAddedToCart(true);
     openCart();
     setTimeout(() => setAddedToCart(false), 2500);
@@ -487,78 +436,110 @@ export default function ProductDetailClient({
 
   const tabs = [
     { key: "description" as const, label: "Description" },
-    ...(product.specifications?.length
-      ? [{ key: "specs" as const, label: "Specifications" }]
-      : []),
+    { key: "specs" as const, label: "Specifications" },
     { key: "reviews" as const, label: `Reviews (${reviewCount})` },
     { key: "faqs" as const, label: `FAQs (${faqs.length})` },
   ];
 
+  const tags = product.tags ?? [];
+  const customStateForTax = product.tax?.customer_state_code;
+  const displayTitle = selectedVariant?.title?.trim() || productName;
+  const wishlisted = isWishlisted(product.id);
+
+  const handleWishlist = async () => {
+    if (!isLoggedIn) {
+      router.push(`/login?redirect=${encodeURIComponent(pathname || `/products/${product.slug}`)}`);
+      return;
+    }
+    if (!selectedStoreIdSafe) {
+      toast.error("Please select a store before adding to wishlist.");
+      return;
+    }
+    if (!selectedVariant?.id) {
+      toast.error("Please select a variant before adding to wishlist.");
+      return;
+    }
+    setWishlistBusy(true);
+    const res = await addToWishlist({
+      wishlist_title: "Favorite",
+      product_id: product.id,
+      product_variant_id: selectedVariant.id,
+      store_id: selectedStoreIdSafe,
+    });
+    setWishlistBusy(false);
+
+    if (res.success) {
+      add({
+        id: product.id,
+        name: displayTitle,
+        slug: product.slug,
+        image: selectedVariant.image || product.images?.main_image || null,
+        price: effectivePrice,
+      });
+      toast.success(res.message || "Added to wishlist");
+      return;
+    }
+
+    // API may return duplicate item with success=false. Keep UI in sync as wishlisted.
+    if ((res.message || "").toLowerCase().includes("already")) {
+      add({
+        id: product.id,
+        name: displayTitle,
+        slug: product.slug,
+        image: selectedVariant.image || product.images?.main_image || null,
+        price: effectivePrice,
+      });
+      toast("Already in wishlist", { icon: "❤️" });
+      return;
+    }
+
+    toast.error(res.message || "Failed to add wishlist item");
+  };
+
   return (
     <Container>
       <div className="py-10">
-        {/* ── Main grid ── */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10 lg:gap-16">
+          <Gallery
+            key={`gallery-${selectedVariant?.id ?? "base"}`}
+            images={galleryImages}
+            name={productName}
+            videoUrl={isVideoLink(product.video?.video_link) ? product.video.video_link : null}
+          />
 
-          {/* Left — Gallery */}
-          <Gallery images={images} name={product.name} videoUrl={product.video_url} />
-
-          {/* Right — Info */}
           <div className="flex flex-col">
-
-            {/* Category + Brand chips */}
             <div className="flex items-center flex-wrap gap-2 mb-3">
-              {product.category && (
-                <span className="text-xs font-semibold text-(--color-primary) bg-(--color-primary)/10 px-2.5 py-1 rounded-full">
-                  {product.category.name}
-                </span>
+              <span className="text-xs font-semibold text-(--color-primary) bg-(--color-primary)/10 px-2.5 py-1 rounded-full">
+                {product.type === "variant" ? "Variant Product" : "Simple Product"}
+              </span>
+              {product.featured === "1" && (
+                <span className="text-xs text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full">Featured</span>
               )}
-              {product.brand && (
-                <span className="text-xs text-gray-500 bg-gray-100 px-2.5 py-1 rounded-full">
-                  {product.brand.name}
-                </span>
+              {product.status && (
+                <span className="text-xs text-gray-500 bg-gray-100 px-2.5 py-1 rounded-full capitalize">{product.status}</span>
               )}
             </div>
 
-            {/* Product name (h1 is in the page layout via JSON-LD/meta, use h2 visually) */}
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-(--color-secondary) leading-tight">
-              {product.name}
-            </h2>
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-(--color-secondary) leading-tight">{displayTitle}</h2>
 
-            {/* Rating */}
             <div className="flex items-center gap-2 mt-3">
               <StarRating rating={rating} size="md" />
-              <span className="text-sm text-gray-500">
-                {rating.toFixed(1)} &nbsp;({reviewCount} review{reviewCount !== 1 ? "s" : ""})
-              </span>
+              <span className="text-sm text-gray-500">{reviewCount} review{reviewCount !== 1 ? "s" : ""}</span>
             </div>
 
-            {/* Price */}
             <div className="flex items-baseline gap-3 mt-4">
-              <span className="text-3xl font-extrabold text-(--color-primary)">
-                ₹{effectivePrice.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-              </span>
+              <span className="text-3xl font-extrabold text-(--color-primary)">{formatCurrency(effectivePrice, currencySymbol)}</span>
               {hasDiscount && (
                 <>
-                  <span className="text-lg text-gray-400 line-through">
-                    ₹{comparePrice.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-                  </span>
-                  <span className="text-sm font-bold text-red-500 bg-red-50 px-2 py-0.5 rounded-full">
-                    Save {discount}%
-                  </span>
+                  <span className="text-lg text-gray-400 line-through">{formatCurrency(basePrice, currencySymbol)}</span>
+                  <span className="text-sm font-bold text-red-500 bg-red-50 px-2 py-0.5 rounded-full">Save {discount}%</span>
                 </>
               )}
             </div>
             <p className="text-[11px] text-gray-400 mt-0.5">Inclusive of all taxes. GST invoice available.</p>
 
-            {/* Short description */}
-            {product.short_description && (
-              <p className="mt-4 text-gray-600 text-sm leading-relaxed">
-                {product.short_description}
-              </p>
-            )}
+            {product.short_description && <p className="mt-4 text-gray-600 text-sm leading-relaxed">{product.short_description}</p>}
 
-            {/* Stock badge */}
             <div className="mt-3">
               {!inStock ? (
                 <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-red-600 bg-red-50 px-2.5 py-1 rounded-full">
@@ -578,48 +559,189 @@ export default function ProductDetailClient({
               )}
             </div>
 
-            {/* Variant selector */}
-            {!variantsLoading && attributes.length > 0 && (
-              <VariantSelector
-                attributes={attributes}
-                variants={variants}
-                selected={selectedAttrs}
-                onSelect={handleAttrSelect}
-              />
+            {colorOptions.length > 0 && (
+              <div className="mt-5">
+                <p className="text-sm font-semibold text-(--color-secondary) mb-2 flex items-center gap-2">
+                  <Palette className="h-4 w-4" /> Color
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {colorOptions.map((opt) => {
+                    const selected = selectedVariant?.id === opt.variantId;
+                    return (
+                      <button
+                        key={opt.color}
+                        onClick={() => setSelectedVariantId(opt.variantId)}
+                        className={`px-3 py-1.5 rounded-lg text-sm font-medium border-2 transition-all ${
+                          selected
+                            ? "border-(--color-primary) bg-(--color-primary) text-white"
+                            : "border-(--color-border) text-(--color-secondary) hover:border-(--color-primary)/60"
+                        }`}
+                        aria-pressed={selected}
+                      >
+                        {opt.color}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             )}
 
-            {/* MOQ notice */}
+            {variantList.length > 0 && (
+              <div className="space-y-3 mt-5">
+                <p className="text-sm font-semibold text-(--color-secondary) flex items-center gap-2">
+                  <Layers className="h-4 w-4" /> Product Variants
+                </p>
+                <div className="grid gap-2 max-h-44 overflow-auto pr-1">
+                  {variantList.map((variant) => {
+                    const selected = selectedVariant?.id === variant.id;
+                    const attributeLabel = Object.entries(variant.attributes ?? {})
+                      .map(([k, v]) => `${k}: ${v}`)
+                      .join(" | ");
+                    return (
+                      <button
+                        key={variant.id}
+                        onClick={() => setSelectedVariantId(variant.id)}
+                        className={`text-left border rounded-xl p-3 transition-all ${
+                          selected
+                            ? "border-(--color-primary) bg-(--color-primary)/5"
+                            : "border-(--color-border) hover:border-(--color-primary)/50"
+                        }`}
+                        aria-pressed={selected}
+                      >
+                        <p className="text-sm font-semibold text-(--color-secondary)">{variant.title}</p>
+                        {attributeLabel && <p className="text-xs text-gray-500 mt-0.5">{attributeLabel}</p>}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {selectedVariantStorePricing.length > 0 && (
+              <div className="mt-5">
+                <p className="text-sm font-semibold text-(--color-secondary) mb-2 flex items-center gap-2">
+                  <Store className="h-4 w-4" /> Store-wise Pricing
+                </p>
+
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {selectedVariantStorePricing.map((store) => {
+                    const selected = selectedStorePricing?.store_id === store.store_id;
+                    return (
+                      <button
+                        key={store.store_id}
+                        onClick={() => setSelectedStoreId(store.store_id)}
+                        className={`px-3 py-1.5 rounded-lg text-sm border transition-all ${
+                          selected
+                            ? "border-(--color-primary) bg-(--color-primary) text-white"
+                            : "border-(--color-border) text-(--color-secondary) hover:border-(--color-primary)/60"
+                        }`}
+                        aria-pressed={selected}
+                      >
+                        {store.store_name}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {selectedStorePricing && (
+                  <div className="border border-(--color-border) rounded-xl p-3 bg-(--color-muted)">
+                    <div className="grid grid-cols-2 gap-2 text-xs mb-2">
+                      <div>
+                        <p className="text-gray-500">Store</p>
+                        <p className="font-semibold text-(--color-secondary)">{selectedStorePricing.store_name}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-500">State</p>
+                        <p className="font-semibold text-(--color-secondary)">
+                          {selectedStorePricing.store_state_name} ({selectedStorePricing.store_state_code})
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-gray-500">SKU</p>
+                        <p className="font-semibold text-(--color-secondary)">{selectedStorePricing.sku || "-"}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-500">Stock</p>
+                        <p className="font-semibold text-(--color-secondary)">
+                          {selectedStorePricing.stock} ({selectedStorePricing.stock_status.replace("_", " ")})
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-xs border-t border-(--color-border) pt-2">
+                      <div>
+                        <p className="text-gray-500">Taxable Amount</p>
+                        <p className="font-semibold text-(--color-secondary)">{formatCurrency(selectedStorePricing.gst?.taxable_amount, currencySymbol)}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-500">GST Type</p>
+                        <p className="font-semibold text-(--color-secondary) uppercase">{selectedStorePricing.gst?.gst_type || "-"}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-500">CGST</p>
+                        <p className="font-semibold text-(--color-secondary)">
+                          {selectedStorePricing.gst?.cgst_rate ?? 0}% ({formatCurrency(selectedStorePricing.gst?.cgst_amount, currencySymbol)})
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-gray-500">SGST</p>
+                        <p className="font-semibold text-(--color-secondary)">
+                          {selectedStorePricing.gst?.sgst_rate ?? 0}% ({formatCurrency(selectedStorePricing.gst?.sgst_amount, currencySymbol)})
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-gray-500">IGST</p>
+                        <p className="font-semibold text-(--color-secondary)">
+                          {selectedStorePricing.gst?.igst_rate ?? 0}% ({formatCurrency(selectedStorePricing.gst?.igst_amount, currencySymbol)})
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-gray-500">Total GST</p>
+                        <p className="font-semibold text-(--color-secondary)">{formatCurrency(selectedStorePricing.gst?.total_tax_amount, currencySymbol)}</p>
+                      </div>
+                    </div>
+
+                    <div className="border-t border-(--color-border) mt-2 pt-2 flex justify-between items-center">
+                      <p className="text-xs text-gray-500">Final Amount</p>
+                      <p className="text-sm font-bold text-(--color-primary)">{formatCurrency(selectedStorePricing.gst?.total_amount ?? effectivePrice, currencySymbol)}</p>
+                    </div>
+
+                    {customStateForTax && (
+                      <p className="text-[11px] text-gray-500 mt-2">
+                        Customer State for GST split: <strong>{customStateForTax}</strong>
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
             {moq > 1 && (
               <p className="mt-4 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                Minimum order quantity: <strong>{moq} units</strong>
+                Minimum order quantity: <strong>{moq} units</strong>. Step size: <strong>{stepSize}</strong>
               </p>
             )}
 
             <hr className="my-5 border-(--color-border)" />
 
-            {/* Qty + Actions */}
             <div className="flex flex-wrap items-center gap-3">
-              {/* Qty selector */}
-              <div
-                className="flex items-center border border-(--color-border) rounded-xl overflow-hidden bg-white"
-                aria-label="Quantity selector"
-              >
+              <div className="flex items-center border border-(--color-border) rounded-xl overflow-hidden bg-white" aria-label="Quantity selector">
                 <button
-                  onClick={() => setQty((q) => Math.max(moq, q - 1))}
-                  disabled={qty <= moq}
+                  onClick={() => setQty((q) => Math.max(moq, Math.max(q, moq) - stepSize))}
+                  disabled={qtySafe <= moq}
                   className="w-10 h-11 flex items-center justify-center hover:bg-(--color-muted) transition-colors disabled:opacity-40"
                   aria-label="Decrease quantity"
                 >
                   <Minus className="h-3.5 w-3.5" aria-hidden="true" />
                 </button>
-                <span className="w-10 text-center text-sm font-semibold tabular-nums">
-                  {qty}
-                </span>
+                <span className="w-10 text-center text-sm font-semibold tabular-nums">{qtySafe}</span>
                 <button
-                  onClick={() =>
-                    setQty((q) => (stockQty != null ? Math.min(stockQty, q + 1) : q + 1))
-                  }
-                  disabled={stockQty != null && qty >= stockQty}
+                  onClick={() => setQty((q) => {
+                    const next = Math.max(q, moq) + stepSize;
+                    if (!selectedStorePricing) return next;
+                    return Math.min(selectedStorePricing.stock, next);
+                  })}
+                  disabled={!!selectedStorePricing && qtySafe >= selectedStorePricing.stock}
                   className="w-10 h-11 flex items-center justify-center hover:bg-(--color-muted) transition-colors disabled:opacity-40"
                   aria-label="Increase quantity"
                 >
@@ -627,10 +749,9 @@ export default function ProductDetailClient({
                 </button>
               </div>
 
-              {/* Add to Cart */}
               <button
                 onClick={handleAddToCart}
-                disabled={!inStock}
+                disabled={!inStock || !selectedVariant || !selectedStorePricing}
                 className={`flex-1 min-w-[160px] flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all duration-300 ${
                   addedToCart
                     ? "bg-green-500 text-white scale-95"
@@ -638,50 +759,47 @@ export default function ProductDetailClient({
                     ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                     : "bg-(--color-primary) text-white hover:bg-(--color-primary-dark) shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0"
                 }`}
-                aria-label={addedToCart ? "Added to cart" : `Add ${product.name} to cart`}
+                aria-label={addedToCart ? "Added to cart" : `Add ${productName} to cart`}
               >
                 <ShoppingCart className="h-4 w-4" aria-hidden="true" />
                 {addedToCart ? "Added to Cart!" : "Add to Cart"}
               </button>
 
-              {/* Wishlist */}
               <button
-                onClick={() => setWishlisted((w) => !w)}
+                onClick={handleWishlist}
+                disabled={wishlistBusy}
                 className="w-11 h-11 rounded-xl border border-(--color-border) flex items-center justify-center hover:border-red-300 hover:bg-red-50 transition-colors"
                 aria-label={wishlisted ? "Remove from wishlist" : "Add to wishlist"}
                 aria-pressed={wishlisted}
               >
-                <Heart
-                  className={`h-5 w-5 transition-colors ${
-                    wishlisted ? "fill-red-500 text-red-500" : "text-gray-400"
-                  }`}
-                />
+                <Heart className={`h-5 w-5 transition-colors ${wishlisted ? "fill-red-500 text-red-500" : "text-gray-400"}`} />
               </button>
             </div>
 
-            {/* Line total */}
-            {qty > 1 && (
+            {qtySafe > 1 && (
               <p className="mt-2 text-xs text-gray-500">
-                Total:{" "}
-                <strong className="text-(--color-primary)">
-                  ₹{(effectivePrice * qty).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-                </strong>{" "}
-                for {qty} units
+                Total: <strong className="text-(--color-primary)">{formatCurrency(effectivePrice * qtySafe, currencySymbol)}</strong> for {qtySafe} units
+                {selectedVariant?.weight != null && selectedVariant.weight > 0 && (() => {
+                  const totalGrams = selectedVariant.weight * qtySafe;
+                  const unit = (selectedVariant.weight_unit ?? "g").toLowerCase();
+                  // Normalise to grams first, then display in kg if ≥ 1000g
+                  const inGrams = unit === "kg" ? totalGrams * 1000 : totalGrams;
+                  const display = inGrams >= 1000
+                    ? `${(inGrams / 1000).toFixed(2).replace(/\.?0+$/, "")} kg`
+                    : `${inGrams} g`;
+                  return <span className="ml-2 text-gray-400">· Total weight: <strong className="text-gray-600">{display}</strong></span>;
+                })()}
               </p>
             )}
 
-            {/* Trust badges */}
             <div className="mt-5 grid grid-cols-2 sm:grid-cols-4 gap-2">
               {[
-                { icon: Truck, label: "Free Shipping", sub: "Orders above ₹999" },
+                { icon: Truck, label: "Free Shipping", sub: `Orders above ${currencySymbol}999` },
                 { icon: RotateCcw, label: "7-Day Returns", sub: "Hassle-free" },
                 { icon: Shield, label: "Secure Payment", sub: "SSL encrypted" },
                 { icon: FileText, label: "GST Invoice", sub: "On every order" },
               ].map(({ icon: Icon, label, sub }) => (
-                <div
-                  key={label}
-                  className="flex flex-col items-center text-center p-2.5 rounded-xl bg-white border border-(--color-border)"
-                >
+                <div key={label} className="flex flex-col items-center text-center p-2.5 rounded-xl bg-white border border-(--color-border)">
                   <Icon className="h-4 w-4 text-(--color-primary) mb-1" aria-hidden="true" />
                   <span className="text-[11px] font-semibold text-(--color-secondary) leading-snug">{label}</span>
                   <span className="text-[10px] text-gray-400 leading-snug">{sub}</span>
@@ -691,9 +809,7 @@ export default function ProductDetailClient({
           </div>
         </div>
 
-        {/* ── Tabs ── */}
         <div className="mt-14">
-          {/* Tab bar */}
           <div className="flex border-b border-(--color-border) overflow-x-auto" role="tablist">
             {tabs.map((tab) => (
               <button
@@ -712,34 +828,49 @@ export default function ProductDetailClient({
             ))}
           </div>
 
-          {/* Tab content */}
           <div className="pt-8 pb-4" role="tabpanel">
             {activeTab === "description" && (
-              <div className="prose prose-sm max-w-none text-gray-600">
-                {product.description ? (
-                  <div dangerouslySetInnerHTML={{ __html: product.description }} />
-                ) : product.short_description ? (
-                  <p>{product.short_description}</p>
-                ) : (
-                  <p className="text-gray-400 text-center py-8">
-                    No description available.
-                  </p>
+              <div className="space-y-5">
+                <div className="prose prose-sm max-w-none text-gray-600">
+                  {product.description ? (
+                    <div dangerouslySetInnerHTML={{ __html: product.description }} />
+                  ) : product.short_description ? (
+                    <p>{product.short_description}</p>
+                  ) : (
+                    <p className="text-gray-400 text-center py-8">No description available.</p>
+                  )}
+                </div>
+
+                {tags.length > 0 && (
+                  <div>
+                    <p className="text-sm font-semibold text-(--color-secondary) mb-2">Tags</p>
+                    <div className="flex flex-wrap gap-2">
+                      {tags.map((tag) => (
+                        <span key={tag} className="text-xs bg-gray-100 text-gray-600 px-2.5 py-1 rounded-full">#{tag}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {(product.video?.video_link && !isVideoLink(product.video.video_link)) && (
+                  <div>
+                    <p className="text-sm font-semibold text-(--color-secondary) mb-1">Product Video</p>
+                    <a href={product.video.video_link} target="_blank" rel="noreferrer" className="text-sm text-(--color-primary) hover:underline">
+                      Watch product video
+                    </a>
+                  </div>
                 )}
               </div>
             )}
 
-            {activeTab === "specs" && product.specifications && (
+            {activeTab === "specs" && (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <tbody>
-                    {product.specifications.map((spec, i) => (
-                      <tr key={i} className={i % 2 === 0 ? "bg-(--color-muted)" : "bg-white"}>
-                        <td className="px-4 py-3 font-semibold text-(--color-secondary) w-1/3 rounded-l-lg">
-                          {spec.key}
-                        </td>
-                        <td className="px-4 py-3 text-gray-600 rounded-r-lg">
-                          {spec.value}
-                        </td>
+                    {specs.map((spec, i) => (
+                      <tr key={`${spec.key}-${i}`} className={i % 2 === 0 ? "bg-(--color-muted)" : "bg-white"}>
+                        <td className="px-4 py-3 font-semibold text-(--color-secondary) w-1/3 rounded-l-lg">{spec.key}</td>
+                        <td className="px-4 py-3 text-gray-600 rounded-r-lg">{spec.value}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -747,9 +878,7 @@ export default function ProductDetailClient({
               </div>
             )}
 
-            {activeTab === "reviews" && (
-              <ReviewsTab reviews={reviews} rating={rating} />
-            )}
+            {activeTab === "reviews" && <ReviewsTab reviews={reviews} rating={rating} />}
 
             {activeTab === "faqs" && <FaqsTab faqs={faqs} />}
           </div>

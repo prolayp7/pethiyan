@@ -336,8 +336,9 @@ class OrderApiController extends Controller
             }
         }
 
-        $order          = $sellerOrders->first()->order;
-        $systemSettings = app(\App\Services\SettingService::class)->getSystemSettings();
+        $order = $sellerOrders->first()->order;
+        $systemSettingResource = app(\App\Services\SettingService::class)->getSettingByVariable('system');
+        $systemSettings = $systemSettingResource?->toArray(request())['value'] ?? [];
 
         $pdf = Pdf::loadView('layouts.order-invoice', [
             'order'          => $order,
