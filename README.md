@@ -1,4 +1,4 @@
-# Pethiyan — Hyperlocal E-Commerce Platform
+# Pethiyan —  E-Commerce Platform
 
 Pethiyan is a full-stack, production-grade hyperlocal multi-vendor e-commerce platform. It is designed for the Indian market, offering a complete ecosystem for platform administrators, sellers, customers, and delivery personnel. The system includes a Laravel 12 REST API backend, a multi-panel admin/seller dashboard, and a Next.js 16 customer-facing storefront.
 
@@ -29,7 +29,7 @@ Pethiyan is a full-stack, production-grade hyperlocal multi-vendor e-commerce pl
 Pethiyan enables multiple independent sellers to list and sell products on a single platform under a unified customer experience. Key traits:
 
 - **Multi-vendor**: Each seller manages their own store, products, orders, and earnings independently.
-- **Hyperlocal**: Delivery zones, pin-code service areas, and per-state shipping rates confine operations to served geographies.
+- ****: Delivery zones, pin-code service areas, and per-state shipping rates confine operations to served geographies.
 - **Role-based**: Four distinct user roles — Admin, Seller, Customer, Delivery Boy — each with their own authentication guard, dashboard, and API surface.
 - **India-ready**: GST-compliant tax engine, Razorpay payment gateway, pin-code service areas, state-level shipping rates, and OTP-based login via mobile.
 
