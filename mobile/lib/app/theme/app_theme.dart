@@ -73,7 +73,7 @@ class AppTheme {
         ),
         hintStyle: const TextStyle(color: AppColors.grey500, fontSize: 14),
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: AppColors.surface,
         elevation: 0,
         shape: RoundedRectangleBorder(

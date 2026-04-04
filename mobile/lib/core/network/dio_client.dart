@@ -68,22 +68,17 @@ class DioClient {
     Duration? cacheTtl,
     bool forceRefresh = false,
   }) async {
-    final options = cacheTtl != null
-        ? _cacheOptions
-            .copyWith(maxStale: Nullable(cacheTtl))
-            .toOptions()
-        : null;
+    final CacheOptions effectiveCache = forceRefresh
+        ? _cacheOptions.copyWith(policy: CachePolicy.refresh)
+        : cacheTtl != null
+            ? _cacheOptions.copyWith(maxStale: Nullable(cacheTtl))
+            : _cacheOptions;
 
-    if (forceRefresh) {
-      options?.extra.addAll(
-        CacheOptions(
-          store: _cacheOptions.store!,
-          policy: CachePolicy.refresh,
-        ).toOptions().extra,
-      );
-    }
-
-    return _dio.get(path, queryParameters: queryParameters, options: options);
+    return _dio.get(
+      path,
+      queryParameters: queryParameters,
+      options: effectiveCache.toOptions(),
+    );
   }
 
   Future<Response> post(String path, {dynamic data}) =>

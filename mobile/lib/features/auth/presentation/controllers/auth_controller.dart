@@ -8,15 +8,29 @@ import '../../domain/repositories/auth_repository.dart';
 import '../providers/auth_providers.dart';
 
 // Global auth state — null = not logged in
-final currentUserProvider = StateProvider<User?>((ref) => null);
+class CurrentUserNotifier extends Notifier<User?> {
+  @override
+  User? build() => null;
+
+  void setUser(User? user) {
+    state = user;
+  }
+
+  void clear() {
+    state = null;
+  }
+}
+
+final currentUserProvider = NotifierProvider<CurrentUserNotifier, User?>(
+  CurrentUserNotifier.new,
+);
 
 class AuthController extends AsyncNotifier<void> {
   late AuthRepository _repo;
 
   @override
   Future<void> build() async {
-    final repoAsync = ref.watch(authRepositoryProvider);
-    _repo = await repoAsync.future;
+    _repo = await ref.watch(authRepositoryProvider.future);
   }
 
   Future<void> sendOtp(String phone) async {
@@ -52,7 +66,7 @@ class AuthController extends AsyncNotifier<void> {
         state = const AsyncData(null);
         return false;
       }
-      final auth = await googleUser.authentication;
+      final auth    = await googleUser.authentication;
       final idToken = auth.idToken;
       if (idToken == null) throw Exception('Google idToken is null');
 
@@ -78,7 +92,10 @@ class AuthController extends AsyncNotifier<void> {
     state = const AsyncLoading();
     try {
       final credential = await SignInWithApple.getAppleIDCredential(
-        scopes: [AppleIDAuthorizationScopes.email, AppleIDAuthorizationScopes.fullName],
+        scopes: [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
       );
       final identityToken = credential.identityToken;
       if (identityToken == null) throw Exception('Apple identityToken is null');
@@ -104,7 +121,7 @@ class AuthController extends AsyncNotifier<void> {
   Future<void> logout() async {
     state = const AsyncLoading();
     await _repo.logout();
-    ref.read(currentUserProvider.notifier).state = null;
+    ref.read(currentUserProvider.notifier).clear();
     state = const AsyncData(null);
   }
 
@@ -112,7 +129,7 @@ class AuthController extends AsyncNotifier<void> {
     final result = await _repo.getProfile();
     result.fold(
       (_) {},
-      (user) => ref.read(currentUserProvider.notifier).state = user,
+      (user) => ref.read(currentUserProvider.notifier).setUser(user),
     );
   }
 }

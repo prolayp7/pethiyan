@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/utils/currency_formatter.dart';
-import '../../../../shared/widgets/app_button.dart';
 import '../../../../shared/widgets/error_view.dart';
 import '../../../../shared/widgets/loading_shimmer.dart';
 import '../../domain/entities/cart_item.dart';
@@ -22,7 +21,7 @@ class CartScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('My Cart'),
         actions: [
-          cartAsync.valueOrNull?.items.isNotEmpty == true
+          cartAsync.value?.items.isNotEmpty == true
               ? TextButton(
                   onPressed: () =>
                       ref.read(cartProvider.notifier).clearCart(),
@@ -202,7 +201,7 @@ class _StepBtn extends StatelessWidget {
 
 // ── Cart summary ─────────────────────────────────────────────────────────────
 class _CartSummary extends StatelessWidget {
-  final cart;
+  final dynamic cart;
   const _CartSummary({required this.cart});
 
   @override

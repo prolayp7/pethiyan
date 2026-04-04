@@ -1,4 +1,4 @@
-name: lcommerce
+name: pethiyan
 description: LCommerce customer mobile app — iOS & Android
 publish_to: none
 version: 1.0.0+1
@@ -11,16 +11,16 @@ dependencies:
     sdk: flutter
 
   # --- State management ---
-  flutter_riverpod: ^2.6.1
-  riverpod_annotation: ^2.3.5
+  flutter_riverpod: ^3.3.1
+  riverpod_annotation: ^4.0.2
 
   # --- Navigation ---
-  go_router: ^14.6.3
+  go_router: ^14.8.1
 
   # --- Networking ---
   dio: ^5.7.0
-  dio_cache_interceptor: ^3.5.0
-  dio_cache_interceptor_hive_store: ^3.2.0
+  dio_cache_interceptor: ^3.5.1
+  dio_cache_interceptor_hive_store: ^4.0.0
   connectivity_plus: ^6.1.1
 
   # --- Secure storage & local DB ---
@@ -36,13 +36,13 @@ dependencies:
   # --- Auth ---
   google_sign_in: ^6.2.2
   sign_in_with_apple: ^6.1.3
-  sms_autofill: ^2.4.0
+  sms_autofill: ^2.4.1
 
   # --- Payments ---
-  razorpay_flutter: ^1.3.7
-  flutter_stripe: ^11.1.0
-  flutter_paystack: ^2.0.1
-  flutterwave_standard: ^1.0.5
+  razorpay_flutter: ^1.4.3
+  flutter_stripe: ^12.5.0
+  flutterwave_standard: ^1.1.0
+  # flutter_paystack: removed — outdated intl constraint; Paystack handled via WebView
 
   # --- Maps ---
   google_maps_flutter: ^2.9.0
@@ -61,22 +61,23 @@ dependencies:
   intl: ^0.19.0
   dartz: ^0.10.1
   equatable: ^2.0.7
-  freezed_annotation: ^2.4.4
+  freezed_annotation: ^3.1.0
   json_annotation: ^4.9.0
   url_launcher: ^6.3.1
   share_plus: ^10.1.4
   image_picker: ^1.1.2
-  geolocator: ^13.0.2
-  flutter_jailbreak_detection: ^1.9.0
+  geolocator: ^14.0.2
+  flutter_jailbreak_detection: ^1.10.0
   package_info_plus: ^8.1.3
   webview_flutter: ^4.10.0
+  path_provider: ^2.1.5
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  riverpod_generator: ^2.4.3
+  riverpod_generator: ^4.0.3
   build_runner: ^2.4.13
-  freezed: ^2.5.7
+  freezed: ^3.2.5
   json_serializable: ^6.9.0
   mockito: ^5.4.4
   flutter_lints: ^5.0.0

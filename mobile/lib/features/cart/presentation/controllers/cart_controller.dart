@@ -66,5 +66,5 @@ final cartProvider =
 
 // Badge count — derived from cart state
 final cartCountProvider = Provider<int>((ref) {
-  return ref.watch(cartProvider).valueOrNull?.itemCount ?? 0;
+  return ref.watch(cartProvider).value?.itemCount ?? 0;
 });

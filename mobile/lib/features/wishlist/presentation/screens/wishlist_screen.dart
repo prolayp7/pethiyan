@@ -22,7 +22,7 @@ class _WishlistScreenState extends ConsumerState<WishlistScreen> {
     super.initState();
     // Load items for first list automatically
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final state = ref.read(wishlistProvider).valueOrNull;
+      final state = ref.read(wishlistProvider).value;
       if (state != null && state.lists.isNotEmpty) {
         ref.read(wishlistProvider.notifier)
             .loadItems(state.lists.first['id'].toString());

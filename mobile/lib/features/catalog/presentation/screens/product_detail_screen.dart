@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/utils/currency_formatter.dart';
-import '../../../../shared/widgets/app_button.dart';
 import '../../../../shared/widgets/error_view.dart';
 import '../../../../shared/widgets/loading_shimmer.dart';
 import '../../domain/entities/product.dart';
@@ -112,7 +111,7 @@ class _PdpBody extends ConsumerWidget {
                             borderRadius: BorderRadius.circular(3),
                             color: imageIndex == i
                                 ? AppColors.primary
-                                : AppColors.grey400,
+                                : AppColors.grey300,
                           ),
                         ),
                       ),
@@ -299,9 +298,4 @@ class _PdpShimmer extends StatelessWidget {
       ],
     );
   }
-}
-
-// Needed for color reference in PageView dots
-extension on AppColors {
-  static const Color grey400 = Color(0xFFBDBDBD);
 }

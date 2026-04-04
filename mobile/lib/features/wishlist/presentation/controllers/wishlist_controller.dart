@@ -61,9 +61,10 @@ class WishlistController extends AsyncNotifier<WishlistState> {
     final items = (res.data['data']?['items'] as List? ?? [])
         .map((e) => WishlistItem.fromJson(e as Map<String, dynamic>))
         .toList();
+    final currentState = state.value;
     state = AsyncData(WishlistState(
-      lists:        state.valueOrNull?.lists ?? [],
-      activeItems:  items,
+      lists: currentState?.lists ?? [],
+      activeItems: items,
       activeListId: wishlistId,
     ));
   }
@@ -79,7 +80,7 @@ class WishlistController extends AsyncNotifier<WishlistState> {
       'wishlist_id': wishlistId,
       if (variantId != null) 'variant_id': variantId,
     });
-    if (state.valueOrNull?.activeListId == wishlistId) {
+    if (state.value?.activeListId == wishlistId) {
       await loadItems(wishlistId);
     }
   }
@@ -87,13 +88,14 @@ class WishlistController extends AsyncNotifier<WishlistState> {
   Future<void> removeItem(String itemId) async {
     final client = await ref.read(dioClientProvider.future);
     await client.delete('${ApiConstants.wishlists}/items/$itemId');
+    final currentState = state.value;
     state = AsyncData(WishlistState(
-      lists:       state.valueOrNull?.lists ?? [],
-      activeItems: state.valueOrNull?.activeItems
+      lists: currentState?.lists ?? [],
+      activeItems: currentState?.activeItems
               .where((i) => i.id != itemId)
               .toList() ??
-          [],
-      activeListId: state.valueOrNull?.activeListId,
+          const [],
+      activeListId: currentState?.activeListId,
     ));
   }
 
