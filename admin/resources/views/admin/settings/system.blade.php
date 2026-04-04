@@ -49,12 +49,10 @@
                             <a class="nav-link" href="#pills-social">Social Media</a>
                             @can('viewSetting', [\App\Models\Setting::class, 'web'])
                                 <a class="nav-link" href="#pills-web-settings-anchor">{{ __('labels.web_settings') }}</a>
-                                <a class="nav-link" href="#pills-web-general">{{ __('labels.general') }}</a>
                                 <a class="nav-link" href="#pills-web-default-location">{{ __('labels.default_location') }}</a>
                                 <a class="nav-link" href="#pills-web-country-validation">{{ __('labels.country_validation') }}</a>
                                 <a class="nav-link" href="#pills-web-support">{{ __('labels.support_information') }}</a>
                                 <a class="nav-link" href="#pills-web-seo">{{ __('labels.seo_settings') }}</a>
-                                <a class="nav-link" href="#pills-web-social">{{ __('labels.social_media') }}</a>
                                 <a class="nav-link" href="#pills-web-app">{{ __('labels.app_download_section') }}</a>
                                 <a class="nav-link" href="#pills-web-features">{{ __('labels.feature_sections') }}</a>
                                 <a class="nav-link" href="#pills-web-policies">{{ __('labels.policy_settings') }}</a>
@@ -144,6 +142,22 @@
                                             <input type="file" name="adminSignature" data-image-url="{{ $settings['adminSignature'] ?? '' }}"/>
                                             <small class="form-hint">Upload a signature image to display on invoices.</small>
                                         </div>
+                                        @can('viewSetting', [\App\Models\Setting::class, 'web'])
+                                            <hr class="my-4">
+                                            <h5 class="mb-3">Website Branding & Basics</h5>
+                                            <div class="mb-3">
+                                                <label class="form-label required">{{ __('labels.address') }}</label>
+                                                <input type="text" class="form-control" name="address"
+                                                       placeholder="{{ __('labels.address_placeholder') }}"
+                                                       value="{{ $webSettings['address'] ?? '' }}" maxlength="255"/>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label required">{{ __('labels.short_description') }}</label>
+                                                <textarea class="form-control" name="shortDescription"
+                                                          placeholder="{{ __('labels.short_description_placeholder') }}"
+                                                          maxlength="500">{{ $webSettings['shortDescription'] ?? '' }}</textarea>
+                                            </div>
+                                        @endcan
                                     </div>
                                 </div>
                                 <div class="card mb-4" id="pills-support">

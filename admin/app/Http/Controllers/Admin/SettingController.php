@@ -149,6 +149,9 @@ class SettingController extends Controller
             // Update or create setting
             if ($setting) {
                 $setting->update($data);
+                if ($type === SettingTypeEnum::SYSTEM()) {
+                    $this->syncMergedWebGeneralSettings($request);
+                }
                 return ApiResponseType::sendJsonResponse(
                     success: true,
                     message: __('labels.setting_updated_successfully', ['type' => ucfirst(Str::replace('_', ' ', $type))]),
@@ -157,6 +160,9 @@ class SettingController extends Controller
             }
 
             $res = Setting::create($data);
+            if ($type === SettingTypeEnum::SYSTEM()) {
+                $this->syncMergedWebGeneralSettings($request);
+            }
             return ApiResponseType::sendJsonResponse(
                 success: true,
                 message: __('labels.setting_created_successfully', ['type' => $type]),
@@ -373,6 +379,56 @@ class SettingController extends Controller
         }
 
         return $isValid;
+    }
+
+    /**
+     * Keep merged "Website Branding & Basics" fields synced to WEB settings
+     * even though they are edited from the SYSTEM form.
+     */
+    private function syncMergedWebGeneralSettings(Request $request): void
+    {
+        $webSetting = Setting::find(SettingTypeEnum::WEB());
+        $webValues = is_array($webSetting?->value) ? $webSetting->value : [];
+
+        // Merge app-level fields into website general fields for consistency.
+        $webValues['siteName'] = $request->input('appName', $webValues['siteName'] ?? '');
+        $webValues['siteCopyright'] = $request->input('copyrightDetails', $webValues['siteCopyright'] ?? '');
+        $webValues['address'] = $request->input('address', $webValues['address'] ?? '');
+        $webValues['shortDescription'] = $request->input('shortDescription', $webValues['shortDescription'] ?? '');
+        $webValues['metaTitle'] = $request->input('metaTitle', $webValues['metaTitle'] ?? '');
+        $webValues['metaKeywords'] = $request->input('metaKeywords', $webValues['metaKeywords'] ?? '');
+        $webValues['metaDescription'] = $request->input('metaDescription', $webValues['metaDescription'] ?? '');
+        $webValues['metaCanonicalUrl'] = $request->input('metaCanonicalUrl', $webValues['metaCanonicalUrl'] ?? '');
+        $webValues['metaRobots'] = $request->input('metaRobots', $webValues['metaRobots'] ?? 'index,follow');
+        $webValues['metaAuthor'] = $request->input('metaAuthor', $webValues['metaAuthor'] ?? '');
+        $webValues['metaPublisher'] = $request->input('metaPublisher', $webValues['metaPublisher'] ?? '');
+        $webValues['googleSiteVerification'] = $request->input('googleSiteVerification', $webValues['googleSiteVerification'] ?? '');
+        $webValues['bingSiteVerification'] = $request->input('bingSiteVerification', $webValues['bingSiteVerification'] ?? '');
+        $webValues['ogTitle'] = $request->input('ogTitle', $webValues['ogTitle'] ?? '');
+        $webValues['ogDescription'] = $request->input('ogDescription', $webValues['ogDescription'] ?? '');
+        $webValues['twitterCard'] = $request->input('twitterCard', $webValues['twitterCard'] ?? 'summary_large_image');
+        $webValues['twitterSite'] = $request->input('twitterSite', $webValues['twitterSite'] ?? '');
+        $webValues['twitterCreator'] = $request->input('twitterCreator', $webValues['twitterCreator'] ?? '');
+        $webValues['twitterTitle'] = $request->input('twitterTitle', $webValues['twitterTitle'] ?? '');
+        $webValues['twitterDescription'] = $request->input('twitterDescription', $webValues['twitterDescription'] ?? '');
+        $webValues['seoSchemaJson'] = $request->input('seoSchemaJson', $webValues['seoSchemaJson'] ?? '');
+
+        if ($request->hasFile('seoOgImage')) {
+            $file = $request->file('seoOgImage');
+            $name = 'seo-og-image-' . time() . '.' . $file->getClientOriginalExtension();
+            $webValues['ogImage'] = $file->storeAs('settings', $name, 'public');
+        }
+
+        if ($request->hasFile('seoTwitterImage')) {
+            $file = $request->file('seoTwitterImage');
+            $name = 'seo-twitter-image-' . time() . '.' . $file->getClientOriginalExtension();
+            $webValues['twitterImage'] = $file->storeAs('settings', $name, 'public');
+        }
+
+        Setting::updateOrCreate(
+            ['variable' => SettingTypeEnum::WEB()],
+            ['value' => json_encode($webValues, JSON_UNESCAPED_UNICODE)]
+        );
     }
 
 }

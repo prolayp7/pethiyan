@@ -99,6 +99,8 @@ document.addEventListener('DOMContentLoaded', () => {
         initializeFilePond('siteHeaderDarkLogo');
         initializeFilePond('siteHeaderLogo');
         initializeFilePond('siteFooterLogo');
+        initializeFilePond('seoOgImage');
+        initializeFilePond('seoTwitterImage');
         initializeFilePond('banner_image');
         initializeFilePond('favicon', ['image/png']);
         initializeFilePond('logo');

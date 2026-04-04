@@ -3,79 +3,7 @@
                                   enctype="multipart/form-data">
                                 @csrf
                                 <input type="hidden" name="type" value="web">
-                                <div class="card mb-4" id="pills-web-general">
-                                    <div class="card-header">
-                                        <h4 class="card-title">{{ __('labels.general') }}</h4>
-                                    </div>
-                                    <div class="card-body">
-                                        <div class="mb-3">
-                                            <label
-                                                class="form-label required">{{ __('labels.site_name') }}</label>
-                                            <input type="text" class="form-control" name="siteName"
-                                                   placeholder="{{ __('labels.site_name_placeholder') }}"
-                                                   value="{{ $settings['siteName'] ?? '' }}" maxlength="255"
-                                                   required/>
-                                        </div>
-                                        <div class="mb-3">
-                                            <label
-                                                class="form-label required">{{ __('labels.site_copyright') }}</label>
-                                            <input type="text" class="form-control" name="siteCopyright"
-                                                   placeholder="{{ __('labels.site_copyright_placeholder') }}"
-                                                   value="{{ $settings['siteCopyright'] ?? '' }}" maxlength="255"
-                                                   required/>
-                                        </div>
-                                        <div class="mb-3">
-                                            <label
-                                                class="form-label required">{{ __('labels.address') }}</label>
-                                            <input type="text" class="form-control" name="address"
-                                                   placeholder="{{ __('labels.address_placeholder') }}"
-                                                   value="{{ $settings['address'] ?? '' }}" maxlength="255"
-                                                   required/>
-                                        </div>
-                                        <div class="mb-3">
-                                            <label
-                                                class="form-label required">{{ __('labels.short_description') }}</label>
-                                            <textarea class="form-control" name="shortDescription"
-                                                      placeholder="{{ __('labels.short_description_placeholder') }}"
-                                                      maxlength="500"
-                                                      required>{{ $settings['shortDescription'] ?? '' }}</textarea>
-                                        </div>
-                                        <div class="row g-2">
-                                            <div class="col-md-3">
-                                                <div class="mb-3">
-                                                    <div
-                                                        class="form-label required">{{ __('labels.site_header_logo') }}</div>
-                                                    <x-filepond_image name="siteHeaderLogo"
-                                                                      imageUrl="{{ $settings['siteHeaderLogo'] ?? '' }}"/>
-                                                </div>
-                                            </div>
-                                            <div class="col-md-3">
-                                                <div class="mb-3">
-                                                    <div
-                                                        class="form-label required">{{ __('labels.site_header_dark_logo') }}</div>
-                                                    <x-filepond_image name="siteHeaderDarkLogo"
-                                                                      imageUrl="{{ $settings['siteHeaderDarkLogo'] ?? '' }}"/>
-                                                </div>
-                                            </div>
-                                            <div class="col-md-3">
-                                                <div class="mb-3">
-                                                    <div
-                                                        class="form-label required">{{ __('labels.site_footer_logo') }}</div>
-                                                    <x-filepond_image name="siteFooterLogo"
-                                                                      imageUrl="{{$settings['siteFooterLogo'] ?? ''}}"/>
-                                                </div>
-                                            </div>
-                                            <div class="col-md-3">
-                                                <div class="mb-3">
-                                                    <div
-                                                        class="form-label required">{{ __('labels.site_favicon') }}</div>
-                                                    <x-filepond_image name="siteFavicon"
-                                                                      imageUrl="{{ $settings['siteFavicon'] ?? '' }}"/>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
+                                {{-- Web General has been merged into System General section --}}
 
                                 <!-- Default Location Section -->
                                 <div class="card mb-4" id="pills-web-default-location">
@@ -192,6 +120,12 @@
                                     </div>
                                     <div class="card-body">
                                         <div class="mb-3">
+                                            <label class="form-label">Meta Title (Homepage)</label>
+                                            <input type="text" class="form-control" name="metaTitle"
+                                                   placeholder="Enter homepage meta title"
+                                                   value="{{ $settings['metaTitle'] ?? '' }}" maxlength="255"/>
+                                        </div>
+                                        <div class="mb-3">
                                             <label class="form-label">{{ __('labels.meta_keywords') }}</label>
                                             <input type="text" class="form-control" name="metaKeywords"
                                                    placeholder="{{ __('labels.meta_keywords_placeholder') }}"
@@ -204,40 +138,136 @@
                                                       placeholder="{{ __('labels.meta_description_placeholder') }}"
                                                       maxlength="500">{{ $settings['metaDescription'] ?? '' }}</textarea>
                                         </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Canonical URL (Homepage)</label>
+                                            <input type="url" class="form-control" name="metaCanonicalUrl"
+                                                   placeholder="https://example.com/"
+                                                   value="{{ $settings['metaCanonicalUrl'] ?? '' }}" maxlength="500"/>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Meta Robots</label>
+                                            <select class="form-select" name="metaRobots">
+                                                @php $robotsValue = $settings['metaRobots'] ?? 'index,follow'; @endphp
+                                                <option value="index,follow" {{ $robotsValue === 'index,follow' ? 'selected' : '' }}>index,follow</option>
+                                                <option value="noindex,follow" {{ $robotsValue === 'noindex,follow' ? 'selected' : '' }}>noindex,follow</option>
+                                                <option value="index,nofollow" {{ $robotsValue === 'index,nofollow' ? 'selected' : '' }}>index,nofollow</option>
+                                                <option value="noindex,nofollow" {{ $robotsValue === 'noindex,nofollow' ? 'selected' : '' }}>noindex,nofollow</option>
+                                            </select>
+                                        </div>
+                                        <div class="row g-2">
+                                            <div class="col-md-6">
+                                                <div class="mb-3">
+                                                    <label class="form-label">Meta Author</label>
+                                                    <input type="text" class="form-control" name="metaAuthor"
+                                                           placeholder="Enter meta author"
+                                                           value="{{ $settings['metaAuthor'] ?? '' }}" maxlength="255"/>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="mb-3">
+                                                    <label class="form-label">Meta Publisher</label>
+                                                    <input type="text" class="form-control" name="metaPublisher"
+                                                           placeholder="Enter meta publisher"
+                                                           value="{{ $settings['metaPublisher'] ?? '' }}" maxlength="255"/>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="row g-2">
+                                            <div class="col-md-6">
+                                                <div class="mb-3">
+                                                    <label class="form-label">Google Site Verification</label>
+                                                    <input type="text" class="form-control" name="googleSiteVerification"
+                                                           placeholder="Paste Google verification token"
+                                                           value="{{ $settings['googleSiteVerification'] ?? '' }}" maxlength="255"/>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="mb-3">
+                                                    <label class="form-label">Bing Site Verification</label>
+                                                    <input type="text" class="form-control" name="bingSiteVerification"
+                                                           placeholder="Paste Bing verification token"
+                                                           value="{{ $settings['bingSiteVerification'] ?? '' }}" maxlength="255"/>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <hr class="my-4">
+                                        <h5 class="mb-3">Open Graph</h5>
+                                        <div class="mb-3">
+                                            <label class="form-label">OG Title</label>
+                                            <input type="text" class="form-control" name="ogTitle"
+                                                   placeholder="Enter Open Graph title"
+                                                   value="{{ $settings['ogTitle'] ?? '' }}" maxlength="255"/>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">OG Description</label>
+                                            <textarea class="form-control" name="ogDescription"
+                                                      placeholder="Enter Open Graph description"
+                                                      maxlength="500">{{ $settings['ogDescription'] ?? '' }}</textarea>
+                                        </div>
+                                        <div class="mb-3">
+                                            <div class="form-label">OG Image</div>
+                                            <input type="file" name="seoOgImage"
+                                                   data-image-url="{{ $settings['ogImage'] ?? '' }}"/>
+                                            <small class="form-hint">Recommended: 1200x630 PNG/JPG/WEBP.</small>
+                                        </div>
+                                        <hr class="my-4">
+                                        <h5 class="mb-3">X (Twitter)</h5>
+                                        <div class="mb-3">
+                                            <label class="form-label">X Card (twitter:card)</label>
+                                            @php $twitterCard = $settings['twitterCard'] ?? 'summary_large_image'; @endphp
+                                            <select class="form-select" name="twitterCard">
+                                                <option value="summary" {{ $twitterCard === 'summary' ? 'selected' : '' }}>summary</option>
+                                                <option value="summary_large_image" {{ $twitterCard === 'summary_large_image' ? 'selected' : '' }}>summary_large_image</option>
+                                                <option value="app" {{ $twitterCard === 'app' ? 'selected' : '' }}>app</option>
+                                                <option value="player" {{ $twitterCard === 'player' ? 'selected' : '' }}>player</option>
+                                            </select>
+                                        </div>
+                                        <div class="row g-2">
+                                            <div class="col-md-6">
+                                                <div class="mb-3">
+                                                    <label class="form-label">X Site Handle (twitter:site)</label>
+                                                    <input type="text" class="form-control" name="twitterSite"
+                                                           placeholder="pethiyan"
+                                                           value="{{ $settings['twitterSite'] ?? '' }}" maxlength="100"/>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="mb-3">
+                                                    <label class="form-label">X Creator Handle (twitter:creator)</label>
+                                                    <input type="text" class="form-control" name="twitterCreator"
+                                                           placeholder="pethiyan"
+                                                           value="{{ $settings['twitterCreator'] ?? '' }}" maxlength="100"/>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">X Title (twitter:title)</label>
+                                            <input type="text" class="form-control" name="twitterTitle"
+                                                   placeholder="Enter X title"
+                                                   value="{{ $settings['twitterTitle'] ?? '' }}" maxlength="255"/>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">X Description (twitter:description)</label>
+                                            <textarea class="form-control" name="twitterDescription"
+                                                      placeholder="Enter X description"
+                                                      maxlength="500">{{ $settings['twitterDescription'] ?? '' }}</textarea>
+                                        </div>
+                                        <div class="mb-3">
+                                            <div class="form-label">X Image (twitter:image)</div>
+                                            <input type="file" name="seoTwitterImage"
+                                                   data-image-url="{{ $settings['twitterImage'] ?? '' }}"/>
+                                            <small class="form-hint">Recommended: 1200x630 PNG/JPG/WEBP.</small>
+                                        </div>
+                                        <hr class="my-4">
+                                        <div class="mb-3">
+                                            <label class="form-label">Schema JSON-LD (Homepage)</label>
+                                            <textarea class="form-control" name="seoSchemaJson" rows="5"
+                                                      placeholder='Paste valid JSON-LD schema for homepage'>{{ $settings['seoSchemaJson'] ?? '' }}</textarea>
+                                        </div>
                                     </div>
                                 </div>
-                                <div class="card mb-4" id="pills-web-social">
-                                    <div class="card-header">
-                                        <h4 class="card-title">{{ __('labels.social_media') }}</h4>
-                                    </div>
-                                    <div class="card-body">
-                                        <div class="mb-3">
-                                            <label class="form-label">{{ __('labels.facebook_link') }}</label>
-                                            <input type="text" class="form-control" name="facebookLink"
-                                                   placeholder="{{ __('labels.facebook_link_placeholder') }}"
-                                                   value="{{ $settings['facebookLink'] ?? '' }}" maxlength="255"/>
-                                        </div>
-                                        <div class="mb-3">
-                                            <label
-                                                class="form-label">{{ __('labels.instagram_link') }}</label>
-                                            <input type="text" class="form-control" name="instagramLink"
-                                                   placeholder="{{ __('labels.instagram_link_placeholder') }}"
-                                                   value="{{ $settings['instagramLink'] ?? '' }}" maxlength="255"/>
-                                        </div>
-                                        <div class="mb-3">
-                                            <label class="form-label">{{ __('labels.x_link') }}</label>
-                                            <input type="text" class="form-control" name="xLink"
-                                                   placeholder="{{ __('labels.x_link_placeholder') }}"
-                                                   value="{{ $settings['xLink'] ?? '' }}" maxlength="255"/>
-                                        </div>
-                                        <div class="mb-3">
-                                            <label class="form-label">{{ __('labels.youtube_link') }}</label>
-                                            <input type="text" class="form-control" name="youtubeLink"
-                                                   placeholder="{{ __('labels.youtube_link_placeholder') }}"
-                                                   value="{{ $settings['youtubeLink'] ?? '' }}" maxlength="255"/>
-                                        </div>
-                                    </div>
-                                </div>
+                                {{-- Social Media card removed here to avoid duplicate with the unified
+                                     "Social Media Links" section in system settings page --}}
                                 <div class="card mb-4" id="pills-web-app">
                                     <div class="card-header">
                                         <h4 class="card-title">{{ __('labels.app_download_section') }}</h4>

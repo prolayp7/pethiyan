@@ -387,78 +387,123 @@ aside.navbar.navbar-vertical .nav-item.active > .dropdown-menu .dropdown-item.ac
     position: relative;
     min-height: 100vh;
     background:
-        radial-gradient(900px 420px at -10% -10%, rgba(36, 117, 208, 0.18), transparent 65%),
-        radial-gradient(700px 360px at 110% 110%, rgba(76, 166, 56, 0.16), transparent 60%),
-        linear-gradient(145deg, #f5f8ff 0%, #ecf3ff 52%, #f4f7fb 100%);
+        radial-gradient(720px 340px at -8% -10%, rgba(19, 82, 166, 0.10), transparent 68%),
+        radial-gradient(560px 280px at 108% 112%, rgba(72, 151, 46, 0.10), transparent 62%),
+        linear-gradient(160deg, #f7f9fd 0%, #fdfefe 44%, #f4f8ff 100%);
 }
 
 .admin-login-theme .container-tight {
-    max-width: 430px;
+    max-width: 460px;
 }
 
 .admin-login-theme .admin-login-brand-wrap .navbar-brand {
     margin: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 18px;
+    border-radius: 14px;
+    background: #ffffff;
+    border: 1px solid #dbe6f5;
+    box-shadow: 0 10px 24px rgba(12, 53, 109, 0.10);
 }
 
 .admin-login-theme .admin-login-brand-wrap .navbar-brand img {
-    width: 180px;
+    width: 196px;
     max-width: 100%;
     height: auto;
 }
 
 .admin-login-theme .admin-login-subtitle {
-    color: #1f4f8f;
-    font-weight: 500;
-    letter-spacing: .1px;
+    color: #194986;
+    font-weight: 600;
+    letter-spacing: .15px;
 }
 
 .admin-login-theme .admin-login-card {
-    border: 1px solid #d6e2f4;
-    border-radius: 18px;
-    box-shadow: 0 20px 45px rgba(12, 55, 113, 0.16);
+    border: 1px solid #d8e4f4;
+    border-radius: 20px;
+    background: #ffffff;
+    box-shadow: 0 20px 42px rgba(15, 56, 114, 0.14);
 }
 
 .admin-login-theme .admin-login-card .card-body {
-    padding: 2rem;
+    padding: 2.15rem;
 }
 
 .admin-login-theme .admin-login-card h2 {
-    color: #0f3f7f;
+    color: #124785;
     font-weight: 700;
 }
 
 .admin-login-theme .admin-login-caption {
-    color: #4f6f97;
+    color: #486b97;
 }
 
 .admin-login-theme .form-label {
-    color: #204d87;
+    color: #1d4b85;
     font-weight: 600;
 }
 
 .admin-login-theme .form-control {
-    border-radius: 10px;
-    border-color: #cddbf0;
+    border-radius: 11px;
+    border-color: #c9d9f0;
+    background: #fdfefe;
 }
 
 .admin-login-theme .form-control:focus {
-    border-color: #1d63b4;
-    box-shadow: 0 0 0 0.18rem rgba(29, 99, 180, 0.15);
+    border-color: #1f62b0;
+    box-shadow: 0 0 0 0.17rem rgba(31, 98, 176, 0.14);
 }
 
 .admin-login-theme .input-group-text {
-    border-color: #cddbf0;
-    border-radius: 0 10px 10px 0;
+    border-color: #c9d9f0;
+    border-radius: 0 11px 11px 0;
+    background: #ffffff;
 }
 
 .admin-login-theme .btn-primary {
     border: 0;
-    border-radius: 12px;
-    background: linear-gradient(90deg, #0f4ea2 0%, #1f6bd5 60%, #389c2e 100%);
-    box-shadow: 0 10px 22px rgba(23, 87, 171, 0.28);
+    border-radius: 13px;
+    background: linear-gradient(92deg, #0f4c9f 0%, #1d67cd 58%, #3e9b34 100%);
+    box-shadow: 0 10px 24px rgba(22, 82, 162, 0.24);
 }
 
 .admin-login-theme .btn-primary:hover,
 .admin-login-theme .btn-primary:focus {
-    background: linear-gradient(90deg, #0d478f 0%, #195bb3 58%, #2f8727 100%);
+    background: linear-gradient(92deg, #0c438e 0%, #195bb6 58%, #35832c 100%);
+}
+
+.admin-login-theme .form-check-label {
+    color: #2f4f77;
+}
+
+.admin-login-theme .form-label-description a,
+.admin-login-theme .text-center.text-muted a {
+    color: #1961be;
+}
+
+.admin-login-theme .form-label-description a:hover,
+.admin-login-theme .text-center.text-muted a:hover {
+    color: #0f4c9f;
+}
+
+@media (max-width: 576px) {
+    .admin-login-theme .container-tight {
+        max-width: 100%;
+        padding-left: 12px;
+        padding-right: 12px;
+    }
+
+    .admin-login-theme .admin-login-card .card-body {
+        padding: 1.5rem;
+    }
+
+    .admin-login-theme .admin-login-brand-wrap .navbar-brand {
+        padding: 10px 12px;
+    }
+
+    .admin-login-theme .admin-login-brand-wrap .navbar-brand img {
+        width: 170px;
+    }
 }

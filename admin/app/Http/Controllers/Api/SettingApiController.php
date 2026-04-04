@@ -89,4 +89,36 @@ class SettingApiController extends Controller
             ]
         );
     }
+
+    public function seo(): JsonResponse
+    {
+        $web = $this->settingService->getSettingByVariable(SettingTypeEnum::WEB());
+        $value = $web ? ($web->toArray(request())['value'] ?? []) : [];
+
+        return ApiResponseType::sendJsonResponse(
+            success: true,
+            message: 'labels.setting_fetched_successfully',
+            data: [
+                'metaTitle' => $value['metaTitle'] ?? '',
+                'metaKeywords' => $value['metaKeywords'] ?? '',
+                'metaDescription' => $value['metaDescription'] ?? '',
+                'metaCanonicalUrl' => $value['metaCanonicalUrl'] ?? '',
+                'metaRobots' => $value['metaRobots'] ?? 'index,follow',
+                'metaAuthor' => $value['metaAuthor'] ?? '',
+                'metaPublisher' => $value['metaPublisher'] ?? '',
+                'googleSiteVerification' => $value['googleSiteVerification'] ?? '',
+                'bingSiteVerification' => $value['bingSiteVerification'] ?? '',
+                'ogTitle' => $value['ogTitle'] ?? '',
+                'ogDescription' => $value['ogDescription'] ?? '',
+                'ogImage' => $value['ogImage'] ?? '',
+                'twitterCard' => $value['twitterCard'] ?? 'summary_large_image',
+                'twitterSite' => $value['twitterSite'] ?? '',
+                'twitterCreator' => $value['twitterCreator'] ?? '',
+                'twitterTitle' => $value['twitterTitle'] ?? '',
+                'twitterDescription' => $value['twitterDescription'] ?? '',
+                'twitterImage' => $value['twitterImage'] ?? '',
+                'seoSchemaJson' => $value['seoSchemaJson'] ?? '',
+            ]
+        );
+    }
 }

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Network security config:
+  - Blocks cleartext (HTTP) traffic to the API domain
+  - Certificate pinning enforced for production
+  Replace YOUR_API_DOMAIN and YOUR_CERT_PIN_BASE64 before release.
+-->
+<network-security-config>
+  <domain-config cleartextTrafficPermitted="false">
+    <domain includeSubdomains="true">YOUR_API_DOMAIN.com</domain>
+    <!--
+    Uncomment and set your actual cert pin before release:
+    <pin-set expiration="2027-01-01">
+      <pin digest="SHA-256">YOUR_CERT_PIN_BASE64=</pin>
+      <pin digest="SHA-256">BACKUP_CERT_PIN_BASE64=</pin>
+    </pin-set>
+    -->
+  </domain-config>
+
+  <!-- Allow cleartext only in debug builds (overridden by debug manifest) -->
+  <base-config cleartextTrafficPermitted="false" />
+</network-security-config>

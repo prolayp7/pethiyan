@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Setting;
 
+use App\Models\Setting;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -14,6 +15,17 @@ class WebSettingResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $systemValues = [];
+        try {
+            $systemSetting = Setting::query()->find('system');
+            $systemValues = is_array($systemSetting?->value) ? $systemSetting->value : [];
+        } catch (\Throwable $e) {
+            $systemValues = [];
+        }
+
+        $systemLogo = !empty($systemValues['logo']) ? url('storage/' . $systemValues['logo']) . '?v=' . time() : '';
+        $systemFavicon = !empty($systemValues['favicon']) ? url('storage/' . $systemValues['favicon']) : '';
+
         return [
             'variable' => $this->variable,
             'value' => [
@@ -25,16 +37,16 @@ class WebSettingResource extends JsonResource
                 'shortDescription' => $this->value['shortDescription'] ?? '',
                 'siteHeaderLogo' => !empty($this->value['siteHeaderLogo'])
                     ? url('storage/' . $this->value['siteHeaderLogo']) . '?v=' . time()
-                    : '',
+                    : $systemLogo,
                 'siteHeaderDarkLogo' => !empty($this->value['siteHeaderDarkLogo'])
                     ? url('storage/' . $this->value['siteHeaderDarkLogo']) . '?v=' . time()
-                    : '',
+                    : $systemLogo,
 
                 'siteFooterLogo' => !empty($this->value['siteFooterLogo'])
                     ? url('storage/' . $this->value['siteFooterLogo']) . '?v=' . time()
-                    : '',
+                    : $systemLogo,
 
-                'siteFavicon' => !empty($this->value['siteFavicon']) ? url('storage/' . $this->value['siteFavicon']) : '',
+                'siteFavicon' => !empty($this->value['siteFavicon']) ? url('storage/' . $this->value['siteFavicon']) : $systemFavicon,
                 'headerScript' => $this->value['headerScript'] ?? '',
                 'footerScript' => $this->value['footerScript'] ?? '',
                 'googleMapKey' => $this->value['googleMapKey'] ?? '',
@@ -61,8 +73,25 @@ class WebSettingResource extends JsonResource
                 'supportFeatureSection' => $this->value['supportFeatureSection'] ?? '',
                 'supportFeatureSectionTitle' => $this->value['supportFeatureSectionTitle'] ?? '',
                 'supportFeatureSectionDescription' => $this->value['supportFeatureSectionDescription'] ?? '',
+                'metaTitle' => $this->value['metaTitle'] ?? '',
                 'metaKeywords' => $this->value['metaKeywords'] ?? '',
                 'metaDescription' => $this->value['metaDescription'] ?? '',
+                'metaCanonicalUrl' => $this->value['metaCanonicalUrl'] ?? '',
+                'metaRobots' => $this->value['metaRobots'] ?? 'index,follow',
+                'metaAuthor' => $this->value['metaAuthor'] ?? '',
+                'metaPublisher' => $this->value['metaPublisher'] ?? '',
+                'googleSiteVerification' => $this->value['googleSiteVerification'] ?? '',
+                'bingSiteVerification' => $this->value['bingSiteVerification'] ?? '',
+                'ogTitle' => $this->value['ogTitle'] ?? '',
+                'ogDescription' => $this->value['ogDescription'] ?? '',
+                'ogImage' => !empty($this->value['ogImage']) ? url('storage/' . $this->value['ogImage']) . '?v=' . time() : '',
+                'twitterCard' => $this->value['twitterCard'] ?? 'summary_large_image',
+                'twitterSite' => $this->value['twitterSite'] ?? '',
+                'twitterCreator' => $this->value['twitterCreator'] ?? '',
+                'twitterTitle' => $this->value['twitterTitle'] ?? '',
+                'twitterDescription' => $this->value['twitterDescription'] ?? '',
+                'twitterImage' => !empty($this->value['twitterImage']) ? url('storage/' . $this->value['twitterImage']) . '?v=' . time() : '',
+                'seoSchemaJson' => $this->value['seoSchemaJson'] ?? '',
                 'defaultLatitude' => $this->value['defaultLatitude'] ?? '',
                 'defaultLongitude' => $this->value['defaultLongitude'] ?? '',
                 'enableCountryValidation' => $this->value['enableCountryValidation'] ?? '',
