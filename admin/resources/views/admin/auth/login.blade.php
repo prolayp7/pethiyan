@@ -54,35 +54,37 @@
                             <input type="hidden" name="fcm_token" value="">
                             <input type="hidden" name="device_type" value="web">
                             @csrf
-                            <div class="mb-3">
-                                <label class="form-label">Email address</label>
-                                <input type="email" class="form-control" name="email" placeholder="your@email.com"
-                                       autocomplete="off"/>
-                            </div>
-                            <div class="mb-2">
-                                <label class="form-label">
-                                    Password
-                                    <span class="form-label-description"><a
-                                            href="{{route('admin.password.request')}}">I forgot password</a></span>
-                                </label>
-                                <div class="input-group input-group-flat">
-                                    <input type="password" class="form-control" name="password"
-                                           placeholder="Your password"
-                                           autocomplete="off" id="password"/>
-                                    <span class="input-group-text">
-                                        <a href="#" class="link-secondary" title="Show password" id="password-toggle"
-                                           data-bs-toggle="tooltip">
-                                            <!-- Download SVG icon from http://tabler.io/icons/icon/eye -->
-                                            Show
-                                          </a>
-                                    </span>
+                            <div id="admin-credentials-step">
+                                <div class="mb-3">
+                                    <label class="form-label">Email address</label>
+                                    <input type="email" class="form-control" name="email" placeholder="your@email.com"
+                                           autocomplete="off"/>
                                 </div>
-                            </div>
-                            <div class="mb-2">
-                                <label class="form-check">
-                                    <input type="checkbox" class="form-check-input"/>
-                                    <span class="form-check-label">Remember me on this device</span>
-                                </label>
+                                <div class="mb-2">
+                                    <label class="form-label">
+                                        Password
+                                        <span class="form-label-description"><a
+                                                href="{{route('admin.password.request')}}">I forgot password</a></span>
+                                    </label>
+                                    <div class="input-group input-group-flat">
+                                        <input type="password" class="form-control" name="password"
+                                               placeholder="Your password"
+                                               autocomplete="off" id="password"/>
+                                        <span class="input-group-text">
+                                            <a href="#" class="link-secondary" title="Show password" id="password-toggle"
+                                               data-bs-toggle="tooltip">
+                                                <!-- Download SVG icon from http://tabler.io/icons/icon/eye -->
+                                                Show
+                                              </a>
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-check">
+                                        <input type="checkbox" class="form-check-input"/>
+                                        <span class="form-check-label">Remember me on this device</span>
+                                    </label>
+                                </div>
                             </div>
                             <input type="hidden" name="challenge_token" id="challenge_token" value="">
                             <div id="admin-totp-step" class="d-none">

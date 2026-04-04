@@ -38,7 +38,7 @@
                         <nav class="nav nav-vertical nav-pills" id="pills">
                             <a class="nav-link" href="#pills-driver">Storage Driver</a>
                             <a class="nav-link" href="#pills-local">Local Storage</a>
-                            <a class="nav-link" href="#pills-aws">{{ __('labels.aws_s3') }}</a>
+                            {{-- <a class="nav-link" href="#pills-aws">{{ __('labels.aws_s3') }}</a> --}}
                         </nav>
                     </div>
                 </div>
@@ -61,9 +61,9 @@
                                                 <option value="local" {{ $currentDriver === 'local' ? 'selected' : '' }}>
                                                     Local Storage (public disk)
                                                 </option>
-                                                <option value="s3" {{ $currentDriver === 's3' ? 'selected' : '' }}>
+                                                {{-- <option value="s3" {{ $currentDriver === 's3' ? 'selected' : '' }}>
                                                     AWS S3
-                                                </option>
+                                                </option> --}}
                                             </select>
                                             <small class="form-hint">Choose where uploaded files are stored. Changing this does not migrate existing files.</small>
                                         </div>
@@ -142,7 +142,7 @@
                                 </div>
 
                                 {{-- ── AWS S3 ── --}}
-                                <div class="card mb-4" id="pills-aws">
+                                {{-- <div class="card mb-4" id="pills-aws">
                                     <div class="card-header">
                                         <h4 class="card-title">{{ __('labels.aws_s3') }}</h4>
                                     </div>
@@ -178,7 +178,7 @@
                                                    value="{{ $settings['awsAssetUrl'] ?? '' }}"/>
                                         </div>
                                     </div>
-                                </div>
+                                </div> --}}
 
                                 <div class="card-footer text-end">
                                     <div class="d-flex">
@@ -203,13 +203,16 @@
     const awsCard  = document.getElementById('pills-aws');
 
     const toggle = () => {
+        if (!select || !awsCard) return;
         awsCard.style.opacity = select.value === 's3' ? '1' : '0.45';
         awsCard.querySelectorAll('input').forEach(el => {
             el.disabled = select.value !== 's3';
         });
     };
 
-    select.addEventListener('change', toggle);
+    if (select) {
+        select.addEventListener('change', toggle);
+    }
     toggle();
 })();
 </script>

@@ -59,6 +59,8 @@ class SystemSettingResource extends JsonResource
                 'referEarnNumberOfTimesBonus' => $this->value['referEarnNumberOfTimesBonus'] ?? '',
                 'currency' => $this->value['currency'] ?? 'INR',
                 'currencySymbol' => $this->value['currencySymbol'] ?? '₹',
+                'customerInvoiceDownloadEnabled' => $this->value['customerInvoiceDownloadEnabled'] ?? true,
+                'customerInvoiceDownloadMinStatus' => $this->value['customerInvoiceDownloadMinStatus'] ?? 'out_for_delivery',
             ]
         ];
     }

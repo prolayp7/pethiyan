@@ -39,18 +39,34 @@
                                href="#pills-support">{{ __('labels.support_information') }}</a>
                             <a class="nav-link"
                                href="#pills-cart">{{ __('labels.cart_inventory_settings') }}</a>
+                            <a class="nav-link"
+                               href="#pills-order-settings">Order Settings</a>
                             {{-- <a class="nav-link" href="#pills-wallet">{{ __('labels.wallet_settings') }}</a> --}}
                             {{-- <a class="nav-link"
                                href="#pills-maintenance">{{ __('labels.maintenance_mode') }}</a> --}}
                             <a class="nav-link"
                                href="#pills-demomode">{{ __('labels.demo_mode') }}</a>
                             <a class="nav-link" href="#pills-social">Social Media</a>
+                            @can('viewSetting', [\App\Models\Setting::class, 'web'])
+                                <a class="nav-link" href="#pills-web-settings-anchor">{{ __('labels.web_settings') }}</a>
+                                <a class="nav-link" href="#pills-web-general">{{ __('labels.general') }}</a>
+                                <a class="nav-link" href="#pills-web-default-location">{{ __('labels.default_location') }}</a>
+                                <a class="nav-link" href="#pills-web-country-validation">{{ __('labels.country_validation') }}</a>
+                                <a class="nav-link" href="#pills-web-support">{{ __('labels.support_information') }}</a>
+                                <a class="nav-link" href="#pills-web-seo">{{ __('labels.seo_settings') }}</a>
+                                <a class="nav-link" href="#pills-web-social">{{ __('labels.social_media') }}</a>
+                                <a class="nav-link" href="#pills-web-app">{{ __('labels.app_download_section') }}</a>
+                                <a class="nav-link" href="#pills-web-features">{{ __('labels.feature_sections') }}</a>
+                                <a class="nav-link" href="#pills-web-policies">{{ __('labels.policy_settings') }}</a>
+                                <a class="nav-link" href="#pills-web-pwa-manifest">{{ __('labels.pwa_manifest_settings') }}</a>
+                                <a class="nav-link" href="#pills-web-scripts">{{ __('labels.scripts') }}</a>
+                            @endcan
                             {{--                            <a class="nav-link"--}}
                             {{--                               href="#pills-referral">{{ __('labels.referral_earn_program') }}</a>--}}
                         </nav>
                     </div>
                 </div>
-                <div class="col-sm" data-bs-spy="scroll" data-bs-target="#pills" data-bs-offset="0">
+                <div class="col-sm">
                     <div class="row row-cards">
                         <div class="col-12">
                             <form action="{{route('admin.settings.store')}}" class="form-submit" method="post"
@@ -212,6 +228,40 @@
 {{--                                        </div>--}}
                                     </div>
                                 </div>
+
+                                <div class="card mb-4" id="pills-order-settings">
+                                    <div class="card-header">
+                                        <h4 class="card-title">Order Settings</h4>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="mb-3">
+                                            <label class="row">
+                                                <span class="col">Enable Customer Invoice Download</span>
+                                                <span class="col-auto">
+                                                    <label class="form-check form-check-single form-switch">
+                                                        <input class="form-check-input" type="checkbox"
+                                                               name="customerInvoiceDownloadEnabled" value="1"
+                                                               {{ !empty($settings['customerInvoiceDownloadEnabled']) ? 'checked' : '' }}/>
+                                                    </label>
+                                                </span>
+                                            </label>
+                                            <small class="form-hint">Controls whether customers can download invoices from frontend order details.</small>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label required">Invoice Download Allowed From Status</label>
+                                            <select class="form-select" name="customerInvoiceDownloadMinStatus">
+                                                <option value="pending" {{ ($settings['customerInvoiceDownloadMinStatus'] ?? 'out_for_delivery') === 'pending' ? 'selected' : '' }}>Placed</option>
+                                                <option value="accepted_by_seller" {{ ($settings['customerInvoiceDownloadMinStatus'] ?? '') === 'accepted_by_seller' ? 'selected' : '' }}>Confirmed</option>
+                                                <option value="preparing" {{ ($settings['customerInvoiceDownloadMinStatus'] ?? '') === 'preparing' ? 'selected' : '' }}>Preparing</option>
+                                                <option value="collected" {{ ($settings['customerInvoiceDownloadMinStatus'] ?? '') === 'collected' ? 'selected' : '' }}>Collected</option>
+                                                <option value="out_for_delivery" {{ ($settings['customerInvoiceDownloadMinStatus'] ?? 'out_for_delivery') === 'out_for_delivery' ? 'selected' : '' }}>Dispatched</option>
+                                                <option value="delivered" {{ ($settings['customerInvoiceDownloadMinStatus'] ?? '') === 'delivered' ? 'selected' : '' }}>Delivered</option>
+                                            </select>
+                                            <small class="form-hint">Default is <strong>Dispatched</strong> as requested.</small>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 {{-- Wallet Settings (temporarily disabled)
                                 <div class="card mb-4" id="pills-wallet">
                                     <div class="card-header">
@@ -493,6 +543,18 @@
                                     </div>
                                 </div>
                             </form>
+
+                            @can('viewSetting', [\App\Models\Setting::class, 'web'])
+                                <div class="card mb-4 mt-4" id="pills-web-settings-anchor">
+                                    <div class="card-header">
+                                        <h4 class="card-title">{{ __('labels.web_settings') }}</h4>
+                                    </div>
+                                    <div class="card-body text-muted">
+                                        Web settings are now managed from this System Settings page.
+                                    </div>
+                                </div>
+                                @include('admin.settings.partials.web-settings-form', ['settings' => $webSettings])
+                            @endcan
                         </div>
                     </div>
                 </div>
@@ -502,6 +564,26 @@
     <!-- END PAGE BODY -->
     <script>
         document.addEventListener('DOMContentLoaded', function () {
+            const menu = document.getElementById('pills');
+            const menuLinks = menu ? Array.from(menu.querySelectorAll('a.nav-link[href^="#"]')) : [];
+            const setActiveMenuByHash = (hash) => {
+                if (!hash) return;
+                menuLinks.forEach((link) => {
+                    link.classList.toggle('active', link.getAttribute('href') === hash);
+                });
+            };
+
+            if (menuLinks.length) {
+                menuLinks.forEach((link) => {
+                    link.addEventListener('click', function () {
+                        setActiveMenuByHash(this.getAttribute('href'));
+                    });
+                });
+
+                setActiveMenuByHash(window.location.hash || '#pills-general');
+                window.addEventListener('hashchange', () => setActiveMenuByHash(window.location.hash));
+            }
+
             const timezoneSelect = document.getElementById('select-timezone');
             if (timezoneSelect && window.TomSelect) {
                 new TomSelect(timezoneSelect, {
@@ -524,3 +606,28 @@
         });
     </script>
 @endsection
+
+@can('viewSetting', [\App\Models\Setting::class, 'web'])
+    @push('script')
+        <script async defer>(g => {
+                var h, a, k, p = "The Google Maps JavaScript API", c = "google", l = "importLibrary", q = "__ib__",
+                    m = document, b = window;
+                b = b[c] || (b[c] = {});
+                var d = b.maps || (b.maps = {}), r = new Set, e = new URLSearchParams,
+                    u = () => h || (h = new Promise(async (f, n) => {
+                        await (a = m.createElement("script"));
+                        e.set("libraries", [...r] + "");
+                        for (k in g) e.set(k.replace(/[A-Z]/g, t => "_" + t[0].toLowerCase()), g[k]);
+                        e.set("callback", c + ".maps." + q);
+                        a.src = `https://maps.${c}apis.com/maps/api/js?` + e;
+                        d[q] = f;
+                        a.onerror = () => h = n(Error(p + " could not load."));
+                        a.nonce = m.querySelector("script[nonce]")?.nonce || "";
+                        m.head.append(a)
+                    }));
+                d[l] ? console.warn(p + " only loads once. Ignoring:", g) : d[l] = (f, ...n) => r.add(f) && u().then(() => d[l](f, ...n))
+            })
+            ({key: "{{$webSettings['googleMapKey'] ?? ''}}", v: "weekly"});</script>
+        <script src="{{hyperAsset('assets/js/settings.js')}}"></script>
+    @endpush
+@endcan

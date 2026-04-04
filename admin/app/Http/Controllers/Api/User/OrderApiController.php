@@ -340,6 +340,10 @@ class OrderApiController extends Controller
         $systemSettingResource = app(\App\Services\SettingService::class)->getSettingByVariable('system');
         $systemSettings = $systemSettingResource?->toArray(request())['value'] ?? [];
 
+        if (!$this->canCustomerDownloadInvoice($order->status, $systemSettings)) {
+            abort(403, 'Invoice is available after order is marked as dispatched.');
+        }
+
         $pdf = Pdf::loadView('layouts.order-invoice', [
             'order'          => $order,
             'sellerOrder'    => $sellerOrders,
@@ -351,6 +355,40 @@ class OrderApiController extends Controller
         $filename = 'invoice-' . ($order->uuid ?? $order->id) . '.pdf';
 
         return $pdf->download($filename);
+    }
+
+    private function canCustomerDownloadInvoice(?string $currentStatus, array $systemSettings): bool
+    {
+        $enabled = (bool)($systemSettings['customerInvoiceDownloadEnabled'] ?? true);
+        if (!$enabled) {
+            return false;
+        }
+
+        $requiredStatus = $systemSettings['customerInvoiceDownloadMinStatus'] ?? 'out_for_delivery';
+        $statusOrder = [
+            'pending',
+            'awaiting_store_response',
+            'partially_accepted',
+            'accepted_by_seller',
+            'ready_for_pickup',
+            'assigned',
+            'preparing',
+            'collected',
+            'out_for_delivery',
+            'delivered',
+        ];
+
+        $requiredIndex = array_search($requiredStatus, $statusOrder, true);
+        if ($requiredIndex === false) {
+            $requiredIndex = array_search('out_for_delivery', $statusOrder, true);
+        }
+
+        $currentIndex = array_search((string)$currentStatus, $statusOrder, true);
+        if ($currentIndex === false) {
+            return false;
+        }
+
+        return $currentIndex >= $requiredIndex;
     }
 
     /**

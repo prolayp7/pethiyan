@@ -129,13 +129,6 @@ return [
         ],
 
         // ─── Content & Marketing ─────────────────────────────────────────
-        'banners' => [
-            'icon'       => 'ti-photo',
-            'route'      => 'admin.banners.index',
-            'title'      => 'labels.banners',
-            'active'     => 'banners',
-            'permission' => 'banner.view',
-        ],
         'hero_section' => [
             'icon'   => 'ti-layout-navbar',
             'route'  => 'admin.hero-section.index',
@@ -243,13 +236,6 @@ return [
                     'route_param' => ['setting' => 'system'],
                     'sub_title'   => 'labels.menu_system',
                     'permission'  => 'setting.system.view',
-                ],
-                'web' => [
-                    'sub_active'  => 'web',
-                    'sub_route'   => 'admin.settings.show',
-                    'route_param' => ['setting' => 'web'],
-                    'sub_title'   => 'labels.menu_web',
-                    'permission'  => 'setting.web.view',
                 ],
                 // 'app' => [
                 //     'sub_active'  => 'app',

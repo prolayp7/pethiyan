@@ -212,8 +212,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (challengeInput) challengeInput.value = data.challenge_token || '';
 
                     const totpStep = document.getElementById('admin-totp-step');
+                    const credentialsStep = document.getElementById('admin-credentials-step');
                     if (totpStep) {
                         totpStep.classList.remove('d-none');
+                        if (credentialsStep) {
+                            credentialsStep.classList.add('d-none');
+                        }
                         const emailInput = loginForm.querySelector('input[name="email"]');
                         const mobileInput = loginForm.querySelector('input[name="mobile"]');
                         const passwordInput = loginForm.querySelector('input[name="password"]');

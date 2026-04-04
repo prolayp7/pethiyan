@@ -54,6 +54,9 @@ class SystemSettingType implements SettingInterface
     public string $referEarnNumberOfTimesBonus = "";
     public string $currency = "INR";
     public string $currencySymbol = "₹";
+    // Order settings
+    public bool $customerInvoiceDownloadEnabled = true;
+    public string $customerInvoiceDownloadMinStatus = 'out_for_delivery'; // Dispatched
     // Social media links: keyed by platform slug, each with 'url' and 'active'
     public array $socialLinks = [];
 
@@ -105,6 +108,8 @@ class SystemSettingType implements SettingInterface
             'referEarnNumberOfTimesBonus' => ['required_if:referEarnStatus,on', 'nullable', 'numeric', 'min:0'],
             'currency' => ['required', 'string', 'max:3', 'exists:countries,currency'],
             'currencySymbol' => ['required', 'string', 'max:3', 'exists:countries,currency_symbol'],
+            'customerInvoiceDownloadEnabled' => ['nullable', 'boolean'],
+            'customerInvoiceDownloadMinStatus' => ['required', 'in:pending,accepted_by_seller,preparing,collected,out_for_delivery,delivered'],
             'socialLinks'          => ['nullable', 'array'],
             'socialLinks.*'        => ['nullable', 'array'],
             'socialLinks.*.url'    => ['nullable', 'url', 'max:500'],

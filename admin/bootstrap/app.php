@@ -13,6 +13,8 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -67,5 +69,13 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        //
+        $exceptions->render(function (NotFoundHttpException $e, Request $request) {
+            if (($request->is('admin') || $request->is('admin/*')) && Auth::guard('admin')->check()) {
+                return response()->view('errors.admin-404', [
+                    'requestedPath' => $request->path(),
+                ], 404);
+            }
+
+            return null;
+        });
     })->create();

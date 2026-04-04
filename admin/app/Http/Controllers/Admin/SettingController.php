@@ -30,6 +30,7 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Enum;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
 class SettingController extends Controller
 {
@@ -259,13 +260,17 @@ class SettingController extends Controller
         }
     }
 
-    public function show($variable): View
+    public function show($variable): \Illuminate\Http\RedirectResponse|View
     {
         try {
 
             $setting_variable = SettingTypeEnum::values();
             if (!in_array($variable, $setting_variable)) {
                 abort(404, __('labels.invalid_type'));
+            }
+
+            if ($variable === SettingTypeEnum::WEB()) {
+                return redirect()->route('admin.settings.show', ['setting' => SettingTypeEnum::SYSTEM()]);
             }
 
             $transformedSetting = $this->settingService->getSettingByVariable($variable);
@@ -276,11 +281,17 @@ class SettingController extends Controller
             // Authorize module-wise view access
             $this->authorize('viewSetting', [Setting::class, $variable]);
             $settings = $transformedSetting->toArray(request())['value'] ?? [];
+            $webSettings = [];
+            if ($variable === SettingTypeEnum::SYSTEM()) {
+                $webTransformedSetting = $this->settingService->getSettingByVariable(SettingTypeEnum::WEB());
+                $webSettings = $webTransformedSetting?->toArray(request())['value'] ?? [];
+            }
 
             $setting = Setting::find(SettingTypeEnum::AUTHENTICATION());
             $googleApiKey = $setting->value['googleApiKey'] ?? null;
             return view('admin.settings.' . $variable, [
                 'settings' => $settings,
+                'webSettings' => $webSettings,
                 'googleApiKey' => $googleApiKey,
                 'paymentSettingsUnlocked' => $variable === SettingTypeEnum::PAYMENT()
                     ? $this->isPaymentSettingsUnlocked(request())
@@ -289,7 +300,10 @@ class SettingController extends Controller
             ]);
         } catch (AuthorizationException $e) {
             abort(403, __('labels.unauthorized_access'));
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
+            if ($e instanceof HttpExceptionInterface) {
+                throw $e;
+            }
             abort(500, __('labels.something_went_wrong'));
         }
     }
