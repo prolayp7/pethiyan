@@ -511,15 +511,21 @@ php artisan test
 
 ## Project Status
 
-| Module | Completeness | Notes |
-|---|---|---|
-| Admin Panel | ~85% | Delivery & seller menu items currently hidden |
-| Seller Panel | ~85% | Core workflows complete |
-| Customer REST API | ~80% | GST line-items and email notifications pending |
-| Delivery Boy API | ~90% | Fully functional |
-| Payment Processing | ~90% | Easepay partial; all others production-ready |
-| GST Tax Engine | ~30% | Schema in place; calculation logic in progress |
-| Next.js Storefront | ~45% | Component library built; API integration pending |
-| Notifications (Push) | ~75% | FCM works; email/SMS not yet implemented |
+Current implementation status as of `2026-04-04`:
 
-See [GAP_ANALYSIS.md](GAP_ANALYSIS.md) for a detailed requirements vs. implementation matrix.
+| Area | Status | Notes |
+|---|---|---|
+| Backend Core Commerce | Substantially built | Catalog, cart, checkout, orders, seller operations, delivery APIs, and admin CRUD are in place across Laravel controllers, models, migrations, and Blade views. |
+| Admin Panel | ~85% | Primary management flows work, but some existing delivery and seller modules are still hidden from the current sidebar/menu configuration. |
+| Seller Panel | ~85% | Core seller workflows are implemented: store setup, product CRUD, orders, wallet, withdrawals, and dashboard reporting. |
+| Customer REST API | ~80% | Main commerce endpoints exist, but invoice download, India-specific GST breakdowns, and some auth/notification flows remain incomplete. |
+| Delivery Boy API | ~90% | Registration, assignments, OTP delivery confirmation, earnings, withdrawals, and location updates are implemented. |
+| Payment Integrations | ~80% | Razorpay is integrated; Easepay is still pending, and the broader payment gateway matrix described in planning docs is not fully complete. |
+| GST & India Compliance | ~30% | Generic tax models/controllers exist, but GST-specific logic such as CGST/SGST vs IGST, HSN codes, GSTIN handling, and GST-compliant invoices are still outstanding. |
+| Invoice System | ~35% | HTML invoice views exist, but downloadable PDF invoices and GST-compliant invoice fields are not finished yet. |
+| Notifications | Mixed | Firebase push notifications are wired, while transactional email and SMS/OTP service layers are still largely unimplemented. |
+| Next.js Storefront | Early stage | The design system, homepage shell, navigation, and shared UI are present, but most customer journeys are not yet connected to live API data. |
+
+The project is best described as a backend-heavy implementation with strong operational coverage and a partially built storefront. The largest remaining gaps are GST compliance, PDF invoices, SMS/email pipelines, Easepay, and full frontend integration.
+
+See [GAP_ANALYSIS.md](GAP_ANALYSIS.md) for the detailed requirements vs. implementation matrix.
