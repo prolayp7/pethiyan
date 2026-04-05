@@ -124,10 +124,10 @@ export default function CartDrawer() {
                   {/* Remove */}
                   <button
                     onClick={() => removeItem(item.id)}
-                    className="p-1.5 text-gray-300 hover:text-red-400 transition-colors self-start"
+                    className="group p-1.5 rounded-full text-gray-300 border border-transparent hover:text-white hover:border-transparent hover:shadow-md hover:bg-[linear-gradient(135deg,_#17396f_0%,_#2f6f9f_52%,_#49ad57_100%)] transition-all self-start"
                     aria-label={`Remove ${item.name}`}
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-4 w-4 transition-colors" />
                   </button>
                 </li>
               ))}

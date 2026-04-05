@@ -80,9 +80,9 @@ class _NotificationList extends StatelessWidget {
         final n    = _sample[i];
         final read = n['read'] as bool;
         return ListTile(
-          tileColor: read ? null : AppColors.primary.withOpacity(0.04),
+          tileColor: read ? null : AppColors.primary.withValues(alpha: 10),
           leading: CircleAvatar(
-            backgroundColor: AppColors.primary.withOpacity(0.1),
+            backgroundColor: AppColors.primary.withValues(alpha: 26),
             child: const Icon(Icons.notifications, color: AppColors.primary, size: 20),
           ),
           title: Text(n['title'] as String,

@@ -4,8 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_colors.dart';
-import '../../../../shared/widgets/loading_shimmer.dart';
 import '../../../../shared/widgets/error_view.dart';
+import '../../../../shared/widgets/loading_shimmer.dart';
 import '../controllers/home_controller.dart';
 
 class HomeScreen extends ConsumerWidget {

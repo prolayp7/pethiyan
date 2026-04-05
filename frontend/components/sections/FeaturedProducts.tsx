@@ -85,6 +85,8 @@ function adapt(p: RealApiProduct): FallbackProduct {
     colors,
     variantCount:     p.variants.length,
     inStock,
+    defaultVariantId: defaultVariant?.id ?? undefined,
+    defaultStoreId: pricing?.store_id ?? undefined,
   };
 }
 
@@ -105,24 +107,9 @@ export default function FeaturedProducts({ apiProducts = [] }: FeaturedProductsP
   return (
     <section
       className="py-16 relative overflow-hidden"
-      style={{ background: "linear-gradient(180deg, #0d2150 0%, #0c1d38 30%, #091528 65%, #071023 100%)" }}
+      style={{ background: "#ffffff" }}
       aria-labelledby="featured-heading"
     >
-      {/* Fine grid overlay */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0"
-        style={{
-          backgroundImage: `
-            linear-gradient(rgba(70,190,150,0.045) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(70,190,150,0.045) 1px, transparent 1px),
-            linear-gradient(rgba(60,130,255,0.04) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(60,130,255,0.04) 1px, transparent 1px)
-          `,
-          backgroundSize: "10px 10px, 10px 10px, 50px 50px, 50px 50px",
-        }}
-      />
-
       <Container className="relative z-10">
         {/* Header */}
         <div className="flex items-end justify-between mb-10">
@@ -130,10 +117,19 @@ export default function FeaturedProducts({ apiProducts = [] }: FeaturedProductsP
             <p className="text-sm font-semibold uppercase tracking-wider mb-2" style={{ color: "#4ea85f" }}>
               Bestsellers
             </p>
-            <h2 id="featured-heading" className="text-3xl sm:text-4xl font-extrabold text-white">
+            <h2
+              id="featured-heading"
+              className="text-3xl sm:text-4xl font-extrabold"
+              style={{
+                backgroundImage: "linear-gradient(135deg, #1a4f83 0%, #2b6e92 48%, #2d8b6a 100%)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text",
+              }}
+            >
               Featured Products
             </h2>
-            <p className="mt-2 text-white/50">
+            <p className="mt-2 text-[#4f6281]">
               Handpicked packaging solutions loved by thousands of brands
             </p>
           </div>

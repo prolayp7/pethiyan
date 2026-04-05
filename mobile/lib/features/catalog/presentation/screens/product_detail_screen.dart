@@ -210,7 +210,7 @@ class _PdpBody extends ConsumerWidget {
                         label: Text(v.name),
                         selected: selected,
                         onSelected: (_) => onVariantSelected(v),
-                        selectedColor: AppColors.primary.withOpacity(0.15),
+                        selectedColor: AppColors.primary.withValues(alpha: 38),
                         labelStyle: TextStyle(
                           color: selected ? AppColors.primary : AppColors.grey700,
                           fontWeight: selected
@@ -228,8 +228,8 @@ class _PdpBody extends ConsumerWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: inStock
-                        ? AppColors.success.withOpacity(0.1)
-                        : AppColors.error.withOpacity(0.1),
+                        ? AppColors.success.withValues(alpha: 26)
+                        : AppColors.error.withValues(alpha: 26),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
@@ -278,20 +278,20 @@ class _PdpShimmer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return const Column(
       children: [
-        const ShimmerBox(height: 320),
-        const SizedBox(height: 16),
+        ShimmerBox(height: 320),
+        SizedBox(height: 16),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: EdgeInsets.symmetric(horizontal: 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const ShimmerBox(height: 16, width: 80),
-              const SizedBox(height: 8),
-              const ShimmerBox(height: 24, width: 240),
-              const SizedBox(height: 12),
-              const ShimmerBox(height: 32, width: 120),
+              ShimmerBox(height: 16, width: 80),
+              SizedBox(height: 8),
+              ShimmerBox(height: 24, width: 240),
+              SizedBox(height: 12),
+              ShimmerBox(height: 32, width: 120),
             ],
           ),
         ),

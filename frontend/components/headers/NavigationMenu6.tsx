@@ -687,10 +687,7 @@ export default function NavigationMenu6() {
                         >
                           <Link
                             href="/contact"
-                            className="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg text-xs font-bold text-white transition-all hover:opacity-90 hover:shadow-md"
-                            style={{
-                              background: "linear-gradient(135deg, #1f4f8a 0%, #4caf50 100%)",
-                            }}
+                            className="btn-brand flex items-center justify-center gap-2 w-full py-2.5 rounded-lg text-xs font-bold transition-all hover:opacity-95 hover:shadow-md"
                             onClick={() => setShopOpen(false)}
                           >
                             <Package className="h-3.5 w-3.5" aria-hidden="true" />
@@ -1185,10 +1182,7 @@ export default function NavigationMenu6() {
 
               <Link
                 href="/contact"
-                className="mt-5 flex items-center justify-center gap-2 w-full py-3 rounded-full text-sm font-bold text-white transition-all hover:opacity-90"
-                style={{
-                  background: "linear-gradient(135deg, #1f4f8a 0%, #4caf50 100%)",
-                }}
+                className="btn-brand mt-5 flex items-center justify-center gap-2 w-full py-3 rounded-full text-sm font-bold transition-all hover:opacity-95"
                 onClick={() => setMobileOpen(false)}
               >
                 Request a Quote

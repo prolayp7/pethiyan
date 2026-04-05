@@ -93,7 +93,7 @@ class _TicketCard extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           decoration: BoxDecoration(
             color: isOpen
-                ? AppColors.success.withOpacity(0.1)
+                ? AppColors.success.withValues(alpha: 26)
                 : AppColors.grey200,
             borderRadius: BorderRadius.circular(20),
           ),

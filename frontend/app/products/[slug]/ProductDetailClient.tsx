@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, type CSSProperties } from "react";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import toast from "react-hot-toast";
@@ -27,6 +27,7 @@ import {
   Store,
   Palette,
   Layers,
+  Trash2,
 } from "lucide-react";
 import Container from "@/components/layout/Container";
 import { useCart } from "@/context/CartContext";
@@ -40,6 +41,8 @@ import {
   type RealApiStorePricing,
   type RealApiVariant,
   addToWishlist,
+  getWishlistItems,
+  removeWishlistItem,
   getProductReviews,
   getProductFaqs,
 } from "@/lib/api";
@@ -69,6 +72,33 @@ function isVideoLink(url?: string | null): boolean {
 function shouldBypassOptimizer(src?: string | null): boolean {
   if (!src) return false;
   return /^https?:\/\//i.test(src);
+}
+
+function colorSwatchStyle(color: string): CSSProperties {
+  const normalized = color.trim().toLowerCase();
+  const palette: Record<string, string> = {
+    transparent: "#b8ddea",
+    brown: "#8b6242",
+    red: "#ef4444",
+    blue: "#2563eb",
+    green: "#22c55e",
+    yellow: "#f59e0b",
+    black: "#111827",
+    white: "#f8fafc",
+    orange: "#f97316",
+    purple: "#7c3aed",
+    pink: "#ec4899",
+    grey: "#9ca3af",
+    gray: "#9ca3af",
+    silver: "#c0c0c0",
+    gold: "#d4af37",
+  };
+
+  if (normalized === "colorful" || normalized === "multicolor" || normalized === "multi color") {
+    return { background: "conic-gradient(#0ea5e9, #22c55e, #eab308, #ef4444, #8b5cf6, #0ea5e9)" };
+  }
+
+  return { background: palette[normalized] ?? "#94a3b8" };
 }
 
 function Gallery({
@@ -288,7 +318,7 @@ interface ProductDetailClientProps {
 export default function ProductDetailClient({ product, reviews: initialReviews, faqs: initialFaqs }: ProductDetailClientProps) {
   const { addItem, openCart, items } = useCart();
   const { isLoggedIn } = useAuth();
-  const { isWishlisted, add } = useWishlist();
+  const { isWishlisted, add, remove } = useWishlist();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -451,6 +481,37 @@ export default function ProductDetailClient({ product, reviews: initialReviews, 
       router.push(`/login?redirect=${encodeURIComponent(pathname || `/products/${product.slug}`)}`);
       return;
     }
+    if (wishlistBusy) return;
+
+    if (wishlisted) {
+      setWishlistBusy(true);
+      try {
+        const rows = await getWishlistItems();
+        const matches = rows.filter((row) => row.product?.id === product.id);
+        if (matches.length === 0) {
+          remove(product.id);
+          toast.success("Removed from wishlist");
+          return;
+        }
+
+        let removedAny = false;
+        for (const row of matches) {
+          const res = await removeWishlistItem(row.id);
+          if (res.success) removedAny = true;
+        }
+
+        if (removedAny) {
+          remove(product.id);
+          toast.success("Removed from wishlist");
+        } else {
+          toast.error("Failed to remove wishlist item");
+        }
+      } finally {
+        setWishlistBusy(false);
+      }
+      return;
+    }
+
     if (!selectedStoreIdSafe) {
       toast.error("Please select a store before adding to wishlist.");
       return;
@@ -564,21 +625,27 @@ export default function ProductDetailClient({ product, reviews: initialReviews, 
                 <p className="text-sm font-semibold text-(--color-secondary) mb-2 flex items-center gap-2">
                   <Palette className="h-4 w-4" /> Color
                 </p>
-                <div className="flex flex-wrap gap-2">
+                <p className="text-2xl font-bold text-(--color-secondary) mb-3">
+                  Color: {selectedVariant?.attributes?.color || colorOptions[0]?.color || "-"}
+                </p>
+                <div className="flex flex-wrap items-center gap-2.5">
                   {colorOptions.map((opt) => {
                     const selected = selectedVariant?.id === opt.variantId;
                     return (
                       <button
-                        key={opt.color}
+                        key={`${opt.color}-${opt.variantId}`}
                         onClick={() => setSelectedVariantId(opt.variantId)}
-                        className={`px-3 py-1.5 rounded-lg text-sm font-medium border-2 transition-all ${
+                        className={`h-10 w-10 rounded-full border-2 transition-all ${
                           selected
-                            ? "border-(--color-primary) bg-(--color-primary) text-white"
-                            : "border-(--color-border) text-(--color-secondary) hover:border-(--color-primary)/60"
+                            ? "border-(--color-primary) shadow-[0_0_0_2px_rgba(31,79,138,0.18)]"
+                            : "border-(--color-border) hover:border-(--color-primary)/60"
                         }`}
+                        style={colorSwatchStyle(opt.color)}
                         aria-pressed={selected}
+                        aria-label={`Select color ${opt.color}`}
+                        title={opt.color}
                       >
-                        {opt.color}
+                        <span className="sr-only">{opt.color}</span>
                       </button>
                     );
                   })}
@@ -752,12 +819,12 @@ export default function ProductDetailClient({ product, reviews: initialReviews, 
               <button
                 onClick={handleAddToCart}
                 disabled={!inStock || !selectedVariant || !selectedStorePricing}
-                className={`flex-1 min-w-[160px] flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all duration-300 ${
+                className={`flex-1 min-w-[160px] h-12 px-6 flex items-center justify-center gap-2 rounded-full text-base font-semibold transition-all duration-300 ${
                   addedToCart
                     ? "bg-green-500 text-white scale-95"
                     : !inStock
                     ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                    : "bg-(--color-primary) text-white hover:bg-(--color-primary-dark) shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0"
+                    : "btn-brand hover:opacity-95 hover:-translate-y-0.5 active:translate-y-0"
                 }`}
                 aria-label={addedToCart ? "Added to cart" : `Add ${productName} to cart`}
               >
@@ -768,11 +835,19 @@ export default function ProductDetailClient({ product, reviews: initialReviews, 
               <button
                 onClick={handleWishlist}
                 disabled={wishlistBusy}
-                className="w-11 h-11 rounded-xl border border-(--color-border) flex items-center justify-center hover:border-red-300 hover:bg-red-50 transition-colors"
+                className="group relative w-11 h-11 rounded-full bg-white/95 text-[#0f2444] border border-gray-200 shadow-sm flex items-center justify-center transition-all hover:scale-105 hover:shadow-md hover:text-white hover:border-transparent hover:bg-[linear-gradient(135deg,_#17396f_0%,_#2f6f9f_52%,_#49ad57_100%)]"
                 aria-label={wishlisted ? "Remove from wishlist" : "Add to wishlist"}
                 aria-pressed={wishlisted}
               >
-                <Heart className={`h-5 w-5 transition-colors ${wishlisted ? "fill-red-500 text-red-500" : "text-gray-400"}`} />
+                {wishlisted ? (
+                  <Trash2 className="h-5 w-5 transition-colors text-red-500 group-hover:text-white" />
+                ) : (
+                  <Heart className="h-5 w-5 transition-colors text-gray-400 group-hover:text-white group-hover:fill-white" />
+                )}
+                <span className="pointer-events-none absolute z-20 left-1/2 -translate-x-1/2 bottom-[calc(100%+12px)] whitespace-nowrap rounded-md bg-[#0f2444] px-2.5 py-1 text-[11px] font-medium text-white opacity-0 transition-opacity group-hover:opacity-100">
+                  {wishlisted ? "Remove from wishlist" : "Add to wishlist"}
+                  <span className="absolute left-1/2 top-full -translate-x-1/2 h-0 w-0 border-l-[5px] border-r-[5px] border-t-[6px] border-l-transparent border-r-transparent border-t-[#0f2444]" />
+                </span>
               </button>
             </div>
 

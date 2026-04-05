@@ -36,15 +36,21 @@ class HeroSectionApiController extends Controller
                 'label'    => $b->label,
             ]);
 
-        $setting  = Setting::where('variable', 'hero_section')->first();
-        $settings = $setting ? json_decode($setting->value, true) : [];
+        $setting = Setting::where('variable', 'hero_section')->first();
+        $settings = [];
+        if ($setting) {
+            $settings = is_array($setting->value)
+                ? $setting->value
+                : (json_decode((string) $setting->value, true) ?: []);
+        }
 
         return response()->json([
             'slides'   => $slides,
             'badges'   => $badges,
             'settings' => [
-                'autoplayEnabled' => $settings['autoplay_enabled'] ?? true,
-                'autoplayDelay'   => $settings['autoplay_delay']   ?? 5000,
+                'autoplayEnabled' => filter_var($settings['autoplay_enabled'] ?? true, FILTER_VALIDATE_BOOL),
+                'autoplayDelay'   => (int) ($settings['autoplay_delay'] ?? 5000),
+                'heroHeight'      => (int) ($settings['hero_height'] ?? 620),
             ],
         ]);
     }

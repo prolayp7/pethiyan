@@ -5,11 +5,7 @@ import {
   Facebook,
 } from "lucide-react";
 import OfferMarquee from "./OfferMarquee";
-import CustomerLogos from "./CustomerLogos";
-import SocialsStrip from "./SocialsStrip";
-import FooterNewsletterCtaStrip from "./FooterNewsletterCtaStrip";
 import FooterNavigationGrid from "./FooterNavigationGrid";
-import FooterBrandIdentityBand from "./FooterBrandIdentityBand";
 import FooterBottomLegalBar from "./FooterBottomLegalBar";
 
 /* ─── Static data ────────────────────────────────────────────── */
@@ -94,29 +90,10 @@ export default function Footer() {
       ══════════════════════════════════════════════════════════ */}
 
       {/* ══════════════════════════════════════════════════════════
-          CUSTOMER LOGOS — Trusted by Modern Brands
-      ══════════════════════════════════════════════════════════ */}
-      <CustomerLogos />
-
-      {/* ══════════════════════════════════════════════════════════
-          SECTION 1 — NEWSLETTER CTA STRIP
-          Split layout: headline left · form right
-      ══════════════════════════════════════════════════════════ */}
-      <SocialsStrip />
-      <FooterNewsletterCtaStrip />
-
-      {/* ══════════════════════════════════════════════════════════
           SECTION 2 — NAVIGATION GRID
           4-column: Brand · Products · Company · Support
       ══════════════════════════════════════════════════════════ */}
-      <FooterNavigationGrid navColumns={navColumns} socialLinks={socialLinks} />
-
-      {/* ══════════════════════════════════════════════════════════
-          SECTION 3 — BRAND IDENTITY BAND
-          Logo + tagline left · brand statement right
-          Giant watermark behind (hover glow via .watermark-band)
-      ══════════════════════════════════════════════════════════ */}
-      <FooterBrandIdentityBand />
+      <FooterNavigationGrid navColumns={navColumns} />
 
       {/* ══════════════════════════════════════════════════════════
           SECTION 4 — BOTTOM LEGAL BAR

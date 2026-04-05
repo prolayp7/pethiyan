@@ -18,6 +18,8 @@ a, button, [role="button"], select, label[for],
   --color-secondary: #0f2f5f;
   --color-accent: #4caf50;
   --color-accent-dark: #388e3c;
+  --brand-gradient: linear-gradient(135deg, #17396f 0%, #2f6f9f 52%, #49ad57 100%);
+  --brand-gradient-hover: linear-gradient(135deg, #12315f 0%, #275f8e 52%, #3f9e4d 100%);
 
   /* Neutrals */
   --background: #ffffff;
@@ -76,6 +78,20 @@ body {
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Shared brand CTA style for primary buttons */
+.btn-brand {
+  background: var(--brand-gradient);
+  color: #ffffff;
+  border: 1px solid transparent;
+  box-shadow: 0 8px 22px rgba(23, 57, 111, 0.22);
+}
+
+.btn-brand:hover:not(:disabled),
+.btn-brand:focus-visible:not(:disabled) {
+  background: var(--brand-gradient-hover);
+  box-shadow: 0 10px 24px rgba(23, 57, 111, 0.28);
 }
 
 /* Safe area for mobile bottom nav */

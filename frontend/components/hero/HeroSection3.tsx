@@ -259,12 +259,7 @@ export default function HeroSection3() {
           >
             <Link
               href={slide.cta.href}
-              className="group inline-flex items-center gap-2.5 px-6 py-3 rounded-full text-sm font-bold transition-all duration-300 hover:gap-4 hover:shadow-xl"
-              style={{
-                background: "#4caf50",
-                color: "#07111f",
-                boxShadow: "0 0 28px rgba(76,175,80,0.25)",
-              }}
+              className="btn-brand group inline-flex items-center gap-2.5 px-6 py-3 rounded-full text-sm font-bold transition-all duration-300 hover:gap-4 hover:shadow-xl"
             >
               {slide.cta.label}
               <ArrowRight

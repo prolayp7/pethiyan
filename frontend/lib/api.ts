@@ -213,6 +213,12 @@ export interface ApiPaymentSettings {
   codEnabled: boolean;
 }
 
+export interface ApiSystemSettings {
+  appName: string;
+  logo: string | null;
+  favicon: string | null;
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function getToken(): string | null {
@@ -224,7 +230,21 @@ function normalizeMediaUrl(src?: string | null): string | null {
   if (!src) return null;
   const trimmed = String(src).trim();
   if (!trimmed) return null;
-  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+
+  if (/^https?:\/\//i.test(trimmed)) {
+    try {
+      const incoming = new URL(trimmed);
+      const apiBase = new URL(API_BASE);
+
+      // If backend returns localhost/127.0.0.1 URLs, rewrite them to the configured API origin.
+      if (["127.0.0.1", "localhost"].includes(incoming.hostname)) {
+        return `${apiBase.origin}${incoming.pathname}${incoming.search}${incoming.hash}`;
+      }
+    } catch {
+      // If URL parsing fails, fall through to original value.
+    }
+    return trimmed;
+  }
 
   const base = API_BASE.replace(/\/+$/, "");
   if (trimmed.startsWith("/")) return `${base}${trimmed}`;
@@ -977,6 +997,28 @@ export async function getPaymentSettings(): Promise<ApiPaymentSettings> {
   };
 }
 
+export async function getSystemSettings(): Promise<ApiSystemSettings | null> {
+  const res = await apiFetch<{
+    success?: boolean;
+    data?: { value?: Record<string, unknown> } | Record<string, unknown>;
+  }>("/api/settings/system");
+
+  if (!res || !res.success || !res.data) return null;
+
+  const setting = ("value" in res.data ? res.data.value : res.data) as Record<string, unknown> | undefined;
+  if (!setting) return null;
+
+  const appName = typeof setting.appName === "string" ? setting.appName.trim() : "";
+  const logoRaw = typeof setting.logo === "string" ? setting.logo.trim() : "";
+  const faviconRaw = typeof setting.favicon === "string" ? setting.favicon.trim() : "";
+
+  return {
+    appName: appName || "Pethiyan",
+    logo: normalizeMediaUrl(logoRaw),
+    favicon: normalizeMediaUrl(faviconRaw),
+  };
+}
+
 // ─── Server Cart API ──────────────────────────────────────────────────────────
 
 export async function serverCartAdd(
@@ -1364,15 +1406,16 @@ export interface ApiHeroSection {
   settings: {
     autoplayEnabled: boolean;
     autoplayDelay: number;
+    heroHeight: number;
   };
 }
 
-/** Fetches hero section data with ISR caching (revalidates via "hero-section" cache tag). */
+/** Fetches hero section data with tag-based cache (invalidated on admin updates). */
 export async function getHeroSection(): Promise<ApiHeroSection | null> {
   try {
     const res = await fetch(`${API_BASE}/api/hero-section`, {
       headers: { Accept: "application/json" },
-      next: { tags: ["hero-section"] },
+      next: { tags: ["hero-section"], revalidate: 3600 },
     });
     if (!res.ok) return null;
     return res.json() as Promise<ApiHeroSection>;

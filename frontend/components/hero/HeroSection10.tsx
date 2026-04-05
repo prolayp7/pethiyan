@@ -25,7 +25,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
 interface Props {
   slides?: ApiHeroSlide[];
   badges?: ApiHeroBadge[];
-  settings?: { autoplayEnabled?: boolean; autoplayDelay?: number };
+  settings?: { autoplayEnabled?: boolean; autoplayDelay?: number; heroHeight?: number };
 }
 
 /* ─── Component ──────────────────────────────────────────────── */
@@ -33,7 +33,26 @@ interface Props {
 export default function HeroSection10({ slides: apiSlides, badges: apiBadges, settings }: Props) {
   const activeSlides = (apiSlides ?? []).filter((s) => s.image);
   const activeBadges = apiBadges ?? [];
-  const autoplayDelay = settings?.autoplayDelay ?? 5000;
+  const autoplayDelay = Number(settings?.autoplayDelay ?? 5000) || 5000;
+  const heroHeight = Number(settings?.heroHeight ?? 620) || 620;
+  const heroMinHeight = `clamp(320px, 65vw, ${heroHeight}px)`;
+  const heightScale = Math.max(0.72, Math.min(heroHeight / 620, 1));
+  const headingFontSize = `clamp(${(1.5 * heightScale).toFixed(2)}rem, ${(3.2 * heightScale).toFixed(2)}vw, ${(3.6 * heightScale).toFixed(2)}rem)`;
+  const contentTopPadding = `${Math.round(56 * heightScale)}px`;
+  const contentBottomPadding = `${Math.round(36 * heightScale)}px`;
+  const contentSidePadding = `${Math.round(52 * heightScale)}px`;
+  const contentGapHeading = `${Math.round(20 * heightScale)}px`;
+  const contentGapDescription = `${Math.round(28 * heightScale)}px`;
+  const contentGapCta = `${Math.round(30 * heightScale)}px`;
+  const buttonPadX = `${Math.round(24 * heightScale)}px`;
+  const buttonPadY = `${Math.round(12 * heightScale)}px`;
+  const buttonFontSize = `${Math.max(12, Math.round(14 * heightScale))}px`;
+  const navSize = `${Math.max(24, Math.round(28 * heightScale))}px`;
+  const navBottomMargin = `${Math.max(8, Math.round(14 * heightScale))}px`;
+  const badgeTopOffset = `${Math.max(10, Math.round(20 * heightScale))}px`;
+  const badgeRightOffset = `${Math.max(10, Math.round(20 * heightScale))}px`;
+  const descFontSize = `${Math.max(12, Math.round(15 * heightScale))}px`;
+  const descMaxWidth = `${Math.max(280, Math.round(400 * heightScale))}px`;
 
   if (activeSlides.length === 0) return null;
   const autoplay = Autoplay({ delay: autoplayDelay, stopOnInteraction: false });
@@ -66,7 +85,7 @@ export default function HeroSection10({ slides: apiSlides, badges: apiBadges, se
     <section
       className="relative w-full overflow-hidden"
       style={{
-        minHeight: "clamp(520px, 65vw, 620px)",
+        minHeight: heroMinHeight,
         background: "linear-gradient(320deg, #071023 0%, #0c1d38 50%, #0f2444 100%)",
       }}
       aria-label="Hero carousel"
@@ -89,18 +108,27 @@ export default function HeroSection10({ slides: apiSlides, badges: apiBadges, se
       />
       <div
         className="relative z-10 flex flex-col lg:flex-row h-full"
-        style={{ minHeight: "clamp(520px, 65vw, 620px)" }}
+        style={{ minHeight: heroMinHeight }}
       >
 
         {/* ════════════════════════════════════════
             LEFT — Text content on dark brand panel
         ════════════════════════════════════════ */}
-        <div className="relative z-10 flex flex-col justify-center lg:w-[46%] px-7 sm:px-10 lg:px-12 xl:px-14 pt-14 pb-10 lg:py-0 order-2 lg:order-1">
+        <div
+          className="relative z-10 flex flex-col justify-center lg:w-[46%] order-2 lg:order-1"
+          style={{
+            paddingTop: contentTopPadding,
+            paddingBottom: contentBottomPadding,
+            paddingLeft: contentSidePadding,
+            paddingRight: contentSidePadding,
+          }}
+        >
 
           {/* Eyebrow */}
           <div
             key={`eyebrow-${activeIndex}`}
-            className="flex items-center gap-3 mb-5 animate-in fade-in-0 slide-in-from-top-2"
+            className="flex items-center gap-3 animate-in fade-in-0 slide-in-from-top-2"
+            style={{ marginBottom: contentGapHeading }}
           >
             <span
               className="text-[9px] font-bold tracking-[0.35em] uppercase"
@@ -112,9 +140,10 @@ export default function HeroSection10({ slides: apiSlides, badges: apiBadges, se
 
           {/* Thin gradient accent line below eyebrow */}
           <div
-            className="w-16 h-[2px] rounded-full mb-5"
+            className="w-16 h-[2px] rounded-full"
             style={{
               background: "linear-gradient(to right, #2e7c8a, #4ea85f)",
+              marginBottom: contentGapHeading,
             }}
             aria-hidden="true"
           />
@@ -122,15 +151,16 @@ export default function HeroSection10({ slides: apiSlides, badges: apiBadges, se
           {/* Heading — full gradient text */}
           <h1
             key={`heading-${activeIndex}`}
-            className="font-extrabold leading-[1.07] tracking-tight mb-5 animate-in fade-in-0 slide-in-from-top-2"
+            className="font-extrabold leading-[1.07] tracking-tight animate-in fade-in-0 slide-in-from-top-2"
             style={{
-              fontSize: "clamp(2rem, 4vw, 3.6rem)",
+              fontSize: headingFontSize,
               backgroundImage:
                 "linear-gradient(135deg, #6ea8d8 0%, #2e7c8a 42%, #4ea85f 100%)",
               WebkitBackgroundClip: "text",
               WebkitTextFillColor: "transparent",
               backgroundClip: "text",
               animationDelay: "55ms",
+              marginBottom: contentGapHeading,
             }}
           >
             {slide.heading.split("\n").map((line, i) => (
@@ -141,10 +171,13 @@ export default function HeroSection10({ slides: apiSlides, badges: apiBadges, se
           {/* Description */}
           <p
             key={`desc-${activeIndex}`}
-            className="text-sm sm:text-[0.95rem] leading-relaxed mb-7 max-w-[400px] animate-in fade-in-0 slide-in-from-top-2"
+            className="leading-relaxed animate-in fade-in-0 slide-in-from-top-2"
             style={{
               color: "rgba(255,255,255,0.45)",
               animationDelay: "110ms",
+              marginBottom: contentGapDescription,
+              fontSize: descFontSize,
+              maxWidth: descMaxWidth,
             }}
           >
             {slide.description}
@@ -153,15 +186,17 @@ export default function HeroSection10({ slides: apiSlides, badges: apiBadges, se
           {/* CTA buttons */}
           <div
             key={`cta-${activeIndex}`}
-            className="flex flex-wrap items-center gap-3 mb-8 animate-in fade-in-0 slide-in-from-top-2"
-            style={{ animationDelay: "165ms" }}
+            className="flex flex-wrap items-center gap-3 animate-in fade-in-0 slide-in-from-top-2"
+            style={{ animationDelay: "165ms", marginBottom: contentGapCta }}
           >
             <Link
               href={slide.primaryCta.href}
-              className="group inline-flex items-center gap-2 px-6 py-3 rounded-full text-sm font-bold text-white transition-all duration-300 hover:shadow-xl hover:scale-[1.04] active:scale-100"
+              className="group inline-flex items-center gap-2 rounded-full font-bold text-white transition-all duration-300 hover:shadow-xl hover:scale-[1.04] active:scale-100"
               style={{
                 background: "linear-gradient(135deg, #2e7c8a 0%, #4ea85f 100%)",
                 boxShadow: "0 6px 22px rgba(78,168,95,0.25)",
+                padding: `${buttonPadY} ${buttonPadX}`,
+                fontSize: buttonFontSize,
               }}
             >
               {slide.primaryCta.label}
@@ -172,10 +207,12 @@ export default function HeroSection10({ slides: apiSlides, badges: apiBadges, se
             </Link>
             <Link
               href={slide.secondaryCta.href}
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-sm font-semibold transition-all duration-300 hover:bg-white/8"
+              className="inline-flex items-center gap-2 rounded-full font-semibold transition-all duration-300 hover:bg-white/8"
               style={{
                 border: "1px solid rgba(255,255,255,0.18)",
                 color: "rgba(255,255,255,0.58)",
+                padding: `${buttonPadY} ${buttonPadX}`,
+                fontSize: buttonFontSize,
               }}
             >
               {slide.secondaryCta.label}
@@ -183,7 +220,7 @@ export default function HeroSection10({ slides: apiSlides, badges: apiBadges, se
           </div>
 
           {/* Trust badges */}
-          <div className="flex flex-wrap items-center gap-2 mb-10">
+          <div className="flex flex-wrap items-center gap-2" style={{ marginBottom: `${Math.round(24 * heightScale)}px` }}>
             {activeBadges.map(({ id, iconName, label }) => {
                 const Icon = ICON_MAP[iconName] ?? ShieldCheck;
                 return (
@@ -208,14 +245,21 @@ export default function HeroSection10({ slides: apiSlides, badges: apiBadges, se
           </div>
 
           {/* ── Numbered circular nav + arrows (unique to HS10) ── */}
-          <div className="flex items-center gap-2" role="tablist" aria-label="Slide navigation">
+          <div
+            className="flex items-center gap-2"
+            role="tablist"
+            aria-label="Slide navigation"
+            style={{ marginBottom: navBottomMargin }}
+          >
             <button
               onClick={scrollPrev}
               aria-label="Previous slide"
-              className="w-7 h-7 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95"
+              className="rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95"
               style={{
                 border: "1px solid rgba(255,255,255,0.14)",
                 color: "rgba(255,255,255,0.35)",
+                width: navSize,
+                height: navSize,
               }}
             >
               <ChevronLeft className="h-3 w-3" aria-hidden="true" />
@@ -228,7 +272,7 @@ export default function HeroSection10({ slides: apiSlides, badges: apiBadges, se
                 aria-selected={i === activeIndex}
                 aria-label={`Go to slide ${i + 1}`}
                 onClick={() => emblaApi?.scrollTo(i)}
-                className="w-7 h-7 rounded-full flex items-center justify-center transition-all duration-400 text-[9px] font-bold tabular-nums"
+                className="rounded-full flex items-center justify-center transition-all duration-400 font-bold tabular-nums"
                 style={{
                   border: i === activeIndex
                     ? "1.5px solid #4ea85f"
@@ -242,6 +286,9 @@ export default function HeroSection10({ slides: apiSlides, badges: apiBadges, se
                   boxShadow: i === activeIndex
                     ? "0 0 10px rgba(78,168,95,0.2)"
                     : "none",
+                  width: navSize,
+                  height: navSize,
+                  fontSize: `${Math.max(8, Math.round(9 * heightScale))}px`,
                 }}
               >
                 {String(i + 1).padStart(2, "0")}
@@ -251,10 +298,12 @@ export default function HeroSection10({ slides: apiSlides, badges: apiBadges, se
             <button
               onClick={scrollNext}
               aria-label="Next slide"
-              className="w-7 h-7 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95"
+              className="rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95"
               style={{
                 border: "1px solid rgba(255,255,255,0.14)",
                 color: "rgba(255,255,255,0.35)",
+                width: navSize,
+                height: navSize,
               }}
             >
               <ChevronRight className="h-3 w-3" aria-hidden="true" />
@@ -268,7 +317,7 @@ export default function HeroSection10({ slides: apiSlides, badges: apiBadges, se
         ════════════════════════════════════════ */}
         <div
           className="relative lg:w-[54%] order-1 lg:order-2"
-          style={{ minHeight: "clamp(260px, 50vw, 620px)" }}
+          style={{ minHeight: heroMinHeight }}
         >
           {/* Image panel — diagonal clip for premium angled separation */}
           <div
@@ -327,7 +376,7 @@ export default function HeroSection10({ slides: apiSlides, badges: apiBadges, se
           </div>
 
           {/* Floating slide label — top right of image */}
-          <div className="absolute top-5 right-5 z-10">
+          <div className="absolute z-10" style={{ top: badgeTopOffset, right: badgeRightOffset }}>
             <span
               key={`label-${activeIndex}`}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[9px] font-bold tracking-widest uppercase backdrop-blur-sm animate-in fade-in-0"

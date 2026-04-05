@@ -3,27 +3,27 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/storage/secure_storage.dart';
-import '../features/auth/presentation/screens/splash_screen.dart';
-import '../features/auth/presentation/screens/onboarding_screen.dart';
 import '../features/auth/presentation/screens/login_screen.dart';
+import '../features/auth/presentation/screens/onboarding_screen.dart';
 import '../features/auth/presentation/screens/otp_screen.dart';
 import '../features/auth/presentation/screens/register_screen.dart';
-import '../features/home/presentation/screens/home_screen.dart';
+import '../features/auth/presentation/screens/splash_screen.dart';
+import '../features/cart/presentation/screens/cart_screen.dart';
 import '../features/catalog/presentation/screens/category_screen.dart';
 import '../features/catalog/presentation/screens/product_detail_screen.dart';
 import '../features/catalog/presentation/screens/search_screen.dart';
 import '../features/catalog/presentation/screens/store_screen.dart';
-import '../features/cart/presentation/screens/cart_screen.dart';
-import '../features/wishlist/presentation/screens/wishlist_screen.dart';
 import '../features/checkout/presentation/screens/checkout_screen.dart';
 import '../features/checkout/presentation/screens/order_confirmation_screen.dart';
-import '../features/orders/presentation/screens/orders_screen.dart';
-import '../features/orders/presentation/screens/order_detail_screen.dart';
 import '../features/delivery_tracking/presentation/screens/tracking_screen.dart';
-import '../features/wallet/presentation/screens/wallet_screen.dart';
-import '../features/profile/presentation/screens/profile_screen.dart';
+import '../features/home/presentation/screens/home_screen.dart';
 import '../features/notifications/presentation/screens/notifications_screen.dart';
+import '../features/orders/presentation/screens/order_detail_screen.dart';
+import '../features/orders/presentation/screens/orders_screen.dart';
+import '../features/profile/presentation/screens/profile_screen.dart';
 import '../features/support/presentation/screens/support_screen.dart';
+import '../features/wallet/presentation/screens/wallet_screen.dart';
+import '../features/wishlist/presentation/screens/wishlist_screen.dart';
 import '../shared/widgets/main_scaffold.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {

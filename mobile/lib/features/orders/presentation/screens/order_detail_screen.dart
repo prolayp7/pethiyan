@@ -197,9 +197,9 @@ class _Row extends StatelessWidget {
 class _DetailShimmer extends StatelessWidget {
   const _DetailShimmer();
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.all(16),
-    child: Column(children: const [
+  Widget build(BuildContext context) => const Padding(
+    padding: EdgeInsets.all(16),
+    child: Column(children: [
       ShimmerBox(height: 120, borderRadius: 12),
       SizedBox(height: 12),
       ShimmerBox(height: 80,  borderRadius: 12),

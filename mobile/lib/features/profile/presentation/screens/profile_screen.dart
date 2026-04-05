@@ -19,7 +19,7 @@ class ProfileScreen extends ConsumerWidget {
           // User info header
           Container(
             padding: const EdgeInsets.all(20),
-            color: AppColors.primary.withOpacity(0.05),
+            color: AppColors.primary.withValues(alpha: 13),
             child: Row(
               children: [
                 CircleAvatar(
@@ -164,7 +164,7 @@ class ProfileScreen extends ConsumerWidget {
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              // TODO: call delete account API then logout
+              // Delete account flow pending backend support
             },
             child: const Text('Delete',
                 style: TextStyle(color: AppColors.error)),

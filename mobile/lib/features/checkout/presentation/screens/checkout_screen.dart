@@ -33,7 +33,7 @@ class CheckoutScreen extends ConsumerWidget {
           ),
           if (checkout.errorMessage != null)
             Container(
-              color: AppColors.error.withOpacity(0.1),
+              color: AppColors.error.withValues(alpha: 26),
               padding: const EdgeInsets.all(12),
               child: Text(checkout.errorMessage!,
                   style: const TextStyle(color: AppColors.error)),
@@ -110,17 +110,26 @@ class _AddressStep extends ConsumerWidget {
       data: (addresses) => ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          ...addresses.map((addr) => Card(
-            child: RadioListTile<Map<String, dynamic>>(
-              value: addr,
-              groupValue: ref.watch(checkoutProvider).selectedAddress,
-              title: Text(addr['label'] as String? ?? 'Address'),
-              subtitle: Text(
-                '${addr['address_line_1']}, ${addr['city']}, ${addr['state']} ${addr['pincode']}'),
-              onChanged: (v) =>
-                  ref.read(checkoutProvider.notifier).selectAddress(v!),
-            ),
-          )),
+          ...addresses.map((addr) {
+            final selected =
+                ref.watch(checkoutProvider).selectedAddress == addr;
+            return Card(
+              child: ListTile(
+                leading: Icon(
+                  selected
+                      ? Icons.radio_button_checked
+                      : Icons.radio_button_unchecked,
+                  color: selected ? AppColors.primary : AppColors.grey500,
+                ),
+                title: Text(addr['label'] as String? ?? 'Address'),
+                subtitle: Text(
+                  '${addr['address_line_1']}, ${addr['city']}, ${addr['state']} ${addr['pincode']}',
+                ),
+                onTap: () =>
+                    ref.read(checkoutProvider.notifier).selectAddress(addr),
+              ),
+            );
+          }),
           const SizedBox(height: 12),
           OutlinedButton.icon(
             onPressed: () {/* navigate to add address */},
@@ -225,17 +234,24 @@ class _PaymentStep extends ConsumerWidget {
 
     return ListView(
       padding: const EdgeInsets.all(16),
-      children: _methods.map((m) => Card(
-        margin: const EdgeInsets.only(bottom: 8),
-        child: RadioListTile<String>(
-          value: m['key'] as String,
-          groupValue: selected,
-          title: Text(m['label'] as String),
-          secondary: Icon(m['icon'] as IconData, color: AppColors.primary),
-          onChanged: (v) =>
-              ref.read(checkoutProvider.notifier).selectPayment(v!),
-        ),
-      )).toList(),
+      children: _methods.map((m) {
+        final key = m['key'] as String;
+        final isSelected = selected == key;
+        return Card(
+          margin: const EdgeInsets.only(bottom: 8),
+          child: ListTile(
+            leading: Icon(
+              isSelected
+                  ? Icons.radio_button_checked
+                  : Icons.radio_button_unchecked,
+              color: isSelected ? AppColors.primary : AppColors.grey500,
+            ),
+            title: Text(m['label'] as String),
+            trailing: Icon(m['icon'] as IconData, color: AppColors.primary),
+            onTap: () => ref.read(checkoutProvider.notifier).selectPayment(key),
+          ),
+        );
+      }).toList(),
     );
   }
 }

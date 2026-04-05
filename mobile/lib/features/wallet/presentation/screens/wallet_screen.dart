@@ -119,8 +119,9 @@ class _TxTile extends StatelessWidget {
 
     return ListTile(
       leading: CircleAvatar(
-        backgroundColor:
-            isCredit ? AppColors.success.withOpacity(0.1) : AppColors.error.withOpacity(0.1),
+        backgroundColor: isCredit
+            ? AppColors.success.withValues(alpha: 26)
+            : AppColors.error.withValues(alpha: 26),
         child: Icon(
           isCredit ? Icons.arrow_downward : Icons.arrow_upward,
           color: isCredit ? AppColors.success : AppColors.error,
@@ -143,9 +144,9 @@ class _TxTile extends StatelessWidget {
 class _WalletShimmer extends StatelessWidget {
   const _WalletShimmer();
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.all(16),
-    child: Column(children: const [
+  Widget build(BuildContext context) => const Padding(
+    padding: EdgeInsets.all(16),
+    child: Column(children: [
       ShimmerBox(height: 160, borderRadius: 16),
       SizedBox(height: 16),
       ShimmerBox(height: 60, borderRadius: 12),

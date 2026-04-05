@@ -1,5 +1,7 @@
 import Link from "next/link";
-import { ArrowRight, MoveRight, type LucideIcon } from "lucide-react";
+import Image from "next/image";
+import { ArrowRight, MoveRight } from "lucide-react";
+import { getSystemSettings } from "@/lib/api";
 
 type NavLink = {
   label: string;
@@ -11,21 +13,17 @@ type NavColumn = {
   links: NavLink[];
 };
 
-type SocialLink = {
-  label: string;
-  icon: LucideIcon;
-  href: string;
-};
-
 type FooterNavigationGridProps = {
   navColumns: NavColumn[];
-  socialLinks: SocialLink[];
 };
 
-export default function FooterNavigationGrid({
+export default async function FooterNavigationGrid({
   navColumns,
-  socialLinks,
 }: FooterNavigationGridProps) {
+  const system = await getSystemSettings();
+  const appName = system?.appName || "Pethiyan";
+  const logoSrc = system?.logo || "/pethiyan-logo.png";
+
   return (
     <div
       className="border-t"
@@ -48,6 +46,16 @@ export default function FooterNavigationGrid({
             >
               Brand
             </p>
+            <Link href="/" className="inline-flex items-center mb-6" aria-label={`${appName} home`}>
+              <Image
+                src={logoSrc}
+                alt={appName}
+                width={180}
+                height={56}
+                className="h-12 w-auto object-contain"
+                unoptimized
+              />
+            </Link>
             <p className="text-sm text-white/35 leading-relaxed mb-8 max-w-xs">
               L-Commerce creates premium packaging solutions designed for modern
               brands - built to make every shipment memorable.
@@ -73,18 +81,6 @@ export default function FooterNavigationGrid({
                   aria-hidden="true"
                 />
               </Link>
-            </div>
-            <div className="flex items-center gap-2 mt-8">
-              {socialLinks.map(({ label, icon: Icon, href }) => (
-                <a
-                  key={label}
-                  href={href}
-                  aria-label={label}
-                  className="w-8 h-8 rounded-full border border-white/10 flex items-center justify-center text-white/35 hover:border-white/30 hover:text-white hover:bg-white/6 hover:scale-110 transition-all duration-300"
-                >
-                  <Icon className="h-3.5 w-3.5" aria-hidden="true" />
-                </a>
-              ))}
             </div>
           </div>
 
