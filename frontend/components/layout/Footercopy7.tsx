@@ -7,6 +7,7 @@ import {
 import OfferMarquee from "./OfferMarquee";
 import FooterNavigationGrid from "./FooterNavigationGrid";
 import FooterBottomLegalBar from "./FooterBottomLegalBar";
+import FooterSeoContent from "./FooterSeoContent";
 
 /* ─── Static data ────────────────────────────────────────────── */
 
@@ -85,22 +86,22 @@ export default function Footer() {
       ══════════════════════════════════════════════════════════ */}
       <OfferMarquee />
 
-      {/* ══════════════════════════════════════════════════════════
-          SOCIALS — Horizontally scrolling image feed
-      ══════════════════════════════════════════════════════════ */}
-
-      {/* ══════════════════════════════════════════════════════════
-          SECTION 2 — NAVIGATION GRID
-          4-column: Brand · Products · Company · Support
-      ══════════════════════════════════════════════════════════ */}
-      <FooterNavigationGrid navColumns={navColumns} />
-
-      {/* ══════════════════════════════════════════════════════════
+       {/* ══════════════════════════════════════════════════════════
           SECTION 4 — BOTTOM LEGAL BAR
           Row 1: Compliance badges · Registration text · Legal links
           Row 2: Payment method chips — centred
           Row 3: Social icons — centred
       ══════════════════════════════════════════════════════════ */}
+      <FooterSeoContent />
+
+      {/* ══════════════════════════════════════════════════════════
+          SECTION 2 — NAVIGATION GRID
+          4-column: Brand · Products · Company · Support
+      ══════════════════════════════════════════════════════════ */}
+      <FooterNavigationGrid navColumns={navColumns} socialLinks={socialLinks} />
+
+     
+
       <FooterBottomLegalBar legalLinks={legalLinks} paymentMethods={paymentMethods} socialLinks={socialLinks} />
 
     </footer>

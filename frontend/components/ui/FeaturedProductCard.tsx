@@ -315,7 +315,7 @@ export default function FeaturedProductCard({ p }: { p: FallbackProduct }) {
         )}
 
         {/* Quick action stack */}
-        <div className="absolute right-3 top-1/2 -translate-y-1/2 z-10 flex flex-col gap-2.5">
+        <div className="absolute right-3 bottom-[12%] z-10 flex flex-col gap-2.5">
           <button
             type="button"
             onClick={handleAddToCart}

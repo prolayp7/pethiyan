@@ -247,7 +247,7 @@ export default function Footer() {
           Logo + tagline left · brand statement right
           Giant watermark behind
       ══════════════════════════════════════════════════════════ */}
-     <FooterBrandIdentityBand />
+     {/* <FooterBrandIdentityBand /> */}
 
       {/* ══════════════════════════════════════════════════════════
           SECTION 4 — BOTTOM LEGAL BAR

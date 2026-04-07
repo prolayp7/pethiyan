@@ -172,8 +172,22 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
+const noop = () => {};
+
+const fallbackCart: CartContextType = {
+  items: [],
+  itemCount: 0,
+  total: 0,
+  isOpen: false,
+  openCart: noop,
+  closeCart: noop,
+  addItem: noop,
+  removeItem: noop,
+  updateQuantity: noop,
+  clearCart: noop,
+};
+
 export function useCart() {
   const context = useContext(CartContext);
-  if (!context) throw new Error("useCart must be used within a CartProvider");
-  return context;
+  return context ?? fallbackCart;
 }
