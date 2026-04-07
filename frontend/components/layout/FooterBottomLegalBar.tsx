@@ -22,13 +22,7 @@ export default function FooterBottomLegalBar({
   legalLinks,
   socialLinks,
 }: FooterBottomLegalBarProps) {
-  const paymentMethodLogos = [
-    { src: "/images/logos/visa-card.webp", alt: "Visa" },
-    { src: "/images/logos/rupay-card.webp", alt: "RuPay" },
-    { src: "/images/logos/phonepay.webp", alt: "PhonePe" },
-    { src: "/images/logos/paytm.webp", alt: "Paytm" },
-    { src: "/images/logos/gpay.webp", alt: "Google Pay" },
-  ];
+  const paymentMethods = ["Visa", "Rupay", "Paytm", "PhonePay", "GPay", "NetBanking"];
 
   return (
     <div
@@ -116,30 +110,20 @@ export default function FooterBottomLegalBar({
           </div>
         </div>
 
-        {/* Row 2: Payment method logos */}
+        {/* Row 2: Payment methods */}
         <div className="flex flex-wrap items-center justify-center gap-2 mt-6">
-          {paymentMethodLogos.map((logo) => (
-            <div
-              key={logo.alt}
-              className="relative overflow-hidden rounded-md bg-white"
+          {paymentMethods.map((method) => (
+            <span
+              key={method}
+              className="inline-flex items-center justify-center rounded px-2.5 py-1 text-[9px] font-semibold tracking-widest uppercase border"
               style={{
-                width: "104px",
-                minWidth: "104px",
-                maxWidth: "104px",
-                height: "34px",
-                flex: "0 0 104px",
-                border: "1px solid rgba(255,255,255,0.14)",
+                borderColor: "rgba(255,255,255,0.08)",
+                color: "rgba(255,255,255,0.32)",
+                background: "rgba(255,255,255,0.03)",
               }}
             >
-              <Image
-                src={logo.src}
-                alt={logo.alt}
-                fill
-                sizes="104px"
-                className="object-contain p-1.5"
-                unoptimized
-              />
-            </div>
+              {method}
+            </span>
           ))}
         </div>
 
