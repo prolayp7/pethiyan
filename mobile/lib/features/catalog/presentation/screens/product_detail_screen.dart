@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/utils/currency_formatter.dart';
-import '../../../../shared/widgets/app_button.dart';
 import '../../../../shared/widgets/error_view.dart';
 import '../../../../shared/widgets/loading_shimmer.dart';
 import '../../domain/entities/product.dart';
@@ -112,7 +111,7 @@ class _PdpBody extends ConsumerWidget {
                             borderRadius: BorderRadius.circular(3),
                             color: imageIndex == i
                                 ? AppColors.primary
-                                : AppColors.grey400,
+                                : AppColors.grey300,
                           ),
                         ),
                       ),
@@ -211,7 +210,7 @@ class _PdpBody extends ConsumerWidget {
                         label: Text(v.name),
                         selected: selected,
                         onSelected: (_) => onVariantSelected(v),
-                        selectedColor: AppColors.primary.withOpacity(0.15),
+                        selectedColor: AppColors.primary.withValues(alpha: 38),
                         labelStyle: TextStyle(
                           color: selected ? AppColors.primary : AppColors.grey700,
                           fontWeight: selected
@@ -229,8 +228,8 @@ class _PdpBody extends ConsumerWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: inStock
-                        ? AppColors.success.withOpacity(0.1)
-                        : AppColors.error.withOpacity(0.1),
+                        ? AppColors.success.withValues(alpha: 26)
+                        : AppColors.error.withValues(alpha: 26),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
@@ -279,29 +278,24 @@ class _PdpShimmer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return const Column(
       children: [
-        const ShimmerBox(height: 320),
-        const SizedBox(height: 16),
+        ShimmerBox(height: 320),
+        SizedBox(height: 16),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: EdgeInsets.symmetric(horizontal: 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const ShimmerBox(height: 16, width: 80),
-              const SizedBox(height: 8),
-              const ShimmerBox(height: 24, width: 240),
-              const SizedBox(height: 12),
-              const ShimmerBox(height: 32, width: 120),
+              ShimmerBox(height: 16, width: 80),
+              SizedBox(height: 8),
+              ShimmerBox(height: 24, width: 240),
+              SizedBox(height: 12),
+              ShimmerBox(height: 32, width: 120),
             ],
           ),
         ),
       ],
     );
   }
-}
-
-// Needed for color reference in PageView dots
-extension on AppColors {
-  static const Color grey400 = Color(0xFFBDBDBD);
 }

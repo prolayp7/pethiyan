@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Mail } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 
 export default function NewsletterForm() {
   const [email, setEmail] = useState("");
@@ -15,26 +15,26 @@ export default function NewsletterForm() {
   return (
     <form
       onSubmit={handleSubmit}
-      className="flex gap-2 w-full md:w-auto"
+      className="flex items-center gap-2"
       aria-label="Newsletter signup"
     >
-      <div className="relative flex-1 md:w-72">
-        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="Enter your email"
-          required
-          className="w-full bg-white/10 border border-white/10 rounded-lg pl-9 pr-4 py-2.5 text-sm text-white placeholder-gray-500 outline-none focus:border-(--color-primary) transition-colors"
-          aria-label="Email address"
-        />
-      </div>
+      <input
+        type="email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        placeholder="Your email address"
+        required
+        className="flex-1 text-sm px-4 py-3 rounded-full text-white placeholder-white/30 focus:outline-none transition-colors"
+        style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.10)" }}
+        aria-label="Email address"
+      />
       <button
         type="submit"
-        className="px-5 py-2.5 bg-(--color-primary) hover:bg-(--color-primary-dark) text-white text-sm font-medium rounded-lg transition-colors flex-shrink-0"
+        aria-label="Subscribe"
+        className="flex items-center justify-center w-11 h-11 rounded-full text-white transition-colors duration-200 shrink-0"
+        style={{ background: "rgba(255,255,255,0.15)" }}
       >
-        Subscribe
+        <ArrowRight className="w-4 h-4" />
       </button>
     </form>
   );

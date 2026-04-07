@@ -114,7 +114,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with CodeAutoFill {
               controller: _otpController,
               codeLength: AppConstants.otpLength,
               decoration: UnderlineDecoration(
-                colorBuilder: FixedColorBuilder(AppColors.primary),
+                colorBuilder: const FixedColorBuilder(AppColors.primary),
                 textStyle: theme.textTheme.headlineMedium!,
               ),
               onCodeChanged: (v) {

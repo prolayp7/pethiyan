@@ -62,7 +62,7 @@ export default function BrandStory() {
 
           {/* Heading */}
           <div
-            className={`bs-item text-center max-w-2xl mx-auto mb-12${visible ? " show" : ""}`}
+            className={`bs-item text-left max-w-4xl mb-12${visible ? " show" : ""}`}
             style={{ animationDelay: "0ms" }}
           >
             <p className="text-xs font-bold tracking-[0.22em] uppercase mb-2" style={{ color: "rgba(78,168,95,0.9)" }}>

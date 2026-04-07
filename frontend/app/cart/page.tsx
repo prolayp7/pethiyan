@@ -170,7 +170,7 @@ export default function CartPage() {
                     </div>
                     <button
                       onClick={() => removeItem(item.id)}
-                      className="shrink-0 p-1 text-gray-300 hover:text-red-500 transition-colors"
+                      className="shrink-0 p-1.5 rounded-full text-gray-300 border border-transparent hover:text-white hover:border-transparent hover:shadow-md hover:bg-[linear-gradient(135deg,_#17396f_0%,_#2f6f9f_52%,_#49ad57_100%)] transition-all"
                       aria-label="Remove item"
                     >
                       <X className="h-4 w-4" />

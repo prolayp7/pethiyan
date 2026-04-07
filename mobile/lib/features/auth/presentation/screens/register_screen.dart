@@ -3,10 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_colors.dart';
-import '../../../../core/errors/failures.dart';
 import '../../../../core/utils/validators.dart';
 import '../../../../shared/widgets/app_button.dart';
-import '../controllers/auth_controller.dart';
+import '../providers/auth_providers.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -16,12 +15,13 @@ class RegisterScreen extends ConsumerStatefulWidget {
 }
 
 class _RegisterScreenState extends ConsumerState<RegisterScreen> {
-  final _formKey = GlobalKey<FormState>();
-  final _nameCtrl     = TextEditingController();
-  final _emailCtrl    = TextEditingController();
-  final _phoneCtrl    = TextEditingController();
-  final _passwordCtrl = TextEditingController();
+  final _formKey        = GlobalKey<FormState>();
+  final _nameCtrl       = TextEditingController();
+  final _emailCtrl      = TextEditingController();
+  final _phoneCtrl      = TextEditingController();
+  final _passwordCtrl   = TextEditingController();
   bool _obscurePassword = true;
+  bool _loading         = false;
 
   @override
   void dispose() {
@@ -35,26 +35,32 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final repo = await ref.read(authRepositoryProviderInternal.future);
-    final result = await repo.register(
-      name:     _nameCtrl.text.trim(),
-      email:    _emailCtrl.text.trim(),
-      phone:    _phoneCtrl.text.trim(),
-      password: _passwordCtrl.text,
-    );
+    setState(() => _loading = true);
+    try {
+      final repo   = await ref.read(authRepositoryProvider.future);
+      final result = await repo.register(
+        name:     _nameCtrl.text.trim(),
+        email:    _emailCtrl.text.trim(),
+        phone:    _phoneCtrl.text.trim(),
+        password: _passwordCtrl.text,
+      );
 
-    if (!mounted) return;
-    result.fold(
-      (failure) => ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(failure.message), backgroundColor: AppColors.error),
-      ),
-      (_) => context.go('/home'),
-    );
+      if (!mounted) return;
+      result.fold(
+        (failure) => ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(failure.message),
+              backgroundColor: AppColors.error),
+        ),
+        (_) => context.go('/home'),
+      );
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final authState = ref.watch(authControllerProvider);
     final theme = Theme.of(context);
 
     return Scaffold(
@@ -82,7 +88,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               const SizedBox(height: 16),
               TextFormField(
                 controller: _phoneCtrl,
-                decoration: const InputDecoration(labelText: 'Mobile Number', prefixText: '+91 '),
+                decoration: const InputDecoration(
+                    labelText: 'Mobile Number', prefixText: '+91 '),
                 keyboardType: TextInputType.phone,
                 validator: Validators.phone,
               ),
@@ -92,8 +99,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 decoration: InputDecoration(
                   labelText: 'Password',
                   suffixIcon: IconButton(
-                    icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility),
-                    onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                    icon: Icon(_obscurePassword
+                        ? Icons.visibility_off
+                        : Icons.visibility),
+                    onPressed: () =>
+                        setState(() => _obscurePassword = !_obscurePassword),
                   ),
                 ),
                 obscureText: _obscurePassword,
@@ -102,14 +112,15 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               const SizedBox(height: 32),
               AppButton(
                 label: 'Create Account',
-                onPressed: authState.isLoading ? null : _register,
-                isLoading: authState.isLoading,
+                onPressed: _loading ? null : _register,
+                isLoading: _loading,
               ),
               const SizedBox(height: 16),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text('Already have an account? ', style: theme.textTheme.bodyMedium),
+                  Text('Already have an account? ',
+                      style: theme.textTheme.bodyMedium),
                   TextButton(
                     onPressed: () => context.pop(),
                     child: const Text('Login'),
@@ -123,8 +134,3 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     );
   }
 }
-
-// Internal alias to avoid circular import
-final authRepositoryProviderInternal = Provider.autoDispose((ref) {
-  return ref.watch(authRepositoryProvider);
-});

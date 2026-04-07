@@ -979,10 +979,7 @@ export default function NavigationMenu5() {
               {/* CTA */}
               <Link
                 href="/contact"
-                className="mt-5 flex items-center justify-center gap-2 w-full py-3 rounded-full text-sm font-bold text-white transition-all hover:opacity-90"
-                style={{
-                  background: "linear-gradient(135deg, #1f4f8a 0%, #4caf50 100%)",
-                }}
+                className="btn-brand mt-5 flex items-center justify-center gap-2 w-full py-3 rounded-full text-sm font-bold transition-all hover:opacity-95"
                 onClick={() => setMobileOpen(false)}
               >
                 Request a Quote

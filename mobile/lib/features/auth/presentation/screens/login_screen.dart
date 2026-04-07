@@ -39,8 +39,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   Future<void> _googleLogin() async {
     final success = await ref.read(authControllerProvider.notifier).loginWithGoogle();
-    if (success && mounted) context.go('/home');
-    else if (!success && mounted) {
+    if (success && mounted) {
+      context.go('/home');
+    } else if (!success && mounted) {
       final state = ref.read(authControllerProvider);
       if (state.hasError) _showError(state.error as Failure);
     }
@@ -48,8 +49,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   Future<void> _appleLogin() async {
     final success = await ref.read(authControllerProvider.notifier).loginWithApple();
-    if (success && mounted) context.go('/home');
-    else if (!success && mounted) {
+    if (success && mounted) {
+      context.go('/home');
+    } else if (!success && mounted) {
       final state = ref.read(authControllerProvider);
       if (state.hasError) _showError(state.error as Failure);
     }

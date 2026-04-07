@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../shared/widgets/loading_shimmer.dart';
 import '../../../../shared/widgets/error_view.dart';
+import '../../../../shared/widgets/loading_shimmer.dart';
 import '../../../../shared/widgets/product_card.dart';
 import '../controllers/catalog_controller.dart';
 

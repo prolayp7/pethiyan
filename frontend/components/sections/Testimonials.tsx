@@ -35,7 +35,7 @@ export default function Testimonials() {
   return (
     <section className="py-16 bg-(--color-muted)" aria-labelledby="testimonials-heading">
       <Container>
-        <div className="text-center mb-12">
+        <div className="text-left max-w-3xl mb-12">
           <p className="text-sm font-semibold text-(--color-primary) uppercase tracking-wider mb-2">
             Social Proof
           </p>

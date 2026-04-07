@@ -5,12 +5,9 @@ import {
   Facebook,
 } from "lucide-react";
 import OfferMarquee from "./OfferMarquee";
-import CustomerLogos from "./CustomerLogos";
-import SocialsStrip from "./SocialsStrip";
-import FooterNewsletterCtaStrip from "./FooterNewsletterCtaStrip";
 import FooterNavigationGrid from "./FooterNavigationGrid";
-import FooterBrandIdentityBand from "./FooterBrandIdentityBand";
 import FooterBottomLegalBar from "./FooterBottomLegalBar";
+import FooterSeoContent from "./FooterSeoContent";
 
 /* ─── Static data ────────────────────────────────────────────── */
 
@@ -57,19 +54,6 @@ const socialLinks = [
   { label: "LinkedIn", icon: Linkedin, href: "#" },
 ];
 
-const paymentMethods = [
-  "Visa",
-  "Mastercard",
-  "PayPal",
-  "Apple Pay",
-  "Google Pay",
-  "Amex",
-  "Shop Pay",
-  "UPI",
-  "Net Banking",
-  "Razorpay",
-];
-
 const legalLinks = [
   { label: "Terms", href: "/terms" },
   { label: "Privacy", href: "/privacy" },
@@ -89,21 +73,13 @@ export default function Footer() {
       ══════════════════════════════════════════════════════════ */}
       <OfferMarquee />
 
-      {/* ══════════════════════════════════════════════════════════
-          SOCIALS — Horizontally scrolling image feed
+       {/* ══════════════════════════════════════════════════════════
+          SECTION 4 — BOTTOM LEGAL BAR
+          Row 1: Compliance badges · Registration text · Legal links
+          Row 2: Payment method chips — centred
+          Row 3: Social icons — centred
       ══════════════════════════════════════════════════════════ */}
-
-      {/* ══════════════════════════════════════════════════════════
-          CUSTOMER LOGOS — Trusted by Modern Brands
-      ══════════════════════════════════════════════════════════ */}
-      <CustomerLogos />
-
-      {/* ══════════════════════════════════════════════════════════
-          SECTION 1 — NEWSLETTER CTA STRIP
-          Split layout: headline left · form right
-      ══════════════════════════════════════════════════════════ */}
-      <SocialsStrip />
-      <FooterNewsletterCtaStrip />
+      <FooterSeoContent />
 
       {/* ══════════════════════════════════════════════════════════
           SECTION 2 — NAVIGATION GRID
@@ -111,25 +87,13 @@ export default function Footer() {
       ══════════════════════════════════════════════════════════ */}
       <FooterNavigationGrid navColumns={navColumns} socialLinks={socialLinks} />
 
-      {/* ══════════════════════════════════════════════════════════
-          SECTION 3 — BRAND IDENTITY BAND
-          Logo + tagline left · brand statement right
-          Giant watermark behind (hover glow via .watermark-band)
-      ══════════════════════════════════════════════════════════ */}
-      <FooterBrandIdentityBand />
+     
 
-      {/* ══════════════════════════════════════════════════════════
-          SECTION 4 — BOTTOM LEGAL BAR
-          Row 1: Compliance badges · Registration text · Legal links
-          Row 2: Payment method chips — centred
-          Row 3: Social icons — centred
-      ══════════════════════════════════════════════════════════ */}
-      <FooterBottomLegalBar legalLinks={legalLinks} paymentMethods={paymentMethods} socialLinks={socialLinks} />
+      <FooterBottomLegalBar legalLinks={legalLinks} socialLinks={socialLinks} />
 
     </footer>
   );
 }
-
 
 
 

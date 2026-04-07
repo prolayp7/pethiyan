@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useState, useEffect } from "react";
 import { Menu, Search, PackageSearch, Heart } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getSystemSettings } from "@/lib/api";
 import SearchBar from "./SearchBar";
 import CartButton from "./CartButton";
 import UserMenu from "./UserMenu";
@@ -12,10 +13,35 @@ import MobileMenu from "./MobileMenu";
 import { useCart } from "@/context/CartContext";
 import { useWishlist } from "@/context/WishlistContext";
 
+const SYSTEM_BRANDING_CACHE_KEY = "system_branding_cache_v1";
+
+type BrandingCache = {
+  appName: string;
+  logo: string;
+};
+
+function getCachedBranding(): BrandingCache {
+  if (typeof window === "undefined") return { appName: "Pethiyan", logo: "/pethiyan-logo.png" };
+  try {
+    const raw = localStorage.getItem(SYSTEM_BRANDING_CACHE_KEY);
+    if (!raw) return { appName: "Pethiyan", logo: "/pethiyan-logo.png" };
+    const cached = JSON.parse(raw) as Partial<BrandingCache>;
+    return {
+      appName: cached.appName || "Pethiyan",
+      logo: cached.logo || "/pethiyan-logo.png",
+    };
+  } catch {
+    return { appName: "Pethiyan", logo: "/pethiyan-logo.png" };
+  }
+}
+
 export default function MainHeader() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  // Keep SSR and initial client render identical to avoid hydration mismatch.
+  const [appName, setAppName] = useState("Pethiyan");
+  const [headerLogo, setHeaderLogo] = useState("/pethiyan-logo.png");
   const { openCart } = useCart();
   const { count: wishlistCount } = useWishlist();
 
@@ -23,6 +49,42 @@ export default function MainHeader() {
     const handleScroll = () => setIsScrolled(window.scrollY > 8);
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+
+    // Hydration-safe: read cache only after mount.
+    Promise.resolve().then(() => {
+      if (!mounted) return;
+      const cached = getCachedBranding();
+      if (cached.appName) setAppName(cached.appName);
+      if (cached.logo) setHeaderLogo(cached.logo);
+    });
+
+    (async () => {
+      const system = await getSystemSettings();
+      if (!mounted || !system) return;
+
+      if (system.appName) setAppName(system.appName);
+      if (system.logo) setHeaderLogo(system.logo);
+
+      try {
+        localStorage.setItem(
+          SYSTEM_BRANDING_CACHE_KEY,
+          JSON.stringify({
+            appName: system.appName || "Pethiyan",
+            logo: system.logo || "/pethiyan-logo.png",
+          } satisfies BrandingCache)
+        );
+      } catch {
+        // ignore storage quota/private mode issues
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   return (
@@ -50,14 +112,15 @@ export default function MainHeader() {
               <Link
                 href="/"
                 className="flex items-center"
-                aria-label="Pethiyan — Home"
+                aria-label={`${appName} — Home`}
               >
                 <Image
-                  src="/pethiyan-logo.png"
-                  alt="Pethiyan"
+                  src={headerLogo}
+                  alt={appName}
                   width={112}
                   height={112}
                   className="h-20 sm:h-24 lg:h-28 w-auto object-contain"
+                  onError={() => setHeaderLogo("/pethiyan-logo.png")}
                   priority
                 />
               </Link>

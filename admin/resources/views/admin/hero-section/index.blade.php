@@ -225,6 +225,19 @@
                                         </div>
                                     </div>
 
+                                    <div class="mb-4">
+                                        <label class="form-label fw-semibold" for="heroHeight">
+                                            Hero Height: <span id="heroHeightDisplay">{{ $settings['hero_height'] }}</span>px
+                                        </label>
+                                        <input type="range" class="form-range" id="heroHeight" name="hero_height"
+                                            min="360" max="980" step="10"
+                                            value="{{ $settings['hero_height'] }}">
+                                        <div class="d-flex justify-content-between">
+                                            <small class="text-muted">360px</small>
+                                            <small class="text-muted">980px</small>
+                                        </div>
+                                    </div>
+
                                     <button type="submit" class="btn btn-primary w-100" id="saveSettingsBtn">
                                         Save Settings
                                     </button>
@@ -583,9 +596,12 @@ window.addEventListener('load', function () {
 
     // ── CAROUSEL SETTINGS ──────────────────────────────────────────────────
 
-    const delaySlider  = document.getElementById('autoplayDelay');
-    const delayDisplay = document.getElementById('delayDisplay');
+    const delaySlider       = document.getElementById('autoplayDelay');
+    const delayDisplay      = document.getElementById('delayDisplay');
+    const heroHeightSlider  = document.getElementById('heroHeight');
+    const heroHeightDisplay = document.getElementById('heroHeightDisplay');
     delaySlider.addEventListener('input', () => delayDisplay.textContent = delaySlider.value);
+    heroHeightSlider.addEventListener('input', () => heroHeightDisplay.textContent = heroHeightSlider.value);
 
     document.getElementById('settingsForm').addEventListener('submit', function (e) {
         e.preventDefault();
@@ -593,6 +609,7 @@ window.addEventListener('load', function () {
         const fd  = new FormData();
         fd.append('autoplay_enabled', document.getElementById('autoplayEnabled').checked ? '1' : '0');
         fd.append('autoplay_delay',   delaySlider.value);
+        fd.append('hero_height',      heroHeightSlider.value);
 
         ajaxPost('{{ route("admin.hero-section.settings.update") }}', fd, btn, function () {});
     });

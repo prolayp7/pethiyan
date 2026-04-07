@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import '../../app/theme/app_colors.dart';
+import '../../core/constants/app_constants.dart';
 import '../../core/utils/currency_formatter.dart';
 import 'loading_shimmer.dart';
 
@@ -145,9 +146,4 @@ class ProductCard extends StatelessWidget {
       ),
     );
   }
-}
-
-// Import constant needed
-class AppConstants {
-  static const int thumbnailCacheWidth = 300;
 }

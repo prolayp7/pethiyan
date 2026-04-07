@@ -804,17 +804,21 @@ export default function LoginModal({ open, onClose, onSuccess, redirectTo }: Log
 
         <style jsx>{`
           .btn-primary {
-            background: linear-gradient(135deg, #1f4f8a 0%, #0f2f5f 100%);
+            background: linear-gradient(135deg, #17396f 0%, #2f6f9f 52%, #49ad57 100%);
             color: white;
             font-weight: 600;
             font-size: 0.875rem;
             padding: 0.65rem 1.5rem;
             border-radius: 9999px;
-            transition: opacity 0.2s;
+            transition: opacity 0.2s, box-shadow 0.2s;
             border: none;
             cursor: pointer;
+            box-shadow: 0 8px 22px rgba(23, 57, 111, 0.22);
           }
-          .btn-primary:hover:not(:disabled) { opacity: 0.9; }
+          .btn-primary:hover:not(:disabled) {
+            opacity: 0.95;
+            box-shadow: 0 10px 24px rgba(23, 57, 111, 0.28);
+          }
 
           @keyframes shake {
             0%, 100% { transform: translateX(0); }

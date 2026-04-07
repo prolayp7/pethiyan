@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../app/theme/app_colors.dart';
 import '../../../../core/storage/local_storage.dart';
 import '../../../../core/storage/secure_storage.dart';
-import '../../../../app/theme/app_colors.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -36,6 +36,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
     final storage = ref.read(secureStorageProvider);
     final hasToken = await storage.hasToken();
+    if (!mounted) return;
 
     if (hasToken) {
       context.go('/home');

@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Leaf, ShieldCheck, type LucideIcon } from "lucide-react";
+import Image from "next/image";
+import { type LucideIcon } from "lucide-react";
 
 type LegalLink = {
   label: string;
@@ -14,15 +15,15 @@ type SocialLink = {
 
 type FooterBottomLegalBarProps = {
   legalLinks: LegalLink[];
-  paymentMethods: string[];
   socialLinks: SocialLink[];
 };
 
 export default function FooterBottomLegalBar({
   legalLinks,
-  paymentMethods,
   socialLinks,
 }: FooterBottomLegalBarProps) {
+  const paymentMethods = ["Visa", "Rupay", "Paytm", "PhonePay", "GPay", "NetBanking"];
+
   return (
     <div
       className="border-t"
@@ -38,45 +39,20 @@ export default function FooterBottomLegalBar({
       />
 
       <div className="max-w-7xl mx-auto px-6 sm:px-10 lg:px-16 py-7">
-        {/* Row 1 */}
+        {/* Row 1: Social icons · Company text · Payment Partners */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-5">
           <div className="flex items-center gap-2.5 shrink-0 order-last sm:order-first">
-            <div
-              className="flex items-center gap-1.5 border rounded px-2.5 py-1.5"
-              style={{ borderColor: "rgba(76,175,80,0.22)" }}
-            >
-              <Leaf
-                className="h-3 w-3 shrink-0"
-                style={{ color: "rgba(76,175,80,0.6)" }}
-                aria-hidden="true"
-              />
-              <span
-                className="text-[8px] font-bold tracking-[0.18em] uppercase leading-tight"
-                style={{ color: "rgba(255,255,255,0.35)" }}
+            {socialLinks.map(({ label, icon: Icon, href }) => (
+              <a
+                key={label}
+                href={href}
+                aria-label={label}
+                className="w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110 hover:brightness-125"
+                style={{ background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.5)" }}
               >
-                Eco
-                <br />
-                Certified
-              </span>
-            </div>
-            <div
-              className="flex items-center gap-1.5 border rounded px-2.5 py-1.5"
-              style={{ borderColor: "rgba(255,255,255,0.08)" }}
-            >
-              <ShieldCheck
-                className="h-3 w-3 shrink-0"
-                style={{ color: "rgba(255,255,255,0.25)" }}
-                aria-hidden="true"
-              />
-              <span
-                className="text-[8px] font-bold tracking-[0.18em] uppercase leading-tight"
-                style={{ color: "rgba(255,255,255,0.28)" }}
-              >
-                ISO
-                <br />
-                9001
-              </span>
-            </div>
+                <Icon className="h-3.5 w-3.5" aria-hidden="true" />
+              </a>
+            ))}
           </div>
 
           <p
@@ -87,18 +63,51 @@ export default function FooterBottomLegalBar({
             U74999MH2020PTC345678&nbsp;&nbsp;·&nbsp;&nbsp;GST 27AABCP1234F1Z5
           </p>
 
-          <nav className="flex items-center gap-5 shrink-0" aria-label="Legal links">
-            {legalLinks.map((link) => (
-              <Link
-                key={link.label}
-                href={link.href}
-                className="text-xs font-medium hover:text-white transition-colors duration-200"
-                style={{ color: "rgba(255,255,255,0.38)" }}
-              >
-                {link.label}
-              </Link>
-            ))}
-          </nav>
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.28)" }}>
+              Payment Partners:
+            </span>
+            <div
+              className="relative overflow-hidden rounded-md bg-white"
+              style={{
+                width: "144px",
+                minWidth: "144px",
+                maxWidth: "144px",
+                height: "40px",
+                flex: "0 0 144px",
+                border: "1px solid rgba(255,255,255,0.14)",
+              }}
+            >
+              <Image
+                src="/images/logos/razorpay.png"
+                alt="Razorpay"
+                fill
+                sizes="144px"
+                className="object-contain p-2"
+                unoptimized
+              />
+            </div>
+            <div
+              className="relative overflow-hidden rounded-md bg-white"
+              style={{
+                width: "144px",
+                minWidth: "144px",
+                maxWidth: "144px",
+                height: "40px",
+                flex: "0 0 144px",
+                border: "1px solid rgba(255,255,255,0.14)",
+              }}
+            >
+              <Image
+                src="/images/logos/Easebuzz_Logo.jpg"
+                alt="Easebuzz"
+                fill
+                sizes="144px"
+                className="object-contain p-2"
+                unoptimized
+              />
+            </div>
+          </div>
         </div>
 
         {/* Row 2: Payment methods */}
@@ -118,23 +127,10 @@ export default function FooterBottomLegalBar({
           ))}
         </div>
 
-        {/* Row 3: Social icons */}
-        <div className="flex items-center justify-center gap-3 mt-5">
-          {socialLinks.map(({ label, icon: Icon, href }) => (
-            <a
-              key={label}
-              href={href}
-              aria-label={label}
-              className="w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110 hover:brightness-125"
-              style={{
-                background: "rgba(255,255,255,0.07)",
-                color: "rgba(255,255,255,0.5)",
-              }}
-            >
-              <Icon className="h-3.5 w-3.5" aria-hidden="true" />
-            </a>
-          ))}
-        </div>
+        {/* Row 3: Copyright */}
+        <p className="text-center text-[10px] mt-5" style={{ color: "rgba(255,255,255,0.20)" }}>
+          © {new Date().getFullYear()} Pethiyan Packaging Pvt. Ltd. All rights reserved.
+        </p>
       </div>
     </div>
   );

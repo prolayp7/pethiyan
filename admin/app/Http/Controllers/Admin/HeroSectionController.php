@@ -8,6 +8,8 @@ use App\Models\HeroTrustBadge;
 use App\Models\Setting;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
@@ -54,6 +56,7 @@ class HeroSectionController extends Controller
         }
 
         $slide = HeroSlide::create($data);
+        $this->triggerFrontendHeroRevalidate();
 
         return response()->json([
             'success' => true,
@@ -89,6 +92,7 @@ class HeroSectionController extends Controller
         }
 
         $slide->update($data);
+        $this->triggerFrontendHeroRevalidate();
 
         return response()->json([
             'success' => true,
@@ -106,6 +110,7 @@ class HeroSectionController extends Controller
         }
 
         $slide->delete();
+        $this->triggerFrontendHeroRevalidate();
 
         return response()->json(['success' => true, 'message' => 'Slide deleted.']);
     }
@@ -114,6 +119,7 @@ class HeroSectionController extends Controller
     {
         $slide = HeroSlide::findOrFail($id);
         $slide->update(['is_active' => !$slide->is_active]);
+        $this->triggerFrontendHeroRevalidate();
 
         return response()->json([
             'success'   => true,
@@ -129,6 +135,7 @@ class HeroSectionController extends Controller
         foreach ($request->order as $position => $slideId) {
             HeroSlide::where('id', $slideId)->update(['sort_order' => $position + 1]);
         }
+        $this->triggerFrontendHeroRevalidate();
 
         return response()->json(['success' => true, 'message' => 'Order saved.']);
     }
@@ -149,6 +156,7 @@ class HeroSectionController extends Controller
         $data['is_active']  = $request->boolean('is_active', true);
 
         $badge = HeroTrustBadge::create($data);
+        $this->triggerFrontendHeroRevalidate();
 
         return response()->json(['success' => true, 'message' => 'Badge created.', 'badge' => $badge]);
     }
@@ -165,6 +173,7 @@ class HeroSectionController extends Controller
 
         $data['is_active'] = $request->boolean('is_active', $badge->is_active);
         $badge->update($data);
+        $this->triggerFrontendHeroRevalidate();
 
         return response()->json(['success' => true, 'message' => 'Badge updated.', 'badge' => $badge->fresh()]);
     }
@@ -172,6 +181,7 @@ class HeroSectionController extends Controller
     public function destroyBadge(int $id): JsonResponse
     {
         HeroTrustBadge::findOrFail($id)->delete();
+        $this->triggerFrontendHeroRevalidate();
         return response()->json(['success' => true, 'message' => 'Badge deleted.']);
     }
 
@@ -179,6 +189,7 @@ class HeroSectionController extends Controller
     {
         $badge = HeroTrustBadge::findOrFail($id);
         $badge->update(['is_active' => !$badge->is_active]);
+        $this->triggerFrontendHeroRevalidate();
 
         return response()->json([
             'success'   => true,
@@ -194,6 +205,7 @@ class HeroSectionController extends Controller
         foreach ($request->order as $position => $badgeId) {
             HeroTrustBadge::where('id', $badgeId)->update(['sort_order' => $position + 1]);
         }
+        $this->triggerFrontendHeroRevalidate();
 
         return response()->json(['success' => true, 'message' => 'Order saved.']);
     }
@@ -207,12 +219,14 @@ class HeroSectionController extends Controller
         $data = $request->validate([
             'autoplay_enabled' => 'required|boolean',
             'autoplay_delay'   => 'required|integer|min:1000|max:30000',
+            'hero_height'      => 'required|integer|min:360|max:980',
         ]);
 
         Setting::updateOrCreate(
             ['variable' => 'hero_section'],
             ['value'    => json_encode($data)]
         );
+        $this->triggerFrontendHeroRevalidate();
 
         return response()->json(['success' => true, 'message' => 'Carousel settings saved.']);
     }
@@ -224,12 +238,40 @@ class HeroSectionController extends Controller
     private function getCarouselSettings(): array
     {
         $setting = Setting::where('variable', 'hero_section')->first();
-        $value   = $setting ? json_decode($setting->value, true) : [];
+        $value   = [];
+        if ($setting) {
+            $value = is_array($setting->value)
+                ? $setting->value
+                : (json_decode((string) $setting->value, true) ?: []);
+        }
 
         return [
             'autoplay_enabled' => $value['autoplay_enabled'] ?? true,
             'autoplay_delay'   => $value['autoplay_delay']   ?? 5000,
+            'hero_height'      => $value['hero_height']      ?? 620,
         ];
+    }
+
+    private function triggerFrontendHeroRevalidate(): void
+    {
+        $frontendUrl = rtrim((string) env('FRONTEND_APP_URL', ''), '/');
+        $secret = (string) env('FRONTEND_REVALIDATE_SECRET', '');
+
+        if ($frontendUrl === '' || $secret === '') {
+            return;
+        }
+
+        try {
+            Http::timeout(3)->post("{$frontendUrl}/api/revalidate", [
+                'secret' => $secret,
+                'tags' => ['hero-section'],
+                'paths' => ['/'],
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('Hero revalidation request failed.', [
+                'message' => $e->getMessage(),
+            ]);
+        }
     }
 
     public static function availableIcons(): array

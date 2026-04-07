@@ -57,33 +57,15 @@ export default function PackagingSolutions() {
       <section
         ref={ref}
         className="relative overflow-hidden"
-        style={{ background: "linear-gradient(140deg, #071023 0%, #0c1d38 50%, #0f2444 100%)" }}
+        style={{ background: "#ffffff" }}
       >
-        {/* Grid overlay */}
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0"
-          style={{
-            backgroundImage: `
-              linear-gradient(rgba(70,190,150,0.045) 1px, transparent 1px),
-              linear-gradient(90deg, rgba(70,190,150,0.045) 1px, transparent 1px),
-              linear-gradient(rgba(60,130,255,0.04) 1px, transparent 1px),
-              linear-gradient(90deg, rgba(60,130,255,0.04) 1px, transparent 1px)
-            `,
-            backgroundSize: "10px 10px, 10px 10px, 50px 50px, 50px 50px",
-          }}
-        />
-        {/* Corner glows */}
-        <div aria-hidden="true" className="pointer-events-none absolute inset-0"
-          style={{ background: "radial-gradient(ellipse 60% 60% at 100% 0%, rgba(46,124,138,0.25) 0%, transparent 70%)" }} />
-        <div aria-hidden="true" className="pointer-events-none absolute inset-0"
-          style={{ background: "radial-gradient(ellipse 60% 60% at 0% 100%, rgba(78,168,95,0.2) 0%, transparent 70%)" }} />
+        {/* Intentionally no overlays: keep section pure white */}
 
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-28">
 
           {/* ── Hero Header ─────────────────────────────────────────── */}
           <div
-            className={`ps-animate text-center max-w-3xl mx-auto mb-16${visible ? " show" : ""}`}
+            className={`ps-animate text-left max-w-4xl mb-16${visible ? " show" : ""}`}
             style={{ animationDelay: "0ms" }}
           >
             <p
@@ -103,7 +85,7 @@ export default function PackagingSolutions() {
             >
               Pethiyan – India's Trusted Packaging Partner
             </h2>
-            <p className="text-base leading-relaxed" style={{ color: "rgba(255,255,255,0.55)" }}>
+            <p className="text-base leading-relaxed" style={{ color: "rgba(15,36,68,0.68)" }}>
               From small businesses to large manufacturers — we supply high-quality, affordable packaging
               products across India. One destination for all your packaging needs.
             </p>
@@ -116,8 +98,9 @@ export default function PackagingSolutions() {
                 key={label}
                 className={`ps-counter${visible ? " show" : ""} rounded-2xl p-5 text-center`}
                 style={{
-                  background: "rgba(255,255,255,0.05)",
-                  border: "1px solid rgba(255,255,255,0.08)",
+                  background: "#ffffff",
+                  border: "1px solid rgba(15,36,68,0.08)",
+                  boxShadow: "0 8px 24px rgba(15,36,68,0.08)",
                   animationDelay: visible ? `${120 + i * 80}ms` : undefined,
                 }}
               >
@@ -127,9 +110,9 @@ export default function PackagingSolutions() {
                 >
                   <Icon className="h-5 w-5" style={{ color: "#4ea85f" }} />
                 </div>
-                <p className="text-2xl font-black text-white">{value}</p>
+                <p className="text-2xl font-black text-[#0f2444]">{value}</p>
                 <p className="text-xs font-bold mt-0.5" style={{ color: "#4ea85f" }}>{label}</p>
-                <p className="text-[10px] mt-0.5" style={{ color: "rgba(255,255,255,0.35)" }}>{sub}</p>
+                <p className="text-[10px] mt-0.5" style={{ color: "rgba(15,36,68,0.52)" }}>{sub}</p>
               </div>
             ))}
           </div>

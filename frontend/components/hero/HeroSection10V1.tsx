@@ -25,7 +25,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
 interface Props {
   slides?: ApiHeroSlide[];
   badges?: ApiHeroBadge[];
-  settings?: { autoplayEnabled?: boolean; autoplayDelay?: number };
+  settings?: { autoplayEnabled?: boolean; autoplayDelay?: number; heroHeight?: number };
 }
 
 /* ─── Component ──────────────────────────────────────────────── */
@@ -33,7 +33,9 @@ interface Props {
 export default function HeroSection10({ slides: apiSlides, badges: apiBadges, settings }: Props) {
   const activeSlides = (apiSlides ?? []).filter((s) => s.image);
   const activeBadges = apiBadges ?? [];
-  const autoplayDelay = settings?.autoplayDelay ?? 5000;
+  const autoplayDelay = Number(settings?.autoplayDelay ?? 5000) || 5000;
+  const heroHeight = Number(settings?.heroHeight ?? 620) || 620;
+  const heroMinHeight = `clamp(320px, 65vw, ${heroHeight}px)`;
 
   if (activeSlides.length === 0) return null;
   const autoplay = Autoplay({ delay: autoplayDelay, stopOnInteraction: false });
@@ -66,7 +68,7 @@ export default function HeroSection10({ slides: apiSlides, badges: apiBadges, se
     <section
       className="relative w-full overflow-hidden"
       style={{
-        minHeight: "clamp(520px, 65vw, 620px)",
+        minHeight: heroMinHeight,
         background: "linear-gradient(140deg, #071023 0%, #0c1d38 50%, #0f2444 100%)",
       }}
       aria-label="Hero carousel"
@@ -75,7 +77,7 @@ export default function HeroSection10({ slides: apiSlides, badges: apiBadges, se
     >
       <div
         className="relative flex flex-col lg:flex-row h-full"
-        style={{ minHeight: "clamp(520px, 65vw, 620px)" }}
+        style={{ minHeight: heroMinHeight }}
       >
 
         {/* ════════════════════════════════════════
@@ -254,7 +256,7 @@ export default function HeroSection10({ slides: apiSlides, badges: apiBadges, se
         ════════════════════════════════════════ */}
         <div
           className="relative lg:w-[54%] order-1 lg:order-2"
-          style={{ minHeight: "clamp(260px, 50vw, 620px)" }}
+          style={{ minHeight: heroMinHeight }}
         >
           {/* Image panel — diagonal clip for premium angled separation */}
           <div

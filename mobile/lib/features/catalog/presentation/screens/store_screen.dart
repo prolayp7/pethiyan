@@ -40,7 +40,7 @@ class StoreScreen extends ConsumerWidget {
                 title: Text(store['name'] as String? ?? ''),
                 background: store['cover_url'] != null
                     ? Image.network(store['cover_url'] as String, fit: BoxFit.cover)
-                    : Container(color: AppColors.primary.withOpacity(0.1)),
+                    : Container(color: AppColors.primary.withValues(alpha: 26)),
               ),
             ),
             SliverToBoxAdapter(
@@ -89,7 +89,7 @@ class _StoreProductGrid extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final params = ProductListParams(search: null); // TODO: add storeSlug filter when backend supports it
+    const params = ProductListParams(search: null); // Store filter not supported by backend yet
     final listAsync = ref.watch(productListProvider(params));
 
     return listAsync.when(
@@ -125,7 +125,7 @@ class _StoreProductGrid extends ConsumerWidget {
 class _StoreShimmer extends StatelessWidget {
   const _StoreShimmer();
   @override
-  Widget build(BuildContext context) => Column(children: const [
+  Widget build(BuildContext context) => const Column(children: [
     ShimmerBox(height: 180),
     SizedBox(height: 16),
     Padding(padding: EdgeInsets.all(16), child: ShimmerBox(height: 60)),
