@@ -78,6 +78,7 @@ Thumbs.db
 .claude/
 .codex
 .codex/
+.code-review-graph/
 sample_data/
 email-template-previews/
 invoice-template-previews/
@@ -96,6 +97,9 @@ invoice-template-previews/
 *.tmp
 *.swp
 *.json
+.cursorrules
+.windsurfrules
+
 
 # Ignore all markdown files except README/REAME
 *.md
