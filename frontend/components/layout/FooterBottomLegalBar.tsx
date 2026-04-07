@@ -15,15 +15,21 @@ type SocialLink = {
 
 type FooterBottomLegalBarProps = {
   legalLinks: LegalLink[];
-  paymentMethods: string[];
   socialLinks: SocialLink[];
 };
 
 export default function FooterBottomLegalBar({
   legalLinks,
-  paymentMethods,
   socialLinks,
 }: FooterBottomLegalBarProps) {
+  const paymentMethodLogos = [
+    { src: "/images/logos/visa-card.webp", alt: "Visa" },
+    { src: "/images/logos/rupay-card.webp", alt: "RuPay" },
+    { src: "/images/logos/phonepay.webp", alt: "PhonePe" },
+    { src: "/images/logos/paytm.webp", alt: "Paytm" },
+    { src: "/images/logos/gpay.webp", alt: "Google Pay" },
+  ];
+
   return (
     <div
       className="border-t"
@@ -68,34 +74,72 @@ export default function FooterBottomLegalBar({
               Payment Partners:
             </span>
             <div
-              className="flex items-center justify-center px-3 py-1.5 rounded-md"
-              style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)" }}
+              className="relative overflow-hidden rounded-md bg-white"
+              style={{
+                width: "144px",
+                minWidth: "144px",
+                maxWidth: "144px",
+                height: "40px",
+                flex: "0 0 144px",
+                border: "1px solid rgba(255,255,255,0.14)",
+              }}
             >
-              <Image src="/razorpay-logo.png" alt="Razorpay" width={64} height={18} className="h-4 w-auto object-contain" unoptimized />
+              <Image
+                src="/images/logos/razorpay.png"
+                alt="Razorpay"
+                fill
+                sizes="144px"
+                className="object-contain p-2"
+                unoptimized
+              />
             </div>
             <div
-              className="flex items-center justify-center px-3 py-1.5 rounded-md"
-              style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)" }}
+              className="relative overflow-hidden rounded-md bg-white"
+              style={{
+                width: "144px",
+                minWidth: "144px",
+                maxWidth: "144px",
+                height: "40px",
+                flex: "0 0 144px",
+                border: "1px solid rgba(255,255,255,0.14)",
+              }}
             >
-              <Image src="/easebuzz-logo.png" alt="Easebuzz" width={64} height={18} className="h-4 w-auto object-contain" unoptimized />
+              <Image
+                src="/images/logos/Easebuzz_Logo.jpg"
+                alt="Easebuzz"
+                fill
+                sizes="144px"
+                className="object-contain p-2"
+                unoptimized
+              />
             </div>
           </div>
         </div>
 
-        {/* Row 2: Payment methods */}
+        {/* Row 2: Payment method logos */}
         <div className="flex flex-wrap items-center justify-center gap-2 mt-6">
-          {paymentMethods.map((method) => (
-            <span
-              key={method}
-              className="inline-flex items-center justify-center rounded px-2.5 py-1 text-[9px] font-semibold tracking-widest uppercase border"
+          {paymentMethodLogos.map((logo) => (
+            <div
+              key={logo.alt}
+              className="relative overflow-hidden rounded-md bg-white"
               style={{
-                borderColor: "rgba(255,255,255,0.08)",
-                color: "rgba(255,255,255,0.32)",
-                background: "rgba(255,255,255,0.03)",
+                width: "104px",
+                minWidth: "104px",
+                maxWidth: "104px",
+                height: "34px",
+                flex: "0 0 104px",
+                border: "1px solid rgba(255,255,255,0.14)",
               }}
             >
-              {method}
-            </span>
+              <Image
+                src={logo.src}
+                alt={logo.alt}
+                fill
+                sizes="104px"
+                className="object-contain p-1.5"
+                unoptimized
+              />
+            </div>
           ))}
         </div>
 

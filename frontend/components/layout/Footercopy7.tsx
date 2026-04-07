@@ -54,19 +54,6 @@ const socialLinks = [
   { label: "LinkedIn", icon: Linkedin, href: "#" },
 ];
 
-const paymentMethods = [
-  "Visa",
-  "Mastercard",
-  "PayPal",
-  "Apple Pay",
-  "Google Pay",
-  "Amex",
-  "Shop Pay",
-  "UPI",
-  "Net Banking",
-  "Razorpay",
-];
-
 const legalLinks = [
   { label: "Terms", href: "/terms" },
   { label: "Privacy", href: "/privacy" },
@@ -102,12 +89,11 @@ export default function Footer() {
 
      
 
-      <FooterBottomLegalBar legalLinks={legalLinks} paymentMethods={paymentMethods} socialLinks={socialLinks} />
+      <FooterBottomLegalBar legalLinks={legalLinks} socialLinks={socialLinks} />
 
     </footer>
   );
 }
-
 
 
 
