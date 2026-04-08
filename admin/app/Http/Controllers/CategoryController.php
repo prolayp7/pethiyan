@@ -9,6 +9,7 @@ use App\Enums\SpatieMediaCollectionName;
 use App\Http\Requests\Category\StoreCategoryRequest;
 use App\Http\Requests\Category\UpdateCategoryRequest;
 use App\Models\Category;
+use App\Services\ImageWebpService;
 use App\Traits\ChecksPermissions;
 use App\Traits\PanelAware;
 use App\Types\Api\ApiResponseType;
@@ -273,7 +274,13 @@ class CategoryController extends Controller
         foreach ($this->mediaCollections as $requestField => $collectionName) {
             if ($request->hasFile($requestField)) {
                 $collectionValue = is_callable($collectionName) ? $collectionName() : $collectionName;
-                $category->addMediaFromRequest($requestField)->toMediaCollection($collectionValue);
+                $converted = ImageWebpService::convert($request->file($requestField));
+                $category->addMedia($converted['path'])
+                    ->usingFileName($converted['filename'])
+                    ->toMediaCollection($collectionValue);
+                if ($converted['isWebp']) {
+                    @unlink($converted['path']);
+                }
             }
         }
     }
@@ -303,11 +310,16 @@ class CategoryController extends Controller
     {
         $newFile = $request->file($requestField);
         $existingMedia = $category->getFirstMedia($collectionName);
-        $newFileName = $newFile->getClientOriginalName();
+        $converted = ImageWebpService::convert($newFile);
 
         // Only upload if file doesn't exist or is different
-        if (!$existingMedia || $existingMedia->file_name !== $newFileName) {
-            $category->addMedia($newFile)->toMediaCollection($collectionName);
+        if (!$existingMedia || $existingMedia->file_name !== $converted['filename']) {
+            $category->addMedia($converted['path'])
+                ->usingFileName($converted['filename'])
+                ->toMediaCollection($collectionName);
+        }
+        if ($converted['isWebp']) {
+            @unlink($converted['path']);
         }
     }
 

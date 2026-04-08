@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { X, ArrowRight, Mail, User as UserIcon, Lock, Eye, EyeOff } from "lucide-react";
+import { X, ArrowRight, Mail, User as UserIcon, Lock, Eye, EyeOff, ShieldCheck, Truck, Tag } from "lucide-react";
 import Image from "next/image";
+import { useSiteSettings } from "@/context/SiteSettingsContext";
 import Link from "next/link";
 import MobileInput, { isValidIndianMobile } from "@/components/auth/MobileInput";
 import OtpInput from "@/components/auth/OtpInput";
@@ -57,6 +58,7 @@ function validatePassword(pw: string): string {
 export default function LoginModal({ open, onClose, onSuccess, redirectTo }: LoginModalProps) {
   const router = useRouter();
   const { login } = useAuth();
+  const { appName, logo } = useSiteSettings();
 
   const completeLogin = useCallback((user: AuthUser, token: string) => {
     login(user, token);
@@ -72,10 +74,10 @@ export default function LoginModal({ open, onClose, onSuccess, redirectTo }: Log
 
   // Login fields
   const [loginMode, setLoginMode] = useState<"password" | "otp">("password");
-  const [loginIdentifier, setLoginIdentifier] = useState(""); // email or mobile for password login
+  const [loginIdentifier, setLoginIdentifier] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [showLoginPassword, setShowLoginPassword] = useState(false);
-  const [loginMobile, setLoginMobile] = useState(""); // mobile for OTP login
+  const [loginMobile, setLoginMobile] = useState("");
 
   // Register fields
   const [regName, setRegName] = useState("");
@@ -89,7 +91,6 @@ export default function LoginModal({ open, onClose, onSuccess, redirectTo }: Log
   // OTP
   const [otp, setOtp] = useState("");
 
-  // After register, hold the token until mobile is verified
   const pendingAuth = useRef<{ token: string; user: AuthUser } | null>(null);
 
   // Google new-user completion state
@@ -99,7 +100,7 @@ export default function LoginModal({ open, onClose, onSuccess, redirectTo }: Log
   const [googleNewUserConfirm, setGoogleNewUserConfirm] = useState("");
   const [showGooglePassword, setShowGooglePassword] = useState(false);
   const [showGoogleConfirm, setShowGoogleConfirm] = useState(false);
-  const [googleStep, setGoogleStep] = useState(false); // true = collecting mobile+pw for new Google user
+  const [googleStep, setGoogleStep] = useState(false);
 
   // UI state
   const [loading, setLoading] = useState(false);
@@ -332,7 +333,6 @@ export default function LoginModal({ open, onClose, onSuccess, redirectTo }: Log
       }
 
       if (res.isNewUser) {
-        // Need mobile + password to complete registration
         setGoogleIdToken(idToken);
         setGoogleStep(true);
         return;
@@ -399,8 +399,10 @@ export default function LoginModal({ open, onClose, onSuccess, redirectTo }: Log
     const hasErr = !!errors[field];
     const isShaking = shaking.has(field);
     return [
-      "w-full rounded-xl border text-sm outline-none transition-colors bg-gray-50 focus:bg-white",
-      hasErr ? "border-red-400 bg-red-50" : "border-gray-200 focus:border-blue-400",
+      "w-full rounded-xl border text-sm outline-none transition-all duration-200 bg-white",
+      hasErr
+        ? "border-red-400 ring-2 ring-red-100"
+        : "border-[#e2e8f0] focus:border-[#2f6f9f] focus:ring-2 focus:ring-[#2f6f9f]/10",
       isShaking ? "shake" : "",
       extra,
     ].join(" ");
@@ -415,451 +417,542 @@ export default function LoginModal({ open, onClose, onSuccess, redirectTo }: Log
   return (
     <div
       className="fixed inset-0 z-[500] flex items-center justify-center p-4"
-      style={{ background: "rgba(15,47,95,0.55)", backdropFilter: "blur(4px)" }}
+      style={{ background: "rgba(8,20,45,0.7)", backdropFilter: "blur(8px)" }}
       onClick={handleBackdrop}
     >
       <div
-        className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden"
+        className="modal-enter relative w-full flex overflow-hidden rounded-2xl shadow-2xl"
+        style={{ maxWidth: 820, minHeight: 520, boxShadow: "0 32px 80px rgba(8,20,45,0.35)" }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Close */}
-        <button onClick={onClose} className="absolute top-4 right-4 z-10 p-1.5 rounded-full hover:bg-gray-100 transition-colors" aria-label="Close">
-          <X className="h-5 w-5 text-gray-500" />
-        </button>
+        {/* ── LEFT BRAND PANEL ── */}
+        <div
+          className="hidden md:flex flex-col justify-between w-[280px] shrink-0 p-8 relative overflow-hidden"
+          style={{ background: "linear-gradient(160deg,#0f2f5f 0%,#17396f 40%,#1e5a8a 70%,#2a7a4e 100%)" }}
+        >
+          {/* Decorative circles */}
+          <div className="absolute -top-16 -left-16 w-56 h-56 rounded-full opacity-10" style={{ background: "radial-gradient(circle,#fff 0%,transparent 70%)" }} />
+          <div className="absolute -bottom-20 -right-10 w-72 h-72 rounded-full opacity-10" style={{ background: "radial-gradient(circle,#49ad57 0%,transparent 70%)" }} />
 
-        {/* Brand strip */}
-        <div className="px-8 pt-8 pb-5 text-center" style={{ background: "linear-gradient(135deg,#1f4f8a 0%,#0f2f5f 100%)" }}>
-          <Image src="/pethiyan-logo.png" alt="Pethiyan" width={120} height={60} className="mx-auto h-14 w-auto object-contain brightness-0 invert" />
-          <p className="mt-2 text-sm text-blue-200">The Power of Perfect Packaging</p>
-        </div>
+          {/* Logo */}
+          <div className="relative z-10">
+            {logo ? (
+              <Image src={logo} alt={appName} width={150} height={56} className="h-12 w-auto object-contain brightness-0 invert" unoptimized />
+            ) : (
+              <span className="text-2xl font-extrabold text-white tracking-tight">{appName}</span>
+            )}
+            <p className="mt-3 text-sm text-blue-200/80 leading-relaxed">The Power of Perfect Packaging</p>
+          </div>
 
-        {/* Tabs */}
-        {!isOtpStep && !googleStep && (
-          <div className="flex border-b border-gray-100">
-            {(["login", "register"] as const).map((t) => (
-              <button key={t} onClick={() => setTab(t)} className="flex-1 py-3.5 text-sm font-semibold transition-colors relative" style={{ color: tab === t ? "#1f4f8a" : "#6b7280" }}>
-                {t === "login" ? "Sign In" : "Create Account"}
-                {tab === t && <span className="absolute bottom-0 left-1/4 right-1/4 h-0.5 rounded-full" style={{ background: "#4caf50" }} />}
-              </button>
+          {/* Feature bullets */}
+          <div className="relative z-10 space-y-4">
+            {[
+              { icon: ShieldCheck, text: "Secure & verified orders" },
+              { icon: Truck,       text: "Fast delivery across India" },
+              { icon: Tag,         text: "Best prices, GST invoices" },
+            ].map(({ icon: Icon, text }) => (
+              <div key={text} className="flex items-center gap-3">
+                <span className="flex items-center justify-center w-8 h-8 rounded-lg shrink-0" style={{ background: "rgba(255,255,255,0.12)" }}>
+                  <Icon className="h-4 w-4 text-white/80" />
+                </span>
+                <span className="text-[13px] text-blue-100/80">{text}</span>
+              </div>
             ))}
           </div>
-        )}
 
-        <div className="px-8 py-6">
+          {/* Bottom tagline */}
+          <div className="relative z-10">
+            <p className="text-[11px] text-blue-200/50">
+              © {new Date().getFullYear()} {appName}. All rights reserved.
+            </p>
+          </div>
+        </div>
 
-          {/* ── GOOGLE NEW USER STEP ── */}
-          {googleStep ? (
-            <form onSubmit={handleGoogleNewUserComplete} className="space-y-3">
-              <button type="button" onClick={() => { setGoogleStep(false); setGoogleIdToken(null); setErrors({}); setApiError(""); }} className="text-xs text-gray-500 hover:text-gray-700 flex items-center gap-1">
-                ← Back
-              </button>
-              <div className="text-center space-y-1">
-                <h3 className="text-base font-bold text-gray-900">Almost there!</h3>
-                <p className="text-xs text-gray-500">Add your mobile and set a password to complete sign-up</p>
+        {/* ── RIGHT FORM PANEL ── */}
+        <div className="flex flex-col flex-1 bg-white overflow-y-auto" style={{ maxHeight: "90vh" }}>
+
+          {/* Mobile logo strip */}
+          <div
+            className="md:hidden px-6 pt-6 pb-4 text-center"
+            style={{ background: "linear-gradient(135deg,#0f2f5f 0%,#17396f 60%,#2a7a4e 100%)" }}
+          >
+            {logo ? (
+              <Image src={logo} alt={appName} width={120} height={44} className="mx-auto h-10 w-auto object-contain brightness-0 invert" unoptimized />
+            ) : (
+              <span className="text-xl font-extrabold text-white">{appName}</span>
+            )}
+            <p className="mt-1 text-xs text-blue-200/70">The Power of Perfect Packaging</p>
+          </div>
+
+          {/* Close button */}
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 z-20 flex items-center justify-center w-8 h-8 rounded-full transition-colors"
+            style={{ background: "rgba(0,0,0,0.06)" }}
+            aria-label="Close"
+          >
+            <X className="h-4 w-4 text-gray-600" />
+          </button>
+
+          {/* Tabs */}
+          {!isOtpStep && !googleStep && (
+            <div className="px-6 pt-6 pb-0">
+              <div className="flex gap-1 p-1 rounded-xl" style={{ background: "#f1f5f9" }}>
+                {(["login", "register"] as const).map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => setTab(t)}
+                    className="flex-1 py-2 text-sm font-semibold rounded-lg transition-all duration-200"
+                    style={
+                      tab === t
+                        ? { background: "white", color: "#17396f", boxShadow: "0 1px 6px rgba(0,0,0,0.10)" }
+                        : { background: "transparent", color: "#64748b" }
+                    }
+                  >
+                    {t === "login" ? "Sign In" : "Create Account"}
+                  </button>
+                ))}
               </div>
+            </div>
+          )}
 
-              <div className={shaking.has("googleMobile") ? "shake" : ""}>
-                <MobileInput
-                  value={googleNewUserMobile}
-                  onChange={(v) => { setGoogleNewUserMobile(v); setFieldError("googleMobile", isValidIndianMobile(v) ? "" : "Enter a valid 10-digit mobile number"); }}
-                  error={errors.googleMobile}
+          {/* Form body */}
+          <div className="px-6 py-5 flex-1">
+
+            {/* ── GOOGLE NEW USER STEP ── */}
+            {googleStep ? (
+              <form onSubmit={handleGoogleNewUserComplete} className="space-y-3">
+                <button
+                  type="button"
+                  onClick={() => { setGoogleStep(false); setGoogleIdToken(null); setErrors({}); setApiError(""); }}
+                  className="flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-gray-700 transition-colors"
+                >
+                  ← Back
+                </button>
+                <div className="space-y-0.5 mb-2">
+                  <h3 className="text-base font-bold text-gray-900">Almost there!</h3>
+                  <p className="text-xs text-gray-500">Add your mobile and set a password to complete sign-up</p>
+                </div>
+
+                <div className={shaking.has("googleMobile") ? "shake" : ""}>
+                  <MobileInput
+                    value={googleNewUserMobile}
+                    onChange={(v) => { setGoogleNewUserMobile(v); setFieldError("googleMobile", isValidIndianMobile(v) ? "" : "Enter a valid 10-digit mobile number"); }}
+                    error={errors.googleMobile}
+                    disabled={loading}
+                    autoFocus
+                  />
+                </div>
+
+                <PasswordField
+                  placeholder="Create password *"
+                  value={googleNewUserPassword}
+                  show={showGooglePassword}
+                  onToggle={() => setShowGooglePassword(s => !s)}
+                  onChange={(v) => { setGoogleNewUserPassword(v); setFieldError("googlePassword", validatePassword(v)); if (googleNewUserConfirm) setFieldError("googleConfirm", v !== googleNewUserConfirm ? "Passwords do not match" : ""); }}
+                  error={errors.googlePassword}
+                  shaking={shaking.has("googlePassword")}
                   disabled={loading}
-                  autoFocus
+                  fieldCls={fieldCls}
+                  fieldKey="googlePassword"
                 />
-              </div>
 
-              <div>
-                <div className={`relative flex items-center ${shaking.has("googlePassword") ? "shake" : ""}`}>
-                  <span className="absolute left-4 text-gray-400"><Lock className="h-4 w-4" /></span>
-                  <input type={showGooglePassword ? "text" : "password"} placeholder="Create password *"
-                    value={googleNewUserPassword}
-                    onChange={(e) => { setGoogleNewUserPassword(e.target.value); setFieldError("googlePassword", validatePassword(e.target.value)); if (googleNewUserConfirm) setFieldError("googleConfirm", e.target.value !== googleNewUserConfirm ? "Passwords do not match" : ""); }}
-                    disabled={loading}
-                    className={fieldCls("googlePassword", "pl-11 pr-11 py-2.5")}
-                  />
-                  <button type="button" onClick={() => setShowGooglePassword(s => !s)} className="absolute right-4 text-gray-400 hover:text-gray-600">
-                    {showGooglePassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-                {errors.googlePassword && <p className="mt-1 text-xs text-red-500 error-fade" role="alert">{errors.googlePassword}</p>}
-              </div>
+                <PasswordField
+                  placeholder="Confirm password *"
+                  value={googleNewUserConfirm}
+                  show={showGoogleConfirm}
+                  onToggle={() => setShowGoogleConfirm(s => !s)}
+                  onChange={(v) => { setGoogleNewUserConfirm(v); setFieldError("googleConfirm", v !== googleNewUserPassword ? "Passwords do not match" : ""); }}
+                  error={errors.googleConfirm}
+                  shaking={shaking.has("googleConfirm")}
+                  disabled={loading}
+                  fieldCls={fieldCls}
+                  fieldKey="googleConfirm"
+                />
 
-              <div>
-                <div className={`relative flex items-center ${shaking.has("googleConfirm") ? "shake" : ""}`}>
-                  <span className="absolute left-4 text-gray-400"><Lock className="h-4 w-4" /></span>
-                  <input type={showGoogleConfirm ? "text" : "password"} placeholder="Confirm password *"
-                    value={googleNewUserConfirm}
-                    onChange={(e) => { setGoogleNewUserConfirm(e.target.value); setFieldError("googleConfirm", e.target.value !== googleNewUserPassword ? "Passwords do not match" : ""); }}
-                    disabled={loading}
-                    className={fieldCls("googleConfirm", "pl-11 pr-11 py-2.5")}
-                  />
-                  <button type="button" onClick={() => setShowGoogleConfirm(s => !s)} className="absolute right-4 text-gray-400 hover:text-gray-600">
-                    {showGoogleConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-                {errors.googleConfirm && <p className="mt-1 text-xs text-red-500 error-fade" role="alert">{errors.googleConfirm}</p>}
-              </div>
+                {apiError && <ApiError msg={apiError} />}
 
-              {apiError && <p className="text-xs text-red-500 error-fade" role="alert">{apiError}</p>}
+                <PrimaryButton loading={loading} label="Complete Sign Up" loadingLabel="Creating account…" />
+              </form>
 
-              <button type="submit" disabled={loading} className="w-full btn-primary flex items-center justify-center gap-2 disabled:opacity-60">
-                {loading ? "Creating account…" : "Complete Sign Up"}
-                {!loading && <ArrowRight className="h-4 w-4" />}
-              </button>
-            </form>
+            ) : isOtpStep ? (
 
-          ) : isOtpStep ? (
-            <form onSubmit={handleVerifyOtp} className="space-y-5">
-              <button type="button" onClick={() => { setStep("form"); setOtp(""); setApiError(""); }} className="text-xs text-gray-500 hover:text-gray-700 flex items-center gap-1">
-                ← Back
-              </button>
-              <div className="text-center space-y-1">
-                <h3 className="text-lg font-bold text-gray-900">Verify your mobile</h3>
-                <p className="text-sm text-gray-500">OTP sent to <span className="font-semibold text-gray-700">+91 {mobileSummary}</span></p>
-                {demoOtp && (
-                  <p className="text-xs font-medium text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5 inline-block">
-                    Demo mode — use OTP: <span className="font-bold tracking-widest">{demoOtp}</span>
-                  </p>
-                )}
-              </div>
-
-              <OtpInput value={otp} onChange={setOtp} error={errors.otp} autoFocus disabled={loading} />
-
-              {apiError && <p className="text-xs text-red-500 text-center" role="alert">{apiError}</p>}
-
-              <button
-                type="submit"
-                disabled={loading || otp.length !== 6}
-                className="w-full btn-primary flex items-center justify-center gap-2 disabled:opacity-60"
-              >
-                {loading ? "Verifying…" : "Verify & Continue"}
-                {!loading && <ArrowRight className="h-4 w-4" />}
-              </button>
-
-              <p className="text-center text-xs text-gray-500">
-                Didn&apos;t receive it?{" "}
-                {countdown > 0
-                  ? <span className="font-medium text-gray-400">Resend in {countdown}s</span>
-                  : <button type="button" onClick={handleResend} disabled={loading} className="font-semibold" style={{ color: "#1f4f8a" }}>Resend OTP</button>
-                }
-              </p>
-            </form>
-
-          ) : tab === "login" ? (
-
-            /* ── LOGIN FORM ── */
-            loginMode === "password" ? (
-              <form onSubmit={handleLoginWithPassword} className="space-y-4">
-                <p className="text-sm text-gray-500 text-center mb-1">Sign in to your account</p>
-
-                {/* Identifier — email or mobile */}
-                <div>
-                  <div className={`relative flex items-center ${shaking.has("loginIdentifier") ? "shake" : ""}`}>
-                    <span className="absolute left-4 text-gray-400"><UserIcon className="h-4 w-4" /></span>
-                    <input
-                      type="text"
-                      placeholder="Email or mobile number *"
-                      value={loginIdentifier}
-                      onChange={(e) => {
-                        setLoginIdentifier(e.target.value);
-                        setFieldError("loginIdentifier", validateIdentifier(e.target.value));
-                      }}
-                      disabled={loading}
-                      autoFocus
-                      className={fieldCls("loginIdentifier", "pl-11 pr-4 py-2.5")}
-                    />
-                  </div>
-                  {errors.loginIdentifier && (
-                    <p className="mt-1 text-xs text-red-500 error-fade" role="alert">{errors.loginIdentifier}</p>
-                  )}
-                </div>
-
-                {/* Password */}
-                <div>
-                  <div className={`relative flex items-center ${shaking.has("loginPassword") ? "shake" : ""}`}>
-                    <span className="absolute left-4 text-gray-400"><Lock className="h-4 w-4" /></span>
-                    <input
-                      type={showLoginPassword ? "text" : "password"}
-                      placeholder="Password *"
-                      value={loginPassword}
-                      onChange={(e) => {
-                        setLoginPassword(e.target.value);
-                        setFieldError("loginPassword", validateLoginPasswordField(e.target.value));
-                      }}
-                      disabled={loading}
-                      className={fieldCls("loginPassword", "pl-11 pr-11 py-2.5")}
-                    />
-                    <button type="button" onClick={() => setShowLoginPassword((s) => !s)} className="absolute right-4 text-gray-400 hover:text-gray-600">
-                      {showLoginPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
-                  </div>
-                  {errors.loginPassword && (
-                    <p className="mt-1 text-xs text-red-500 error-fade" role="alert">{errors.loginPassword}</p>
-                  )}
-                </div>
-
-                {apiError && <p className="text-xs text-red-500 text-center error-fade" role="alert">{apiError}</p>}
-
-                <button type="submit" disabled={loading} className="w-full btn-primary flex items-center justify-center gap-2 disabled:opacity-60">
-                  {loading ? "Signing in…" : "Sign In"}
-                  {!loading && <ArrowRight className="h-4 w-4" />}
+              /* ── OTP STEP ── */
+              <form onSubmit={handleVerifyOtp} className="space-y-5">
+                <button
+                  type="button"
+                  onClick={() => { setStep("form"); setOtp(""); setApiError(""); }}
+                  className="flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-gray-700 transition-colors"
+                >
+                  ← Back
                 </button>
 
-                <GoogleButton onClick={handleGoogleSignIn} loading={loading} label="Sign in with Google" />
+                <div className="text-center space-y-1.5">
+                  <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-1" style={{ background: "linear-gradient(135deg,#17396f,#2f6f9f)" }}>
+                    <ShieldCheck className="h-7 w-7 text-white" />
+                  </div>
+                  <h3 className="text-lg font-bold text-gray-900">Verify your mobile</h3>
+                  <p className="text-sm text-gray-500">OTP sent to <span className="font-semibold text-gray-700">+91 {mobileSummary}</span></p>
+                  {demoOtp && (
+                    <p className="text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5 inline-block">
+                      Demo mode — use OTP: <span className="font-bold tracking-widest">{demoOtp}</span>
+                    </p>
+                  )}
+                </div>
 
-                <div className="text-center space-y-1">
-                  <p className="text-xs text-gray-500">
-                    Forgot password?{" "}
+                <OtpInput value={otp} onChange={setOtp} error={errors.otp} autoFocus disabled={loading} />
+
+                {apiError && <ApiError msg={apiError} />}
+
+                <PrimaryButton loading={loading} label="Verify & Continue" loadingLabel="Verifying…" disabled={otp.length !== 6} />
+
+                <p className="text-center text-xs text-gray-500">
+                  Didn&apos;t receive it?{" "}
+                  {countdown > 0
+                    ? <span className="font-medium text-gray-400">Resend in {countdown}s</span>
+                    : <button type="button" onClick={handleResend} disabled={loading} className="font-semibold" style={{ color: "#17396f" }}>Resend OTP</button>
+                  }
+                </p>
+              </form>
+
+            ) : tab === "login" ? (
+
+              /* ── LOGIN FORM ── */
+              loginMode === "password" ? (
+                <form onSubmit={handleLoginWithPassword} className="space-y-3.5">
+                  <div className="mb-1">
+                    <h2 className="text-lg font-bold text-gray-900">Welcome back</h2>
+                    <p className="text-xs text-gray-500 mt-0.5">Sign in to continue to your account</p>
+                  </div>
+
+                  {/* Identifier */}
+                  <FormField error={errors.loginIdentifier}>
+                    <div className={`relative ${shaking.has("loginIdentifier") ? "shake" : ""}`}>
+                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+                        <UserIcon className="h-4 w-4" />
+                      </span>
+                      <input
+                        type="text"
+                        placeholder="Email or mobile number *"
+                        value={loginIdentifier}
+                        onChange={(e) => { setLoginIdentifier(e.target.value); setFieldError("loginIdentifier", validateIdentifier(e.target.value)); }}
+                        disabled={loading}
+                        autoFocus
+                        className={fieldCls("loginIdentifier", "pl-10 pr-4 py-3")}
+                      />
+                    </div>
+                  </FormField>
+
+                  {/* Password */}
+                  <PasswordField
+                    placeholder="Password *"
+                    value={loginPassword}
+                    show={showLoginPassword}
+                    onToggle={() => setShowLoginPassword(s => !s)}
+                    onChange={(v) => { setLoginPassword(v); setFieldError("loginPassword", validateLoginPasswordField(v)); }}
+                    error={errors.loginPassword}
+                    shaking={shaking.has("loginPassword")}
+                    disabled={loading}
+                    fieldCls={fieldCls}
+                    fieldKey="loginPassword"
+                  />
+
+                  <div className="flex justify-end">
                     <button
                       type="button"
                       onClick={() => { setLoginMode("otp"); setErrors({}); setApiError(""); }}
-                      className="font-semibold"
-                      style={{ color: "#1f4f8a" }}
+                      className="text-xs font-semibold hover:underline"
+                      style={{ color: "#17396f" }}
                     >
-                      Login with OTP instead
+                      Forgot password? Login with OTP
                     </button>
-                  </p>
-                  <p className="text-xs text-gray-500">
+                  </div>
+
+                  {apiError && <ApiError msg={apiError} />}
+
+                  <PrimaryButton loading={loading} label="Sign In" loadingLabel="Signing in…" />
+
+                  <GoogleButton onClick={handleGoogleSignIn} loading={loading} label="Sign in with Google" />
+
+                  <p className="text-center text-xs text-gray-500 pt-1">
                     Don&apos;t have an account?{" "}
-                    <button type="button" onClick={() => setTab("register")} className="font-semibold" style={{ color: "#1f4f8a" }}>Create one</button>
+                    <button type="button" onClick={() => setTab("register")} className="font-semibold hover:underline" style={{ color: "#17396f" }}>Create one</button>
                   </p>
-                </div>
-              </form>
+                </form>
+              ) : (
+                /* OTP login mode */
+                <form onSubmit={handleLoginSendOtp} className="space-y-3.5">
+                  <div className="mb-1">
+                    <h2 className="text-lg font-bold text-gray-900">Login with OTP</h2>
+                    <p className="text-xs text-gray-500 mt-0.5">We&apos;ll send a one-time password to your mobile</p>
+                  </div>
+
+                  <div className={shaking.has("loginMobile") ? "shake" : ""}>
+                    <MobileInput
+                      value={loginMobile}
+                      onChange={(v) => { setLoginMobile(v); setFieldError("loginMobile", isValidIndianMobile(v) ? "" : "Enter a valid 10-digit mobile number"); }}
+                      error={errors.loginMobile}
+                      disabled={loading}
+                      autoFocus
+                    />
+                  </div>
+
+                  {apiError && <ApiError msg={apiError} />}
+
+                  <PrimaryButton loading={loading} label="Send OTP" loadingLabel="Sending OTP…" />
+
+                  <div className="text-center space-y-1 pt-1">
+                    <p className="text-xs text-gray-500">
+                      <button
+                        type="button"
+                        onClick={() => { setLoginMode("password"); setErrors({}); setApiError(""); }}
+                        className="font-semibold hover:underline"
+                        style={{ color: "#17396f" }}
+                      >
+                        ← Back to password login
+                      </button>
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      Don&apos;t have an account?{" "}
+                      <button type="button" onClick={() => setTab("register")} className="font-semibold hover:underline" style={{ color: "#17396f" }}>Create one</button>
+                    </p>
+                  </div>
+                </form>
+              )
+
             ) : (
-              /* OTP login mode */
-              <form onSubmit={handleLoginSendOtp} className="space-y-4">
-                <p className="text-sm text-gray-500 text-center mb-1">Enter your mobile number to receive an OTP</p>
 
-                <div className={shaking.has("loginMobile") ? "shake" : ""}>
+              /* ── REGISTER FORM ── */
+              <form onSubmit={handleRegisterSubmit} className="space-y-3">
+                <div className="mb-1">
+                  <h2 className="text-lg font-bold text-gray-900">Create your account</h2>
+                  <p className="text-xs text-gray-500 mt-0.5">Fill in your details to get started</p>
+                </div>
+
+                {/* Full name */}
+                <FormField error={errors.regName}>
+                  <div className="relative">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+                      <UserIcon className="h-4 w-4" />
+                    </span>
+                    <input
+                      type="text"
+                      placeholder="Full name *"
+                      value={regName}
+                      onChange={(e) => { setRegName(e.target.value); setFieldError("regName", validateName(e.target.value)); }}
+                      disabled={loading}
+                      autoFocus
+                      className={fieldCls("regName", "pl-10 pr-4 py-3")}
+                    />
+                  </div>
+                </FormField>
+
+                {/* Email */}
+                <FormField error={errors.regEmail}>
+                  <div className="relative">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+                      <Mail className="h-4 w-4" />
+                    </span>
+                    <input
+                      type="email"
+                      placeholder="Email address *"
+                      value={regEmail}
+                      onChange={(e) => { setRegEmail(e.target.value); setFieldError("regEmail", validateEmail(e.target.value)); }}
+                      disabled={loading}
+                      className={fieldCls("regEmail", "pl-10 pr-4 py-3")}
+                    />
+                  </div>
+                </FormField>
+
+                {/* Mobile */}
+                <div className={shaking.has("regMobile") ? "shake" : ""}>
                   <MobileInput
-                    value={loginMobile}
-                    onChange={(v) => {
-                      setLoginMobile(v);
-                      setFieldError("loginMobile", isValidIndianMobile(v) ? "" : "Enter a valid 10-digit mobile number");
-                    }}
-                    error={errors.loginMobile}
+                    value={regMobile}
+                    onChange={(v) => { setRegMobile(v); setFieldError("regMobile", isValidIndianMobile(v) ? "" : "Enter a valid 10-digit mobile number"); }}
+                    error={errors.regMobile}
                     disabled={loading}
-                    autoFocus
                   />
                 </div>
 
-                {apiError && <p className="text-xs text-red-500 error-fade" role="alert">{apiError}</p>}
-
-                <button type="submit" disabled={loading} className="w-full btn-primary flex items-center justify-center gap-2 disabled:opacity-60">
-                  {loading ? "Sending OTP…" : "Send OTP"}
-                  {!loading && <ArrowRight className="h-4 w-4" />}
-                </button>
-
-                <div className="text-center space-y-1">
-                  <p className="text-xs text-gray-500">
-                    <button
-                      type="button"
-                      onClick={() => { setLoginMode("password"); setErrors({}); setApiError(""); }}
-                      className="font-semibold"
-                      style={{ color: "#1f4f8a" }}
-                    >
-                      ← Back to password login
-                    </button>
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    Don&apos;t have an account?{" "}
-                    <button type="button" onClick={() => setTab("register")} className="font-semibold" style={{ color: "#1f4f8a" }}>Create one</button>
-                  </p>
-                </div>
-              </form>
-            )
-
-          ) : (
-
-            /* ── REGISTER FORM ── */
-            <form onSubmit={handleRegisterSubmit} className="space-y-3">
-              <p className="text-sm text-gray-500 text-center mb-1">Fill in your details to get started</p>
-
-              {/* Full name */}
-              <div>
-                <div className="relative flex items-center">
-                  <span className="absolute left-4 text-gray-400"><UserIcon className="h-4 w-4" /></span>
-                  <input
-                    type="text"
-                    placeholder="Full name *"
-                    value={regName}
-                    onChange={(e) => { setRegName(e.target.value); setFieldError("regName", validateName(e.target.value)); }}
-                    disabled={loading}
-                    autoFocus
-                    className={fieldCls("regName", "pl-11 pr-4 py-2.5")}
-                  />
-                </div>
-                {errors.regName && (
-                  <p className="mt-1 text-xs text-red-500 error-fade" role="alert">{errors.regName}</p>
-                )}
-              </div>
-
-              {/* Email */}
-              <div>
-                <div className="relative flex items-center">
-                  <span className="absolute left-4 text-gray-400"><Mail className="h-4 w-4" /></span>
-                  <input
-                    type="email"
-                    placeholder="Email address *"
-                    value={regEmail}
-                    onChange={(e) => { setRegEmail(e.target.value); setFieldError("regEmail", validateEmail(e.target.value)); }}
-                    disabled={loading}
-                    className={fieldCls("regEmail", "pl-11 pr-4 py-2.5")}
-                  />
-                </div>
-                {errors.regEmail && (
-                  <p className="mt-1 text-xs text-red-500 error-fade" role="alert">{errors.regEmail}</p>
-                )}
-              </div>
-
-              {/* Mobile */}
-              <div className={shaking.has("regMobile") ? "shake" : ""}>
-                <MobileInput
-                  value={regMobile}
-                  onChange={(v) => {
-                    setRegMobile(v);
-                    setFieldError("regMobile", isValidIndianMobile(v) ? "" : "Enter a valid 10-digit mobile number");
-                  }}
-                  error={errors.regMobile}
+                {/* Password */}
+                <PasswordField
+                  placeholder="Password *"
+                  value={regPassword}
+                  show={showPassword}
+                  onToggle={() => setShowPassword(s => !s)}
+                  onChange={(v) => { setRegPassword(v); setFieldError("regPassword", validatePassword(v)); if (regConfirmPassword) setFieldError("regConfirmPassword", v !== regConfirmPassword ? "Passwords do not match" : ""); }}
+                  error={errors.regPassword}
+                  shaking={shaking.has("regPassword")}
                   disabled={loading}
+                  fieldCls={fieldCls}
+                  fieldKey="regPassword"
                 />
-              </div>
 
-              {/* Password */}
-              <div>
-                <div className="relative flex items-center">
-                  <span className="absolute left-4 text-gray-400"><Lock className="h-4 w-4" /></span>
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Password *"
-                    value={regPassword}
-                    onChange={(e) => {
-                      setRegPassword(e.target.value);
-                      setFieldError("regPassword", validatePassword(e.target.value));
-                      // Re-validate confirm if it has been touched
-                      if (regConfirmPassword) setFieldError("regConfirmPassword", e.target.value !== regConfirmPassword ? "Passwords do not match" : "");
-                    }}
-                    disabled={loading}
-                    className={fieldCls("regPassword", "pl-11 pr-11 py-2.5")}
-                  />
-                  <button type="button" onClick={() => setShowPassword((s) => !s)} className="absolute right-4 text-gray-400 hover:text-gray-600">
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-                {errors.regPassword && (
-                  <p className="mt-1 text-xs text-red-500 error-fade" role="alert">{errors.regPassword}</p>
-                )}
-              </div>
+                {/* Confirm password */}
+                <PasswordField
+                  placeholder="Confirm password *"
+                  value={regConfirmPassword}
+                  show={showConfirmPassword}
+                  onToggle={() => setShowConfirmPassword(s => !s)}
+                  onChange={(v) => { setRegConfirmPassword(v); setFieldError("regConfirmPassword", v !== regPassword ? "Passwords do not match" : ""); }}
+                  error={errors.regConfirmPassword}
+                  shaking={shaking.has("regConfirmPassword")}
+                  disabled={loading}
+                  fieldCls={fieldCls}
+                  fieldKey="regConfirmPassword"
+                />
 
-              {/* Confirm password */}
-              <div>
-                <div className="relative flex items-center">
-                  <span className="absolute left-4 text-gray-400"><Lock className="h-4 w-4" /></span>
-                  <input
-                    type={showConfirmPassword ? "text" : "password"}
-                    placeholder="Confirm password *"
-                    value={regConfirmPassword}
-                    onChange={(e) => {
-                      setRegConfirmPassword(e.target.value);
-                      setFieldError("regConfirmPassword", e.target.value !== regPassword ? "Passwords do not match" : "");
-                    }}
-                    disabled={loading}
-                    className={fieldCls("regConfirmPassword", "pl-11 pr-11 py-2.5")}
-                  />
-                  <button type="button" onClick={() => setShowConfirmPassword((s) => !s)} className="absolute right-4 text-gray-400 hover:text-gray-600">
-                    {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-                {errors.regConfirmPassword && (
-                  <p className="mt-1 text-xs text-red-500 error-fade" role="alert">{errors.regConfirmPassword}</p>
-                )}
-              </div>
+                {apiError && <ApiError msg={apiError} />}
 
-              {apiError && <p className="text-xs text-red-500" role="alert">{apiError}</p>}
+                <PrimaryButton loading={loading} label="Create Account & Verify" loadingLabel="Creating account…" />
 
-              <button type="submit" disabled={loading} className="w-full btn-primary flex items-center justify-center gap-2 disabled:opacity-60">
-                {loading ? "Creating account…" : "Create Account & Verify"}
-                {!loading && <ArrowRight className="h-4 w-4" />}
-              </button>
+                <GoogleButton onClick={handleGoogleSignIn} loading={loading} label="Sign up with Google" />
 
-              <GoogleButton onClick={handleGoogleSignIn} loading={loading} label="Sign up with Google" />
+                <p className="text-center text-xs text-gray-500 pt-1">
+                  Already have an account?{" "}
+                  <button type="button" onClick={() => setTab("login")} className="font-semibold hover:underline" style={{ color: "#17396f" }}>Sign in</button>
+                </p>
+              </form>
+            )}
+          </div>
 
-              <p className="text-center text-xs text-gray-500">
-                Already have an account?{" "}
-                <button type="button" onClick={() => setTab("login")} className="font-semibold" style={{ color: "#1f4f8a" }}>Sign in</button>
-              </p>
-            </form>
-          )}
+          {/* Footer */}
+          <div className="px-6 pb-5 pt-2 text-center border-t border-gray-100">
+            <p className="text-[11px] text-gray-400">
+              By continuing you agree to our{" "}
+              <Link href="/terms" className="underline hover:text-gray-600 transition-colors">Terms</Link>{" "}
+              &amp;{" "}
+              <Link href="/privacy" className="underline hover:text-gray-600 transition-colors">Privacy Policy</Link>
+            </p>
+          </div>
         </div>
-
-        {/* Footer */}
-        <div className="px-8 pb-5 text-center">
-          <p className="text-[11px] text-gray-400">
-            By continuing you agree to our{" "}
-            <Link href="/terms" className="underline hover:text-gray-600">Terms</Link>{" "}
-            &amp;{" "}
-            <Link href="/privacy" className="underline hover:text-gray-600">Privacy Policy</Link>
-          </p>
-        </div>
-
-        <style jsx>{`
-          .btn-primary {
-            background: linear-gradient(135deg, #17396f 0%, #2f6f9f 52%, #49ad57 100%);
-            color: white;
-            font-weight: 600;
-            font-size: 0.875rem;
-            padding: 0.65rem 1.5rem;
-            border-radius: 9999px;
-            transition: opacity 0.2s, box-shadow 0.2s;
-            border: none;
-            cursor: pointer;
-            box-shadow: 0 8px 22px rgba(23, 57, 111, 0.22);
-          }
-          .btn-primary:hover:not(:disabled) {
-            opacity: 0.95;
-            box-shadow: 0 10px 24px rgba(23, 57, 111, 0.28);
-          }
-
-          @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            15%       { transform: translateX(-6px); }
-            30%       { transform: translateX(6px); }
-            45%       { transform: translateX(-4px); }
-            60%       { transform: translateX(4px); }
-            75%       { transform: translateX(-2px); }
-            90%       { transform: translateX(2px); }
-          }
-          .shake { animation: shake 0.5s ease-in-out; }
-
-          @keyframes errorFadeIn {
-            from { opacity: 0; transform: translateY(-4px); }
-            to   { opacity: 1; transform: translateY(0); }
-          }
-          .error-fade { animation: errorFadeIn 0.2s ease-out; }
-        `}</style>
       </div>
+
+      <style jsx>{`
+        .modal-enter {
+          animation: modalSlideIn 0.25s cubic-bezier(0.16,1,0.3,1);
+        }
+        @keyframes modalSlideIn {
+          from { opacity: 0; transform: scale(0.96) translateY(10px); }
+          to   { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        @keyframes shake {
+          0%, 100% { transform: translateX(0); }
+          15%       { transform: translateX(-6px); }
+          30%       { transform: translateX(6px); }
+          45%       { transform: translateX(-4px); }
+          60%       { transform: translateX(4px); }
+          75%       { transform: translateX(-2px); }
+          90%       { transform: translateX(2px); }
+        }
+        .shake { animation: shake 0.5s ease-in-out; }
+
+        @keyframes errorFadeIn {
+          from { opacity: 0; transform: translateY(-4px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        .error-fade { animation: errorFadeIn 0.2s ease-out; }
+      `}</style>
     </div>
   );
 }
 
-// ── Google button sub-component ───────────────────────────────────────────────
+// ── Sub-components ────────────────────────────────────────────────────────────
+
+function FormField({ children, error }: { children: React.ReactNode; error?: string }) {
+  return (
+    <div>
+      {children}
+      {error && <p className="mt-1 text-xs text-red-500 error-fade flex items-center gap-1" role="alert"><span className="inline-block w-1 h-1 rounded-full bg-red-500 shrink-0" />{error}</p>}
+    </div>
+  );
+}
+
+function PasswordField({
+  placeholder, value, show, onToggle, onChange, error, shaking, disabled, fieldCls, fieldKey,
+}: {
+  placeholder: string; value: string; show: boolean; onToggle: () => void;
+  onChange: (v: string) => void; error?: string; shaking: boolean;
+  disabled: boolean; fieldCls: (f: string, e?: string) => string; fieldKey: string;
+}) {
+  return (
+    <FormField error={error}>
+      <div className={`relative ${shaking ? "shake" : ""}`}>
+        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+          <Lock className="h-4 w-4" />
+        </span>
+        <input
+          type={show ? "text" : "password"}
+          placeholder={placeholder}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          disabled={disabled}
+          className={fieldCls(fieldKey, "pl-10 pr-11 py-3")}
+        />
+        <button
+          type="button"
+          onClick={onToggle}
+          className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+          tabIndex={-1}
+        >
+          {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+        </button>
+      </div>
+    </FormField>
+  );
+}
+
+function PrimaryButton({ loading, label, loadingLabel, disabled }: { loading: boolean; label: string; loadingLabel: string; disabled?: boolean }) {
+  return (
+    <button
+      type="submit"
+      disabled={loading || disabled}
+      className="w-full flex items-center justify-center gap-2 py-3 px-6 rounded-xl text-sm font-semibold text-white transition-all duration-200 disabled:opacity-60"
+      style={{
+        background: "linear-gradient(135deg,#17396f 0%,#2f6f9f 52%,#49ad57 100%)",
+        boxShadow: "0 6px 20px rgba(23,57,111,0.25)",
+      }}
+    >
+      {loading ? (
+        <>
+          <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+          {loadingLabel}
+        </>
+      ) : (
+        <>
+          {label}
+          <ArrowRight className="h-4 w-4" />
+        </>
+      )}
+    </button>
+  );
+}
+
+function ApiError({ msg }: { msg: string }) {
+  return (
+    <div className="flex items-start gap-2 px-3 py-2.5 rounded-lg text-xs text-red-600 error-fade" style={{ background: "#fef2f2", border: "1px solid #fecaca" }} role="alert">
+      <span className="inline-block w-1.5 h-1.5 rounded-full bg-red-500 shrink-0 mt-1" />
+      {msg}
+    </div>
+  );
+}
 
 function GoogleButton({ onClick, loading, label }: { onClick: () => void; loading: boolean; label: string }) {
   return (
     <>
-      <div className="flex items-center gap-3 my-1">
-        <div className="flex-1 h-px bg-gray-200" />
-        <span className="text-xs text-gray-400 font-medium">or</span>
-        <div className="flex-1 h-px bg-gray-200" />
+      <div className="flex items-center gap-3">
+        <div className="flex-1 h-px bg-gray-100" />
+        <span className="text-xs text-gray-400 font-medium">or continue with</span>
+        <div className="flex-1 h-px bg-gray-100" />
       </div>
       <button
         type="button"
         onClick={onClick}
         disabled={loading}
-        className="w-full flex items-center justify-center gap-3 py-2.5 px-4 rounded-full border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-60"
-        style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.08)" }}
+        className="w-full flex items-center justify-center gap-3 py-2.5 px-4 rounded-xl border text-sm font-medium text-gray-700 transition-all duration-200 disabled:opacity-60 hover:bg-gray-50"
+        style={{ borderColor: "#e2e8f0", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}
       >
-        {/* Google "G" logo */}
         <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
           <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
           <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>

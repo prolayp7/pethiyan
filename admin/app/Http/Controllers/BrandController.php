@@ -11,6 +11,7 @@ use App\Http\Requests\Brand\UpdateBrandRequest;
 use App\Http\Resources\BrandResource;
 use App\Models\Brand;
 use App\Models\Seller;
+use App\Services\ImageWebpService;
 use App\Traits\ChecksPermissions;
 use App\Traits\PanelAware;
 use App\Types\Api\ApiResponseType;
@@ -86,7 +87,13 @@ class BrandController extends Controller
             }
             $brand = Brand::create($validated);
             if ($request->hasFile('logo')) {
-                $brand->addMediaFromRequest('logo')->toMediaCollection('brand');
+                $converted = ImageWebpService::convert($request->file('logo'));
+                $brand->addMedia($converted['path'])
+                    ->usingFileName($converted['filename'])
+                    ->toMediaCollection('brand');
+                if ($converted['isWebp']) {
+                    @unlink($converted['path']);
+                }
             }
             return ApiResponseType::sendJsonResponse(success: true, message: 'labels.brand_created_successfully', data: $brand, status: 201);
         } catch (ValidationException $e) {
@@ -130,13 +137,16 @@ class BrandController extends Controller
             }
             $brand->update($validated);
             if ($request->hasFile('logo')) {
-                $newImageFile = $request->file('logo');
+                $converted     = ImageWebpService::convert($request->file('logo'));
                 $existingImage = $brand->getFirstMedia('brand');
 
-                $newImageName = $newImageFile->getClientOriginalName();
-
-                if (!$existingImage || $existingImage->file_name !== $newImageName) {
-                    $brand->addMedia($newImageFile)->toMediaCollection('brand');
+                if (!$existingImage || $existingImage->file_name !== $converted['filename']) {
+                    $brand->addMedia($converted['path'])
+                        ->usingFileName($converted['filename'])
+                        ->toMediaCollection('brand');
+                }
+                if ($converted['isWebp']) {
+                    @unlink($converted['path']);
                 }
             }
             return ApiResponseType::sendJsonResponse(

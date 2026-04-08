@@ -87,6 +87,7 @@ function adapt(p: RealApiProduct): FallbackProduct {
     inStock,
     defaultVariantId: defaultVariant?.id ?? undefined,
     defaultStoreId: pricing?.store_id ?? undefined,
+    category: p.category?.title ?? undefined,
   };
 }
 

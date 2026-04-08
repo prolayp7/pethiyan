@@ -17,9 +17,12 @@ import { NextRequest, NextResponse } from "next/server";
 
 // Tags → paths that should also be force-revalidated when that tag fires
 const TAG_PATH_MAP: Record<string, string[]> = {
-  products:   ["/shop", "/"],
-  categories: ["/shop"],
+  products:            ["/shop", "/", "/new-arrivals"],
+  categories:          ["/shop"],
   "featured-products": ["/"],
+  "new-arrivals":      ["/new-arrivals"],
+  "site-settings":     ["/"],
+  // category-specific tags bust /category/[slug] pages
 };
 
 type RevalidateBody = {

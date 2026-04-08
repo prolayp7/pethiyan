@@ -36,8 +36,7 @@ function EmptyCart() {
       </p>
       <Link
         href="/shop"
-        className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold text-white"
-        style={{ background: "linear-gradient(135deg,#1f4f8a 0%,#0f2f5f 100%)" }}
+        className="btn-brand inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold"
       >
         Start Shopping
         <ArrowRight className="h-4 w-4" />
@@ -306,8 +305,7 @@ export default function CartPage() {
                     <button
                       onClick={handleApplyCoupon}
                       disabled={!couponCode.trim() || couponLoading}
-                      className="px-4 py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                      style={{ background: "linear-gradient(135deg,#1f4f8a 0%,#0f2f5f 100%)" }}
+                      className="btn-brand px-4 py-2.5 rounded-xl text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {couponLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Apply"}
                     </button>
@@ -351,8 +349,7 @@ export default function CartPage() {
               {/* Checkout button */}
               <Link
                 href="/checkout"
-                className="mt-5 w-full flex items-center justify-center gap-2 py-4 rounded-xl text-sm font-bold text-white transition-all hover:-translate-y-0.5 active:translate-y-0"
-                style={{ background: "linear-gradient(135deg,#1f4f8a 0%,#0f2f5f 100%)" }}
+                className="btn-brand mt-5 w-full flex items-center justify-center gap-2 py-4 rounded-xl text-sm font-bold transition-all hover:-translate-y-0.5 active:translate-y-0"
               >
                 Proceed to Checkout
                 <ArrowRight className="h-4 w-4" />

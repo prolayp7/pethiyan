@@ -2,90 +2,24 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Menu, Search, PackageSearch, Heart } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getSystemSettings } from "@/lib/api";
 import SearchBar from "./SearchBar";
 import CartButton from "./CartButton";
 import UserMenu from "./UserMenu";
 import MobileMenu from "./MobileMenu";
 import { useCart } from "@/context/CartContext";
 import { useWishlist } from "@/context/WishlistContext";
-
-const SYSTEM_BRANDING_CACHE_KEY = "system_branding_cache_v1";
-
-type BrandingCache = {
-  appName: string;
-  logo: string;
-};
-
-function getCachedBranding(): BrandingCache {
-  if (typeof window === "undefined") return { appName: "Pethiyan", logo: "/pethiyan-logo.png" };
-  try {
-    const raw = localStorage.getItem(SYSTEM_BRANDING_CACHE_KEY);
-    if (!raw) return { appName: "Pethiyan", logo: "/pethiyan-logo.png" };
-    const cached = JSON.parse(raw) as Partial<BrandingCache>;
-    return {
-      appName: cached.appName || "Pethiyan",
-      logo: cached.logo || "/pethiyan-logo.png",
-    };
-  } catch {
-    return { appName: "Pethiyan", logo: "/pethiyan-logo.png" };
-  }
-}
+import { useSiteSettings } from "@/context/SiteSettingsContext";
 
 export default function MainHeader() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
-  // Keep SSR and initial client render identical to avoid hydration mismatch.
-  const [appName, setAppName] = useState("Pethiyan");
-  const [headerLogo, setHeaderLogo] = useState("/pethiyan-logo.png");
   const { openCart } = useCart();
   const { count: wishlistCount } = useWishlist();
-
-  useEffect(() => {
-    const handleScroll = () => setIsScrolled(window.scrollY > 8);
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
-  useEffect(() => {
-    let mounted = true;
-
-    // Hydration-safe: read cache only after mount.
-    Promise.resolve().then(() => {
-      if (!mounted) return;
-      const cached = getCachedBranding();
-      if (cached.appName) setAppName(cached.appName);
-      if (cached.logo) setHeaderLogo(cached.logo);
-    });
-
-    (async () => {
-      const system = await getSystemSettings();
-      if (!mounted || !system) return;
-
-      if (system.appName) setAppName(system.appName);
-      if (system.logo) setHeaderLogo(system.logo);
-
-      try {
-        localStorage.setItem(
-          SYSTEM_BRANDING_CACHE_KEY,
-          JSON.stringify({
-            appName: system.appName || "Pethiyan",
-            logo: system.logo || "/pethiyan-logo.png",
-          } satisfies BrandingCache)
-        );
-      } catch {
-        // ignore storage quota/private mode issues
-      }
-    })();
-
-    return () => {
-      mounted = false;
-    };
-  }, []);
+  const { appName, logo } = useSiteSettings();
 
   return (
     <>
@@ -114,26 +48,24 @@ export default function MainHeader() {
                 className="flex items-center"
                 aria-label={`${appName} — Home`}
               >
-                <div className="relative" style={{ width: 160, height: 52 }}>
-                  <Image
-                    src={headerLogo}
-                    alt={appName}
-                    fill
-                    className="object-contain object-left"
-                    onError={() => setHeaderLogo("/pethiyan-logo.png")}
-                    unoptimized
-                    priority
-                  />
-                </div>
+                {logo ? (
+                  <div className="relative" style={{ width: 160, height: 52 }}>
+                    <Image
+                      src={logo}
+                      alt={appName}
+                      fill
+                      className="object-contain object-left"
+                      unoptimized
+                      priority
+                    />
+                  </div>
+                ) : (
+                  <span className="text-xl font-extrabold text-(--color-secondary)">{appName}</span>
+                )}
               </Link>
             </div>
 
             {/* ── CENTER: Search bar — absolutely centered ── */}
-            {/*
-              pointer-events-none on the overlay so it never blocks
-              the logo or icon buttons underneath.
-              pointer-events-auto re-enables it on the actual search box.
-            */}
             <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 justify-center pointer-events-none hidden md:flex">
               <div className="w-full max-w-xl lg:max-w-4xl pl-6 pr-10 pointer-events-auto">
                 <SearchBar />

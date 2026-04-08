@@ -4,6 +4,8 @@ import "./globals.css";
 import { CartProvider } from "@/context/CartContext";
 import { AuthProvider } from "@/context/AuthContext";
 import { WishlistProvider } from "@/context/WishlistContext";
+import { SiteSettingsProvider } from "@/context/SiteSettingsContext";
+import { getSystemSettings } from "@/lib/api";
 import CartDrawer from "@/components/ui/CartDrawer";
 import TopAnnouncementBar from "@/components/headers/TopAnnouncementBar";
 import OfferTicker from "@/components/headers/OfferTicker";
@@ -89,13 +91,14 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   const orgSchema = organizationSchema();
   const siteSchema = websiteSchema();
+  const siteSettings = (await getSystemSettings()) ?? { appName: "Pethiyan", logo: null, favicon: null };
 
   return (
     <html lang="en" className={inter.variable} suppressHydrationWarning>
@@ -109,6 +112,7 @@ export default function RootLayout({
 
         {/* App root — explicit z:0 stacking context so portal-root always wins */}
         <div id="app-root" style={{ isolation: "isolate", position: "relative", zIndex: 0 }}>
+        <SiteSettingsProvider settings={siteSettings}>
         <AuthProvider>
           <WishlistProvider>
             <CartProvider>
@@ -164,6 +168,7 @@ export default function RootLayout({
             </CartProvider>
           </WishlistProvider>
         </AuthProvider>
+        </SiteSettingsProvider>
         </div>{/* /app-root */}
       </body>
     </html>

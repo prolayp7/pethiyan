@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\HeroSlide;
 use App\Models\HeroTrustBadge;
 use App\Models\Setting;
+use App\Services\ImageWebpService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
@@ -52,7 +53,19 @@ class HeroSectionController extends Controller
         $data['is_active']  = $request->boolean('is_active', true);
 
         if ($request->hasFile('image')) {
-            $data['image'] = $request->file('image')->store('hero-slides', 'public');
+            $converted = ImageWebpService::convert($request->file('image'));
+            $stored    = Storage::disk('public')->put('hero-slides', new \Illuminate\Http\File($converted['path']), ['visibility' => 'public']);
+            // Rename to use the WebP filename derived from conversion
+            $dir      = dirname($stored);
+            $target   = $dir . '/' . $converted['filename'];
+            if ($stored !== $target) {
+                Storage::disk('public')->move($stored, $target);
+                $stored = $target;
+            }
+            $data['image'] = $stored;
+            if ($converted['isWebp']) {
+                @unlink($converted['path']);
+            }
         }
 
         $slide = HeroSlide::create($data);
@@ -88,7 +101,18 @@ class HeroSectionController extends Controller
             if ($slide->image && !str_starts_with($slide->image, 'http')) {
                 Storage::disk('public')->delete($slide->image);
             }
-            $data['image'] = $request->file('image')->store('hero-slides', 'public');
+            $converted = ImageWebpService::convert($request->file('image'));
+            $stored    = Storage::disk('public')->put('hero-slides', new \Illuminate\Http\File($converted['path']), ['visibility' => 'public']);
+            $dir      = dirname($stored);
+            $target   = $dir . '/' . $converted['filename'];
+            if ($stored !== $target) {
+                Storage::disk('public')->move($stored, $target);
+                $stored = $target;
+            }
+            $data['image'] = $stored;
+            if ($converted['isWebp']) {
+                @unlink($converted['path']);
+            }
         }
 
         $slide->update($data);

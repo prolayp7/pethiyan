@@ -115,10 +115,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function useAuth() {
+const AUTH_DEFAULTS: AuthContextType = {
+  user: null,
+  token: null,
+  isLoggedIn: false,
+  isLoading: true,
+  login: () => {},
+  logout: () => {},
+  updateUser: () => {},
+};
+
+export function useAuth(): AuthContextType {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
-  return context;
+  // During SSR the AuthProvider hasn't mounted yet — return safe defaults
+  // so server rendering succeeds. The client hydration will supply real values.
+  return context ?? AUTH_DEFAULTS;
 }

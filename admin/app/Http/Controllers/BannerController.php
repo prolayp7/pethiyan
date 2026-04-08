@@ -11,6 +11,7 @@ use App\Enums\SpatieMediaCollectionName;
 use App\Http\Requests\Banner\StoreUpdateBannerRequest;
 use App\Models\Banner;
 use App\Models\Category;
+use App\Services\ImageWebpService;
 use App\Traits\ChecksPermissions;
 use App\Traits\PanelAware;
 use App\Types\Api\ApiResponseType;
@@ -128,7 +129,13 @@ class BannerController extends Controller
 
             // Handle media uploads if present
             if ($request->hasFile('banner_image')) {
-                $banner->addMediaFromRequest('banner_image')->toMediaCollection(SpatieMediaCollectionName::BANNER_IMAGE());
+                $converted = ImageWebpService::convert($request->file('banner_image'));
+                $banner->addMedia($converted['path'])
+                    ->usingFileName($converted['filename'])
+                    ->toMediaCollection(SpatieMediaCollectionName::BANNER_IMAGE());
+                if ($converted['isWebp']) {
+                    @unlink($converted['path']);
+                }
             }
             DB::commit();
 
@@ -248,12 +255,16 @@ class BannerController extends Controller
 
             // Handle media uploads
             if ($request->hasFile('banner_image')) {
-                $newImageFile = $request->file('banner_image');
+                $converted     = ImageWebpService::convert($request->file('banner_image'));
                 $existingImage = $banner->getFirstMedia('banner');
 
-                $newImageName = $newImageFile->getClientOriginalName();
-                if (!$existingImage || $existingImage->file_name !== $newImageName) {
-                    $banner->addMedia($newImageFile)->toMediaCollection(SpatieMediaCollectionName::BANNER_IMAGE());
+                if (!$existingImage || $existingImage->file_name !== $converted['filename']) {
+                    $banner->addMedia($converted['path'])
+                        ->usingFileName($converted['filename'])
+                        ->toMediaCollection(SpatieMediaCollectionName::BANNER_IMAGE());
+                }
+                if ($converted['isWebp']) {
+                    @unlink($converted['path']);
                 }
             }
 

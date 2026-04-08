@@ -259,6 +259,8 @@ class ProductApiController extends Controller
     #[QueryParameter('page', description: 'Page number for pagination.', type: 'int', default: 1, example: 1)]
     #[QueryParameter('perPage', description: 'Products Per Page.', type: 'int', default: 20, example: 20)]
     #[QueryParameter('search', description: 'Search by product title, slug, tags, and description.', type: 'string', example: 'tape')]
+    #[QueryParameter('categories', description: 'Comma-separated list of category slugs to filter products', type: 'string', example: 'tape,ziplock-bags')]
+    #[QueryParameter('include_child_categories', description: 'Include child category products', type: 'boolean', default: false)]
     #[QueryParameter('customer_state_code', description: 'Optional customer state code for GST split (intra/inter).', type: 'string', example: 'TN')]
     public function getAllProduct(Request $request): JsonResponse
     {
@@ -269,6 +271,8 @@ class ProductApiController extends Controller
                 'per_page' => 'nullable|integer|min:1|max:100',
                 'perpage' => 'nullable|integer|min:1|max:100',
                 'search' => 'nullable|string|max:255',
+                'categories' => 'nullable|string',
+                'include_child_categories' => 'nullable|boolean',
                 'customer_state_code' => 'nullable|string|max:10',
             ]);
 
@@ -293,6 +297,22 @@ class ProductApiController extends Controller
                         ]);
                     },
                 ]);
+
+            // Category filter
+            if (!empty($validated['categories'])) {
+                $categorySlugs = array_filter(array_map('trim', explode(',', $validated['categories'])));
+                $categoryIds = Category::whereIn('slug', $categorySlugs)->pluck('id')->toArray();
+
+                if (!empty($validated['include_child_categories'])) {
+                    $allIds = $categoryIds;
+                    foreach ($categoryIds as $cid) {
+                        $allIds = array_merge($allIds, Product::getAllChildCategoryIds($cid));
+                    }
+                    $categoryIds = array_unique($allIds);
+                }
+
+                $query->whereIn('category_id', $categoryIds);
+            }
 
             if ($search !== '') {
                 $query->where(function ($searchQuery) use ($search) {
@@ -388,6 +408,70 @@ class ProductApiController extends Controller
             Log::error('Featured products catalog API failed.', [
                 'message' => $e->getMessage(),
             ]);
+            return ApiResponseType::sendJsonResponse(
+                success: false,
+                message: 'labels.error_fetching_products',
+                data: [],
+            );
+        }
+    }
+
+    /**
+     * Get newly added products ordered by creation date.
+     */
+    #[QueryParameter('days', description: 'How many days back to look for new arrivals', type: 'int', default: 30, example: 30)]
+    #[QueryParameter('limit', description: 'Maximum number of products to return', type: 'int', default: 20, example: 20)]
+    #[QueryParameter('customer_state_code', description: 'Customer state code for GST calculation', type: 'string', example: 'TN')]
+    public function getNewArrivals(Request $request): JsonResponse
+    {
+        try {
+            $validated = $request->validate([
+                'days'                => ['nullable', 'integer', 'min:1', 'max:365'],
+                'limit'               => ['nullable', 'integer', 'min:1', 'max:100'],
+                'customer_state_code' => 'nullable|string|max:10',
+            ]);
+
+            $days  = (int) ($validated['days']  ?? 30);
+            $limit = (int) ($validated['limit'] ?? 20);
+
+            $products = Product::query()
+                ->where('verification_status', ProductVarificationStatusEnum::APPROVED->value)
+                ->where('status', ProductStatusEnum::ACTIVE->value)
+                ->where('created_at', '>=', now()->subDays($days))
+                ->with([
+                    'category:id,title,slug',
+                    'brand:id,title,slug',
+                    'taxClasses:id,title',
+                    'taxClasses.taxRates:id,title,rate',
+                    'variants' => function ($variantQuery) {
+                        $variantQuery->with([
+                            'attributes.attribute:id,title,slug',
+                            'attributes.attributeValue:id,title,swatche_value',
+                            'storeProductVariants' => function ($spvQuery) {
+                                $spvQuery->with('store:id,name,slug,state_code,state_name');
+                            },
+                        ]);
+                    },
+                ])
+                ->orderByDesc('created_at')
+                ->limit($limit)
+                ->get()
+                ->map(fn($product) => new ProductCatalogResource($product))
+                ->values();
+
+            return ApiResponseType::sendJsonResponse(
+                success: true,
+                message: 'labels.product_fetched_successfully',
+                data: $products
+            );
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return ApiResponseType::sendJsonResponse(
+                success: false,
+                message: 'labels.validation_error',
+                data: $e->errors()
+            );
+        } catch (\Exception $e) {
+            Log::error('New arrivals API failed.', ['message' => $e->getMessage()]);
             return ApiResponseType::sendJsonResponse(
                 success: false,
                 message: 'labels.error_fetching_products',
