@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback, useTransition } from "react";
+import { useState, useEffect, useCallback, useTransition, useMemo } from "react";
 import {
-  Search, SlidersHorizontal, X, ChevronDown, Package,
+  Search, SlidersHorizontal, X, ChevronDown, ChevronRight, Package,
 } from "lucide-react";
 import Container from "@/components/layout/Container";
 import Breadcrumb from "@/components/common/Breadcrumb";
@@ -13,7 +13,7 @@ import {
 } from "@/lib/api";
 
 const SORT_OPTIONS = [
-  { label: "Featured",          value: "featured"   },
+  { label: "Featured",           value: "featured"   },
   { label: "Price: Low to High", value: "price-asc"  },
   { label: "Price: High to Low", value: "price-desc" },
   { label: "Top Rated",          value: "rating"     },
@@ -37,22 +37,87 @@ function sortProducts(products: RealApiProduct[], sort: string): RealApiProduct[
   }
 }
 
+// ── Checkbox component with brand accent ──────────────────────────────────────
+function CategoryCheckbox({
+  id, label, checked, onChange, count, indent = false,
+}: {
+  id: string;
+  label: string;
+  checked: boolean;
+  onChange: () => void;
+  count?: number;
+  indent?: boolean;
+}) {
+  return (
+    <label
+      htmlFor={id}
+      className={`flex items-center gap-2.5 py-1.5 cursor-pointer group ${indent ? "pl-5" : ""}`}
+    >
+      <input
+        id={id}
+        type="checkbox"
+        checked={checked}
+        onChange={onChange}
+        className="sr-only"
+      />
+      {/* Custom checkbox */}
+      <span
+        className={`flex-shrink-0 h-4 w-4 rounded border-2 flex items-center justify-center transition-all ${
+          checked
+            ? "border-transparent"
+            : "border-gray-300 group-hover:border-[#2f6f9f]"
+        }`}
+        style={checked ? { background: "linear-gradient(135deg,#17396f 0%,#2f6f9f 52%,#49ad57 100%)" } : undefined}
+        aria-hidden="true"
+      >
+        {checked && (
+          <svg className="h-2.5 w-2.5 text-white" viewBox="0 0 12 12" fill="none">
+            <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        )}
+      </span>
+      <span className={`text-sm leading-tight flex-1 ${checked ? "text-[#17396f] font-semibold" : "text-gray-600 group-hover:text-gray-900"} transition-colors`}>
+        {label}
+      </span>
+      {count !== undefined && (
+        <span className="text-[10px] text-gray-400 tabular-nums">{count}</span>
+      )}
+    </label>
+  );
+}
+
 interface Props {
   initialProducts: RealApiProduct[];
   initialCategories: ApiCategory[];
+  initialSubCategories: ApiCategory[];
 }
 
-export default function ShopClient({ initialProducts, initialCategories }: Props) {
+export default function ShopClient({ initialProducts, initialCategories, initialSubCategories }: Props) {
   const [products, setProducts]           = useState<RealApiProduct[]>(initialProducts);
   const [searchLoading, setSearchLoading] = useState(false);
   const [, startTransition]               = useTransition();
 
   const [search,          setSearch]          = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
+  const [selectedIds,     setSelectedIds]     = useState<Set<number>>(new Set());
+  const [expandedCats,    setExpandedCats]    = useState<Set<number>>(new Set());
   const [sort,    setSort]    = useState("featured");
   const [priceMax, setPriceMax] = useState<number>(INR_MAX);
   const [filtersOpen, setFiltersOpen] = useState(false);
+
+  // Build nested structure: parent categories + their sub-categories
+  const categoryTree = useMemo(() => {
+    return initialCategories.map((cat) => ({
+      ...cat,
+      children: initialSubCategories.filter((s) => s.parent_id === cat.id),
+    }));
+  }, [initialCategories, initialSubCategories]);
+
+  // Orphan sub-categories (parent not in initialCategories)
+  const orphanSubs = useMemo(() => {
+    const parentIds = new Set(initialCategories.map((c) => c.id));
+    return initialSubCategories.filter((s) => s.parent_id == null || !parentIds.has(s.parent_id));
+  }, [initialCategories, initialSubCategories]);
 
   // Debounce search input
   useEffect(() => {
@@ -60,7 +125,7 @@ export default function ShopClient({ initialProducts, initialCategories }: Props
     return () => clearTimeout(t);
   }, [search]);
 
-  // Search API call (user-triggered, always fresh)
+  // Search API call
   useEffect(() => {
     if (!debouncedSearch.trim()) {
       setProducts(initialProducts);
@@ -81,14 +146,39 @@ export default function ShopClient({ initialProducts, initialCategories }: Props
     setProducts(initialProducts);
   }, [initialProducts]);
 
+  const toggleId = useCallback((id: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const toggleExpand = useCallback((id: number) => {
+    setExpandedCats((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const resetFilters = useCallback(() => {
+    setSelectedIds(new Set());
+    setPriceMax(INR_MAX);
+  }, []);
+
   const filtered = sortProducts(
     products.filter((p) => {
       if (priceMax < INR_MAX && getPrice(p) > priceMax) return false;
-      if (selectedCategory && p.category?.id !== selectedCategory) return false;
+      if (selectedIds.size > 0 && !selectedIds.has(p.category?.id ?? -1)) return false;
       return true;
     }),
     sort
   );
+
+  const hasActiveFilters = selectedIds.size > 0 || priceMax < INR_MAX;
 
   return (
     <div className="min-h-screen bg-(--background)">
@@ -123,7 +213,7 @@ export default function ShopClient({ initialProducts, initialCategories }: Props
           <aside
             className={`
               fixed inset-y-0 left-0 z-50 w-72 bg-white overflow-y-auto transform transition-transform duration-300 shadow-2xl
-              lg:static lg:z-auto lg:w-56 lg:min-w-56 lg:shadow-none lg:transform-none lg:translate-x-0 lg:overflow-visible lg:bg-transparent
+              lg:static lg:z-auto lg:w-60 lg:min-w-60 lg:shadow-none lg:transform-none lg:translate-x-0 lg:overflow-visible lg:bg-transparent
               ${filtersOpen ? "translate-x-0" : "-translate-x-full"}
             `}
             aria-label="Product filters"
@@ -137,45 +227,91 @@ export default function ShopClient({ initialProducts, initialCategories }: Props
                 </button>
               </div>
 
-              {/* Category filter */}
+              {/* ── Category filter ── */}
               <div>
                 <h3 className="text-xs font-bold text-(--color-secondary) uppercase tracking-wider mb-3">
                   Category
                 </h3>
-                <ul className="space-y-0.5">
-                  <li>
-                    <button
-                      onClick={() => setSelectedCategory(null)}
-                      className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
-                        selectedCategory === null
-                          ? "btn-brand font-semibold"
-                          : "text-gray-600 hover:bg-(--color-muted)"
-                      }`}
-                    >
-                      All Categories
-                    </button>
-                  </li>
-                  {initialCategories.map((cat) => (
-                    <li key={cat.id}>
-                      <button
-                        onClick={() => { setSelectedCategory(cat.id); setFiltersOpen(false); }}
-                        className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
-                          selectedCategory === cat.id
-                            ? "btn-brand font-semibold"
-                            : "text-gray-600 hover:bg-(--color-muted)"
-                        }`}
-                      >
-                        {cat.name}
-                      </button>
-                    </li>
-                  ))}
-                  {initialCategories.length === 0 && (
-                    <li className="text-xs text-gray-400 px-3 py-2">No categories found</li>
-                  )}
-                </ul>
+
+                {initialCategories.length === 0 && initialSubCategories.length === 0 ? (
+                  <p className="text-xs text-gray-400 py-1">No categories found</p>
+                ) : (
+                  <div className="space-y-0.5">
+                    {categoryTree.map((cat) => {
+                      const hasSubs = cat.children.length > 0;
+                      const expanded = expandedCats.has(cat.id);
+                      return (
+                        <div key={cat.id}>
+                          {/* Parent row */}
+                          <div className="flex items-center">
+                            <div className="flex-1">
+                              <CategoryCheckbox
+                                id={`cat-${cat.id}`}
+                                label={cat.title}
+                                checked={selectedIds.has(cat.id)}
+                                onChange={() => toggleId(cat.id)}
+                                count={cat.product_count}
+                              />
+                            </div>
+                            {hasSubs && (
+                              <button
+                                onClick={() => toggleExpand(cat.id)}
+                                className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+                                aria-label={expanded ? "Collapse subcategories" : "Expand subcategories"}
+                              >
+                                {expanded
+                                  ? <ChevronDown className="h-3.5 w-3.5" />
+                                  : <ChevronRight className="h-3.5 w-3.5" />}
+                              </button>
+                            )}
+                          </div>
+
+                          {/* Sub-categories */}
+                          {hasSubs && expanded && (
+                            <div className="mt-0.5 border-l-2 border-gray-100 ml-2 space-y-0.5">
+                              {cat.children.map((sub) => (
+                                <CategoryCheckbox
+                                  key={sub.id}
+                                  id={`cat-${sub.id}`}
+                                  label={sub.title}
+                                  checked={selectedIds.has(sub.id)}
+                                  onChange={() => toggleId(sub.id)}
+                                  count={sub.product_count}
+                                  indent
+                                />
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+
+                    {/* Orphan sub-categories (no matched parent) */}
+                    {orphanSubs.map((sub) => (
+                      <CategoryCheckbox
+                        key={sub.id}
+                        id={`cat-${sub.id}`}
+                        label={sub.title}
+                        checked={selectedIds.has(sub.id)}
+                        onChange={() => toggleId(sub.id)}
+                        count={sub.product_count}
+                      />
+                    ))}
+                  </div>
+                )}
+
+                {/* Selected summary */}
+                {selectedIds.size > 0 && (
+                  <button
+                    onClick={() => setSelectedIds(new Set())}
+                    className="mt-2 text-[11px] text-[#2f6f9f] hover:text-[#17396f] transition-colors"
+                  >
+                    Clear ({selectedIds.size} selected)
+                  </button>
+                )}
               </div>
 
-              {/* Price range */}
+              {/* ── Price range ── */}
               <div>
                 <h3 className="text-xs font-bold text-(--color-secondary) uppercase tracking-wider mb-3">
                   Max Price
@@ -198,9 +334,9 @@ export default function ShopClient({ initialProducts, initialCategories }: Props
               </div>
 
               {/* Reset */}
-              {(selectedCategory !== null || priceMax < INR_MAX) && (
+              {hasActiveFilters && (
                 <button
-                  onClick={() => { setSelectedCategory(null); setPriceMax(INR_MAX); }}
+                  onClick={resetFilters}
                   className="w-full text-center text-sm text-red-500 hover:text-red-700 transition-colors py-2 border border-red-200 rounded-lg hover:bg-red-50"
                 >
                   Reset Filters
@@ -236,6 +372,12 @@ export default function ShopClient({ initialProducts, initialCategories }: Props
               >
                 <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
                 Filters
+                {hasActiveFilters && (
+                  <span className="ml-1 h-5 w-5 rounded-full text-white text-[10px] font-bold flex items-center justify-center"
+                    style={{ background: "linear-gradient(135deg,#17396f,#49ad57)" }}>
+                    {selectedIds.size + (priceMax < INR_MAX ? 1 : 0)}
+                  </span>
+                )}
               </button>
 
               <div className="relative">

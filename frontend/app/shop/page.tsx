@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getProducts, getCategories, type RealApiProduct } from "@/lib/api";
+import { getProducts, getCategories, getSubCategories, type RealApiProduct } from "@/lib/api";
 import ShopClient from "./ShopClient";
 
 export const metadata: Metadata = {
@@ -12,10 +12,17 @@ export const metadata: Metadata = {
 export const revalidate = 300;
 
 export default async function ShopPage() {
-  const [products, categories] = await Promise.all([
+  const [products, categories, subCategories] = await Promise.all([
     getProducts() as Promise<RealApiProduct[]>,
     getCategories(),
+    getSubCategories(),
   ]);
 
-  return <ShopClient initialProducts={products} initialCategories={categories} />;
+  return (
+    <ShopClient
+      initialProducts={products}
+      initialCategories={categories}
+      initialSubCategories={subCategories}
+    />
+  );
 }
