@@ -11,7 +11,11 @@ export interface ApiCategory {
   name: string;   // mapped from title for backwards compat
   title: string;
   slug: string;
+  description?: string;
   image?: string;
+  background_color?: string;
+  background_type?: string;
+  font_color?: string;
   parent_id?: number | null;
   subcategory_count?: number;
   product_count?: number;

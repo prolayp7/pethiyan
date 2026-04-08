@@ -159,22 +159,26 @@
                                     </div>
 
                                     <div class="mb-3" id="background-color-field" style="display: none;">
-                                        <label class="form-label required">{{ __('labels.background_color') }}</label>
-                                        <input type="color" class="form-control form-control-color w-100"
-                                               name="background_color" id="background-color-input"/>
+                                        <label class="form-label">{{ __('labels.background_color') }}</label>
+                                        <input type="text" class="form-control" name="background_color"
+                                               id="background-color-input" placeholder="#ffffff"
+                                               pattern="^#[0-9A-Fa-f]{6}$"/>
+                                        <small class="form-text text-muted">Hex color code e.g. #ffffff</small>
                                     </div>
 
                                     <div class="mb-3">
                                         <label class="form-label">{{ __('labels.font_color') }}</label>
-                                        <input type="color" class="form-control form-control-color w-100" name="font_color"
-                                               id="font-color-input"/>
+                                        <input type="text" class="form-control" name="font_color"
+                                               id="font-color-input" placeholder="#000000"
+                                               pattern="^#[0-9A-Fa-f]{6}$"/>
+                                        <small class="form-text text-muted">Hex color code e.g. #000000 (optional)</small>
                                     </div>
 
                                     <div class="mb-3">
                                         <label class="form-label">{{ __('labels.commission') }}</label>
                                         <input type="number" class="form-control" name="commission" id="commission"
                                                placeholder="{{ __('labels.commission_placeholder') }}" step="0.01" min="0"
-                                               max="100" value="0"/>
+                                               max="100"/>
                                         <small class="form-text text-muted">Enter commission percentage (0-100)</small>
                                     </div>
 
@@ -187,14 +191,6 @@
                                                        for="status-switch">{{ __('labels.status') }}</label>
                                             </div>
                                         </div>
-                                        <div class="col-6">
-                                            <div class="mb-3 form-check form-switch">
-                                                <input class="form-check-input" type="checkbox" name="requires_approval"
-                                                       id="approval-switch" value="1" checked>
-                                                <label class="form-check-label"
-                                                       for="approval-switch">{{ __('labels.requires_approval') }}</label>
-                                            </div>
-                                        </div>
                                     </div>
                                 </div>
 
@@ -204,7 +200,7 @@
                                         <h6 class="mb-3 text-muted fw-semibold text-uppercase" style="font-size: .7rem; letter-spacing: .05em;">Media &amp; Images</h6>
 
                                         <div class="mb-3">
-                                            <label class="form-label required">{{ __('labels.image') }}</label>
+                                            <label class="form-label">{{ __('labels.image') }}</label>
                                             <input type="file" class="form-control" id="image-upload" name="image"
                                                    data-image-url=""/>
                                         </div>
@@ -228,7 +224,7 @@
                                         </div>
 
                                         <div class="mb-0" id="background-image-field" style="display: none;">
-                                            <label class="form-label required">{{ __('labels.background_image') }}</label>
+                                            <label class="form-label">{{ __('labels.background_image') }}</label>
                                             <input type="file" class="form-control" id="background-image-upload"
                                                    name="background_image"
                                                    data-image-url=""/>

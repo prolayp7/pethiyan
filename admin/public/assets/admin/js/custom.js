@@ -39,23 +39,15 @@ document.addEventListener('show.bs.modal', function (event) {
                     form.querySelector('input[id="category-id"]').value = categoryId;
                     form.querySelector('textarea[name="description"]').value = data.description || '';
                     form.querySelector('input[name="status"]').checked = data.status === 'active';
-                    form.querySelector('input[name="requires_approval"]').checked = !!data.requires_approval;
-                    form.querySelector('input[name="commission"]').value = data.commission || 0;
+                    form.querySelector('input[name="commission"]').value = (data.commission !== null && data.commission !== undefined && parseFloat(data.commission) !== 0) ? data.commission : '';
 
                     // Set background fields
                     if (backgroundTypeSelect) {
                         backgroundTypeSelect.value = data.background_type || '';
                         toggleBackgroundFields(data.background_type);
                     }
-                    if (data.background_color) {
-                        form.querySelector('input[name="background_color"]').value = data.background_color;
-                    }
-                    if (data.font_color) {
-                        form.querySelector('input[name="font_color"]').value = data.font_color;
-                    } else {
-
-                        form.querySelector('input[name="font_color"]').value = '#00000';
-                    }
+                    form.querySelector('input[name="background_color"]').value = data.background_color || '';
+                    form.querySelector('input[name="font_color"]').value = data.font_color || '';
 
                     // Set parent_id in TomSelect (auto-select)
                     if (tomSelectInstance) {
@@ -83,31 +75,31 @@ document.addEventListener('show.bs.modal', function (event) {
                         if (data.image !== null && data.image !== undefined && imageUpload && data.image !== '') {
                             const pond = FilePond.find(imageUpload);
                             if (pond) {
-                                pond.addFile(data.image);
+                                pond.addFile(data.image, { type: 'local' });
                             }
                         }
                         if (data.banner !== null && data.banner !== undefined && bannerUpload && data.banner !== '') {
                             const bannerPond = FilePond.find(bannerUpload);
                             if (bannerPond) {
-                                bannerPond.addFile(data.banner);
+                                bannerPond.addFile(data.banner, { type: 'local' });
                             }
                         }
                         if (data.icon !== null && data.icon !== undefined && iconUpload && data.icon !== '') {
                             const iconPond = FilePond.find(iconUpload);
                             if (iconPond) {
-                                iconPond.addFile(data.icon);
+                                iconPond.addFile(data.icon, { type: 'local' });
                             }
                         }
                         if (data.active_icon !== null && data.active_icon !== undefined && activeIconUpload && data.active_icon !== '') {
                             const activeIconPond = FilePond.find(activeIconUpload);
                             if (activeIconPond) {
-                                activeIconPond.addFile(data.active_icon);
+                                activeIconPond.addFile(data.active_icon, { type: 'local' });
                             }
                         }
                         if (data.background_image !== null && data.background_image !== undefined && backgroundImageUpload && data.background_image !== '') {
                             const backgroundImagePond = FilePond.find(backgroundImageUpload);
                             if (backgroundImagePond) {
-                                backgroundImagePond.addFile(data.background_image);
+                                backgroundImagePond.addFile(data.background_image, { type: 'local' });
                             }
                         }
                     }
@@ -138,6 +130,7 @@ document.addEventListener('show.bs.modal', function (event) {
                 toggleBackgroundFields('');
             }
             form.querySelector('input[name="background_color"]').value = '';
+            form.querySelector('input[name="font_color"]').value = '';
 
             // Set action for create
             form.querySelector('input[id="category-id"]').value = "";

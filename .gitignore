@@ -79,6 +79,8 @@ Thumbs.db
 .codex
 .codex/
 .code-review-graph/
+.vscode/
+.idea/
 sample_data/
 email-template-previews/
 invoice-template-previews/

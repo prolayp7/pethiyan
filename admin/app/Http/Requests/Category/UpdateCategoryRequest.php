@@ -53,10 +53,12 @@ class UpdateCategoryRequest extends FormRequest
      */
     protected function prepareForValidation(): void
     {
-        // Set default values
         $this->merge([
-            'status' => $this->status ?? CategoryStatusEnum::INACTIVE->value,
-            'requires_approval' => $this->requires_approval ?? false,
+            'status'            => $this->status ?? CategoryStatusEnum::INACTIVE->value,
+            'requires_approval' => false, // always auto-approved
+            'commission'        => $this->commission !== '' ? $this->commission : null,
+            'background_color'  => $this->background_color ?: null,
+            'font_color'        => $this->font_color ?: null,
         ]);
     }
 }
