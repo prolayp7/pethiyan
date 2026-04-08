@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useMemo } from "react";
 import {
-  Search, SlidersHorizontal, X, ChevronDown, ChevronRight, Package,
+  Search, SlidersHorizontal, X, ChevronDown, ChevronRight, Package, Layers,
 } from "lucide-react";
 import Container from "@/components/layout/Container";
 import Breadcrumb from "@/components/common/Breadcrumb";
@@ -306,12 +306,22 @@ export default function ShopClient({ initialProducts, initialCategories, initial
 
       <div className="bg-white border-b border-(--color-border) py-8">
         <Container>
-          <h1 className="text-3xl sm:text-4xl font-extrabold text-(--color-secondary)">
-            All Products
-          </h1>
-          <p className="mt-1 text-gray-500 text-sm">
-            {filtered.length} product{filtered.length !== 1 ? "s" : ""} found
-          </p>
+          <div className="flex items-center gap-3">
+            <span
+              className="flex items-center justify-center h-10 w-10 rounded-xl shrink-0"
+              style={{ background: "linear-gradient(135deg,#17396f 0%,#2f6f9f 52%,#49ad57 100%)" }}
+            >
+              <Layers className="h-5 w-5 text-white" />
+            </span>
+            <div>
+              <h1 className="text-3xl sm:text-4xl font-extrabold text-(--color-secondary)">
+                All Products
+              </h1>
+              <p className="mt-0.5 text-gray-500 text-sm">
+                {filtered.length} product{filtered.length !== 1 ? "s" : ""} found
+              </p>
+            </div>
+          </div>
         </Container>
       </div>
 
