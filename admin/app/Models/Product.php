@@ -417,7 +417,7 @@ class Product extends Model implements HasMedia
     /**
      * Get all child category IDs recursively
      */
-    private static function getAllChildCategoryIds(int $categoryId): array
+    public static function getAllChildCategoryIds(int $categoryId): array
     {
         $childIds = [];
         $children = Category::where('parent_id', $categoryId)->pluck('id')->toArray();

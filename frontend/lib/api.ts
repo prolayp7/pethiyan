@@ -1524,15 +1524,33 @@ export async function getHeroSection(): Promise<ApiHeroSection | null> {
 
 // ─── Products by category ─────────────────────────────────────────────────────
 
-export async function getProductsByCategory(categorySlug: string): Promise<ApiProduct[]> {
-  const res = await apiFetch<ApiResponse<ApiProduct[]> | ApiProduct[] | PaginatedResponse<ApiProduct>>(
-    `/api/products?category=${encodeURIComponent(categorySlug)}`,
-    { next: { revalidate: 3600 } } as RequestInit
-  );
-  if (!res) return [];
-  if (Array.isArray(res)) return res;
-  if ("data" in res && Array.isArray(res.data)) return res.data;
-  return [];
+export async function getProductsByCategory(categorySlug: string): Promise<RealApiProduct[]> {
+  // Use fetch directly (not apiFetch) so Next.js ISR cache works.
+  // Fix: API expects ?categories= (plural), not ?category=
+  try {
+    const res = await fetch(
+      `${API_BASE}/api/products?categories=${encodeURIComponent(categorySlug)}&per_page=100&include_child_categories=1`,
+      {
+        headers: { Accept: "application/json" },
+        next: { revalidate: 300, tags: ["products", `category-${categorySlug}`] },
+      } as RequestInit
+    );
+    if (!res.ok) return [];
+    const json = await res.json() as {
+      data?: RealApiProduct[] | { data?: RealApiProduct[] };
+    } | RealApiProduct[];
+    if (Array.isArray(json)) return json;
+    if ("data" in json) {
+      const d = json.data;
+      // Paginated wrapper: { data: { data: [...] } }
+      if (d && !Array.isArray(d) && "data" in d && Array.isArray(d.data)) return d.data;
+      // Flat: { data: [...] }
+      if (Array.isArray(d)) return d;
+    }
+    return [];
+  } catch {
+    return [];
+  }
 }
 
 export async function getCategory(slug: string): Promise<ApiCategory | null> {
@@ -1540,7 +1558,11 @@ export async function getCategory(slug: string): Promise<ApiCategory | null> {
     `/api/categories/${slug}`
   );
   if (!res) return null;
-  if ("data" in res && typeof res.data === "object") return res.data as ApiCategory;
-  if ("id" in (res as object)) return res as ApiCategory;
-  return null;
+  const raw = ("data" in res && typeof res.data === "object")
+    ? res.data as ApiCategory
+    : ("id" in (res as object) ? res as ApiCategory : null);
+  if (!raw) return null;
+  // Normalise: API returns `title`, component expects `name`
+  const title = (raw as unknown as Record<string, string>).title ?? raw.name ?? "";
+  return { ...raw, title, name: title };
 }

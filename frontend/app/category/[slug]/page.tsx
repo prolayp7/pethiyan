@@ -1,12 +1,14 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import Image from "next/image";
+import Link from "next/link";
+import { Home, ChevronRight } from "lucide-react";
 import {
   getCategory,
   getCategories,
   getProductsByCategory,
+  type RealApiProduct,
 } from "@/lib/api";
-import Breadcrumb from "@/components/common/Breadcrumb";
 import Container from "@/components/layout/Container";
 import CategoryProducts from "./CategoryProducts";
 import { breadcrumbSchema, jsonLd } from "@/lib/structured-data";
@@ -73,15 +75,7 @@ export default async function CategoryPage({
     <div className="min-h-screen bg-(--background)">
       <script {...jsonLd(bcSchema)} key="breadcrumb-schema" />
 
-      {/* Breadcrumb */}
-      <Breadcrumb
-        items={[
-          { label: "Shop", href: "/shop" },
-          { label: category.name },
-        ]}
-      />
-
-      {/* Category hero */}
+      {/* Combined header: title left, breadcrumb right */}
       <div className="relative bg-white border-b border-(--color-border) overflow-hidden">
         {category.image && (
           <div className="absolute inset-0">
@@ -96,22 +90,36 @@ export default async function CategoryPage({
           </div>
         )}
         <Container>
-          <div className="relative py-10 sm:py-14">
-            <p className="text-xs font-semibold text-(--color-primary) uppercase tracking-widest mb-2">
-              Category
-            </p>
-            <h1 className="text-3xl sm:text-4xl font-extrabold text-(--color-secondary)">
-              {category.name}
-            </h1>
-            <p className="mt-2 text-gray-500 text-sm">
-              Premium {category.name.toLowerCase()} packaging solutions with GST invoice
-            </p>
+          <div className="relative py-5 flex items-center justify-between gap-4">
+            {/* Left: title + subtitle */}
+            <div>
+              <p className="text-xs font-semibold text-(--color-primary) uppercase tracking-widest mb-1">
+                Category
+              </p>
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-(--color-secondary)">
+                {category.name}
+              </h1>
+              <p className="mt-0.5 text-gray-500 text-sm">
+                Premium {category.name.toLowerCase()} packaging solutions with GST invoice
+              </p>
+            </div>
+            {/* Right: breadcrumb */}
+            <nav className="hidden sm:flex items-center gap-1.5 text-sm text-gray-500 shrink-0" aria-label="Breadcrumb">
+              <Link href="/" className="flex items-center gap-1 hover:text-(--color-primary) transition-colors">
+                <Home className="h-3.5 w-3.5" aria-hidden="true" />
+                <span>Home</span>
+              </Link>
+              <ChevronRight className="h-3.5 w-3.5 text-gray-300" aria-hidden="true" />
+              <Link href="/shop" className="hover:text-(--color-primary) transition-colors">Shop</Link>
+              <ChevronRight className="h-3.5 w-3.5 text-gray-300" aria-hidden="true" />
+              <span className="text-(--color-secondary) font-medium">{category.name}</span>
+            </nav>
           </div>
         </Container>
       </div>
 
       {/* Products with client-side sort/filter */}
-      <CategoryProducts initialProducts={products} />
+      <CategoryProducts initialProducts={products as RealApiProduct[]} />
 
       {/* Mobile bottom padding */}
       <div className="h-16 lg:hidden" aria-hidden="true" />

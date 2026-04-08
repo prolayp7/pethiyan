@@ -277,16 +277,8 @@ export default function ShopProductCard({ product }: { product: RealApiProduct }
               )}
             </div>
 
-            {/* Quick action stack */}
-            <div className="absolute right-3 bottom-[10%] z-10 flex flex-col gap-2.5">
-              <button type="button" onClick={handleAddToCart} className={QA_BTN} aria-label="Add to cart">
-                <ShoppingBag className="h-4 w-4" />
-                <span className="pointer-events-none absolute z-20 right-[calc(100%+10px)] top-1/2 -translate-y-1/2 whitespace-nowrap rounded-md bg-[#0f2444] px-2.5 py-1 text-[11px] font-medium text-white opacity-0 transition-opacity group-hover/qa:opacity-100">
-                  Add to cart
-                  <span className="absolute left-full top-1/2 -translate-y-1/2 h-0 w-0 border-y-[5px] border-l-[6px] border-y-transparent border-l-[#0f2444]" />
-                </span>
-              </button>
-
+            {/* Quick action stack — wishlist + quick view only */}
+            <div className="absolute right-3 top-3 z-10 flex flex-col gap-2">
               <button type="button" onClick={handleToggleWishlist} disabled={wishlistBusy} className={QA_BTN}
                 aria-label={isInWishlist ? "Remove from wishlist" : "Add to wishlist"}>
                 {isInWishlist ? <Trash2 className="h-4 w-4" /> : <Heart className="h-4 w-4" />}
@@ -314,7 +306,7 @@ export default function ShopProductCard({ product }: { product: RealApiProduct }
           </div>
 
           {/* Body */}
-          <div className="flex flex-col flex-1 p-4 gap-2">
+          <div className="flex flex-col flex-1 p-3 gap-1.5">
             {product.category && (
               <p className="text-[10px] text-[#1f4f8a] font-semibold uppercase tracking-wider">
                 {product.category.title}
@@ -337,38 +329,50 @@ export default function ShopProductCard({ product }: { product: RealApiProduct }
               return (
                 <div className="flex items-center gap-1.5">
                   {colors.slice(0, 5).map(([c, bg]) => (
-                    <span
-                      key={c}
-                      title={c}
-                      className="w-3.5 h-3.5 rounded-full border border-black/10 shrink-0"
-                      style={{ background: bg }}
-                    />
+                    <span key={c} title={c} className="w-3 h-3 rounded-full border border-black/10 shrink-0" style={{ background: bg }} />
                   ))}
                   {variantCount > 1 && (
-                    <span className="text-[10px] text-gray-400 ml-0.5">
-                      {variantCount} variants
-                    </span>
+                    <span className="text-[10px] text-gray-400 ml-0.5">{variantCount} variants</span>
                   )}
                 </div>
               );
             })()}
 
-            <div className="flex items-baseline gap-2 mt-auto">
-              <span className="text-base font-extrabold text-gray-900">
-                {product.currency?.symbol || "₹"}{price.toFixed(2)}
-              </span>
-              {showCompare && (
-                <span className="text-xs text-gray-400 line-through">
-                  {product.currency?.symbol || "₹"}{compare.toFixed(2)}
+            {/* Bottom row: meta left, price+cart right */}
+            <div className="flex items-end justify-between gap-2 mt-auto pt-2 border-t border-gray-100">
+              {/* Left: GST + min qty */}
+              <div className="flex flex-col gap-0.5 min-w-0">
+                <span className="text-[10px] text-gray-400">+{product.tax?.gst_rate ?? ""}% GST</span>
+                <span className="flex items-center gap-1 text-[10px] text-gray-400">
+                  <Tag className="h-2.5 w-2.5 shrink-0" />
+                  Min: {minQty} pcs
                 </span>
-              )}
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] text-gray-400">+{product.tax?.gst_rate ?? ""}% GST</span>
-              <span className="flex items-center gap-1 text-[10px] text-gray-400">
-                <Tag className="h-2.5 w-2.5" />
-                Min: {minQty} pcs
-              </span>
+              </div>
+
+              {/* Right: price + add to cart */}
+              <div className="flex flex-col items-end gap-1.5 shrink-0">
+                <div className="flex items-baseline gap-1">
+                  <span className="text-sm font-extrabold text-gray-900">
+                    {product.currency?.symbol || "₹"}{price.toFixed(2)}
+                  </span>
+                  {showCompare && (
+                    <span className="text-[10px] text-gray-400 line-through">
+                      {product.currency?.symbol || "₹"}{compare.toFixed(2)}
+                    </span>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={handleAddToCart}
+                  disabled={!inStock}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold text-white transition-all hover:opacity-90 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+                  style={{ background: "linear-gradient(135deg,#17396f 0%,#2f6f9f 52%,#49ad57 100%)" }}
+                  aria-label="Add to cart"
+                >
+                  <ShoppingBag className="h-3.5 w-3.5" />
+                  Add to Cart
+                </button>
+              </div>
             </div>
           </div>
         </Link>

@@ -28,6 +28,7 @@ export interface FallbackProduct {
   inStock: boolean;
   defaultVariantId?: number;
   defaultStoreId?: number;
+  category?: string;
 }
 
 const COLOR_MAP: Record<string, string> = {
@@ -327,20 +328,8 @@ export default function FeaturedProductCard({ p }: { p: FallbackProduct }) {
           </span>
         )}
 
-        {/* Quick action stack */}
-        <div className="absolute right-3 bottom-[10%] z-10 flex flex-col gap-2.5">
-          <button
-            type="button"
-            onClick={handleAddToCart}
-            className="group/qa relative h-9 w-9 rounded-full bg-white/95 text-[#0f2444] border border-gray-200 shadow-sm flex items-center justify-center transition-all hover:scale-105 hover:shadow-md hover:text-white hover:border-transparent hover:bg-[linear-gradient(135deg,_#17396f_0%,_#2f6f9f_52%,_#49ad57_100%)]"
-            aria-label="Add to cart"
-          >
-            <ShoppingBag className="h-4 w-4" />
-            <span className="pointer-events-none absolute z-20 right-[calc(100%+10px)] top-1/2 -translate-y-1/2 whitespace-nowrap rounded-md bg-[#0f2444] px-2.5 py-1 text-[11px] font-medium text-white opacity-0 transition-opacity group-hover/qa:opacity-100">
-              Add to cart
-              <span className="absolute left-full top-1/2 -translate-y-1/2 h-0 w-0 border-y-[5px] border-l-[6px] border-y-transparent border-l-[#0f2444]" />
-            </span>
-          </button>
+        {/* Quick action stack — wishlist + quick view only */}
+        <div className="absolute right-3 top-3 z-10 flex flex-col gap-2">
           <button
             type="button"
             onClick={handleToggleWishlist}
@@ -348,11 +337,7 @@ export default function FeaturedProductCard({ p }: { p: FallbackProduct }) {
             className="group/qa relative h-9 w-9 rounded-full bg-white/95 text-[#0f2444] border border-gray-200 shadow-sm flex items-center justify-center transition-all hover:scale-105 hover:shadow-md hover:text-white hover:border-transparent hover:bg-[linear-gradient(135deg,_#17396f_0%,_#2f6f9f_52%,_#49ad57_100%)]"
             aria-label={isInWishlist ? "Remove from wishlist" : "Add to wishlist"}
           >
-            {isInWishlist ? (
-              <Trash2 className="h-4 w-4" />
-            ) : (
-              <Heart className="h-4 w-4" />
-            )}
+            {isInWishlist ? <Trash2 className="h-4 w-4" /> : <Heart className="h-4 w-4" />}
             <span className="pointer-events-none absolute z-20 right-[calc(100%+10px)] top-1/2 -translate-y-1/2 whitespace-nowrap rounded-md bg-[#0f2444] px-2.5 py-1 text-[11px] font-medium text-white opacity-0 transition-opacity group-hover/qa:opacity-100">
               {isInWishlist ? "Remove from wishlist" : "Add to wishlist"}
               <span className="absolute left-full top-1/2 -translate-y-1/2 h-0 w-0 border-y-[5px] border-l-[6px] border-y-transparent border-l-[#0f2444]" />
@@ -381,52 +366,66 @@ export default function FeaturedProductCard({ p }: { p: FallbackProduct }) {
       </div>
 
       {/* Body */}
-      <div className="flex flex-col flex-1 p-4 gap-2">
+      <div className="flex flex-col flex-1 p-3 gap-1.5">
+        {/* Category */}
+        {p.category && (
+          <p className="text-[10px] text-[#1f4f8a] font-semibold uppercase tracking-wider">
+            {p.category}
+          </p>
+        )}
         {/* Name */}
         <p className="text-sm font-semibold text-gray-900 leading-snug line-clamp-2 group-hover:text-[#2e7c8a] transition-colors">
           {p.name}
         </p>
 
-        {/* Color swatches */}
-        {p.colors.length > 0 && (
+        {/* Color swatches + variant count */}
+        {(p.colors.length > 0 || p.variantCount > 1) && (
           <div className="flex items-center gap-1.5">
             {p.colors.slice(0, 5).map((c) => (
-              <span
-                key={c}
-                title={c}
-                className="w-3.5 h-3.5 rounded-full border border-black/10 shrink-0"
-                style={{ background: COLOR_MAP[c] ?? "#aaa" }}
-              />
+              <span key={c} title={c} className="w-3 h-3 rounded-full border border-black/10 shrink-0" style={{ background: COLOR_MAP[c] ?? "#aaa" }} />
             ))}
             {p.variantCount > 1 && (
-              <span className="text-[10px] text-gray-400 ml-0.5">
-                {p.variantCount} variants
-              </span>
+              <span className="text-[10px] text-gray-400 ml-0.5">{p.variantCount} variants</span>
             )}
           </div>
         )}
 
-        {/* Price row */}
-        <div className="flex items-baseline gap-2 mt-auto">
-          <span className="text-base font-extrabold text-gray-900">
-            ₹{p.price.toFixed(2)}
-          </span>
-          {p.originalPrice && (
-            <span className="text-xs text-gray-400 line-through">
-              ₹{p.originalPrice.toFixed(2)}
+        {/* Bottom row: meta left, price+cart right */}
+        <div className="flex items-end justify-between gap-2 mt-auto pt-2 border-t border-gray-100">
+          {/* Left: GST + min qty */}
+          <div className="flex flex-col gap-0.5 min-w-0">
+            <span className="text-[10px] text-gray-400">+{p.gstRate}% GST</span>
+            <span className="flex items-center gap-1 text-[10px] text-gray-400">
+              <Tag className="h-2.5 w-2.5 shrink-0" />
+              Min: {p.minQty} pcs
             </span>
-          )}
-        </div>
+          </div>
 
-        {/* GST + min qty */}
-        <div className="flex items-center justify-between">
-          <span className="text-[10px] text-gray-400">+{p.gstRate}% GST</span>
-          <span className="flex items-center gap-1 text-[10px] text-gray-400">
-            <Tag className="h-2.5 w-2.5" />
-            Min: {p.minQty} pcs
-          </span>
+          {/* Right: price + add to cart */}
+          <div className="flex flex-col items-end gap-1.5 shrink-0">
+            <div className="flex items-baseline gap-1">
+              <span className="text-sm font-extrabold text-gray-900">
+                ₹{p.price.toFixed(2)}
+              </span>
+              {p.originalPrice && (
+                <span className="text-[10px] text-gray-400 line-through">
+                  ₹{p.originalPrice.toFixed(2)}
+                </span>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={handleAddToCart}
+              disabled={!p.inStock}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold text-white transition-all hover:opacity-90 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+              style={{ background: "linear-gradient(135deg,#17396f 0%,#2f6f9f 52%,#49ad57 100%)" }}
+              aria-label="Add to cart"
+            >
+              <ShoppingBag className="h-3.5 w-3.5" />
+              Add to Cart
+            </button>
+          </div>
         </div>
-
       </div>
 
     </Link>

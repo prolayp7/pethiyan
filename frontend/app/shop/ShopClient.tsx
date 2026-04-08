@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useCallback, useMemo } from "react";
+import Link from "next/link";
 import {
-  Search, SlidersHorizontal, X, ChevronDown, ChevronRight, Package, Layers,
+  SlidersHorizontal, X, ChevronDown, ChevronRight, Package, Layers, Home,
 } from "lucide-react";
 import Container from "@/components/layout/Container";
-import Breadcrumb from "@/components/common/Breadcrumb";
 import ShopProductCard from "@/components/shop/ShopProductCard";
 import {
   type RealApiProduct, type ApiCategory,
@@ -302,25 +302,33 @@ export default function ShopClient({ initialProducts, initialCategories, initial
 
   return (
     <div className="min-h-screen bg-(--background)">
-      <Breadcrumb items={[{ label: "Shop" }]} />
-
-      <div className="bg-white border-b border-(--color-border) py-8">
+      <div className="bg-white border-b border-(--color-border) py-5">
         <Container>
-          <div className="flex items-center gap-3">
-            <span
-              className="flex items-center justify-center h-10 w-10 rounded-xl shrink-0"
-              style={{ background: "linear-gradient(135deg,#17396f 0%,#2f6f9f 52%,#49ad57 100%)" }}
-            >
-              <Layers className="h-5 w-5 text-white" />
-            </span>
-            <div>
-              <h1 className="text-3xl sm:text-4xl font-extrabold text-(--color-secondary)">
-                All Products
-              </h1>
-              <p className="mt-0.5 text-gray-500 text-sm">
-                {filtered.length} product{filtered.length !== 1 ? "s" : ""} found
-              </p>
+          <div className="flex items-center justify-between gap-4">
+            {/* Left: icon + title + subtitle */}
+            <div className="flex items-center gap-3">
+              <span
+                className="flex items-center justify-center h-10 w-10 rounded-xl shrink-0"
+                style={{ background: "linear-gradient(135deg,#17396f 0%,#2f6f9f 52%,#49ad57 100%)" }}
+              >
+                <Layers className="h-5 w-5 text-white" />
+              </span>
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-extrabold text-(--color-secondary)">All Products</h1>
+                <p className="mt-0.5 text-gray-500 text-sm">
+                  {filtered.length} product{filtered.length !== 1 ? "s" : ""} found
+                </p>
+              </div>
             </div>
+            {/* Right: breadcrumb */}
+            <nav className="hidden sm:flex items-center gap-1.5 text-sm text-gray-500 shrink-0" aria-label="Breadcrumb">
+              <Link href="/" className="flex items-center gap-1 hover:text-(--color-primary) transition-colors">
+                <Home className="h-3.5 w-3.5" aria-hidden="true" />
+                <span>Home</span>
+              </Link>
+              <ChevronRight className="h-3.5 w-3.5 text-gray-300" aria-hidden="true" />
+              <span className="text-(--color-secondary) font-medium">Shop</span>
+            </nav>
           </div>
         </Container>
       </div>
@@ -583,25 +591,8 @@ export default function ShopClient({ initialProducts, initialCategories, initial
 
           {/* ── Main ── */}
           <div className="flex-1 min-w-0">
-            {/* Search + Sort toolbar */}
+            {/* Sort / filter toolbar */}
             <div className="flex flex-col sm:flex-row gap-3 mb-6">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" aria-hidden="true" />
-                <input
-                  type="search"
-                  placeholder="Search products…"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="w-full pl-9 pr-9 py-2.5 text-sm bg-white border border-(--color-border) rounded-xl focus:outline-none focus:ring-2 focus:ring-(--color-primary)/30 focus:border-(--color-primary) transition"
-                  aria-label="Search products"
-                />
-                {search && (
-                  <button onClick={handleClearSearch} className="absolute right-3 top-1/2 -translate-y-1/2" aria-label="Clear search">
-                    <X className="h-4 w-4 text-gray-400 hover:text-gray-600" />
-                  </button>
-                )}
-              </div>
-
               <button
                 onClick={() => setFiltersOpen(true)}
                 className="lg:hidden flex items-center gap-2 px-4 py-2.5 bg-white border border-(--color-border) rounded-xl text-sm font-medium text-gray-700 hover:border-(--color-primary) transition"

@@ -77,6 +77,27 @@ class CategoryApiController extends Controller
     }
 
     /**
+     * Get a single category by slug.
+     */
+    public function show(string $slug): JsonResponse
+    {
+        $category = Category::where('slug', $slug)
+            ->where('status', CategoryStatusEnum::ACTIVE())
+            ->withCount('products')
+            ->first();
+
+        if (!$category) {
+            return ApiResponseType::sendJsonResponse(false, 'labels.category_not_found', [], 404);
+        }
+
+        return ApiResponseType::sendJsonResponse(
+            true,
+            'labels.category_fetched_successfully',
+            new CategoryResource($category)
+        );
+    }
+
+    /**
      * Get sub-categories.
      */
     #[QueryParameter('page', description: 'Page number for pagination.', type: 'int', default: 1, example: 1)]

@@ -8,19 +8,24 @@ class SpatieMediaService
 {
     public static function upload($model, $media)
     {
-        // Try to get the uploaded file from the current request to derive a slugged filename
         $file = request()->file($media);
         if ($file) {
-            $original = $file->getClientOriginalName();
-            $basename = pathinfo($original, PATHINFO_FILENAME);
-            $extension = strtolower(pathinfo($original, PATHINFO_EXTENSION));
-            $slug = Str::slug($basename);
-            $sluggedName = $extension ? ($slug . '.' . $extension) : $slug;
+            $converted = ImageWebpService::convert($file);
+            $filename  = $converted['filename'];
+            $slug      = Str::slug(pathinfo($filename, PATHINFO_FILENAME));
+            $ext       = pathinfo($filename, PATHINFO_EXTENSION);
+            $sluggedName = $ext ? ($slug . '.' . $ext) : $slug;
 
-            return $model
-                ->addMediaFromRequest($media)
+            $adder = $model
+                ->addMedia($converted['path'])
                 ->usingFileName($sluggedName)
                 ->toMediaCollection($media);
+
+            if ($converted['isWebp']) {
+                @unlink($converted['path']);
+            }
+
+            return $adder;
         }
 
         // Fallback if file is not available for any reason
@@ -29,35 +34,52 @@ class SpatieMediaService
 
     public static function uploadFromRequest($model, $file, $collectionName)
     {
-        $original = $file->getClientOriginalName();
-        $basename = pathinfo($original, PATHINFO_FILENAME);
-        $extension = strtolower(pathinfo($original, PATHINFO_EXTENSION));
-        $slug = Str::slug($basename);
-        $sluggedName = $extension ? ($slug . '.' . $extension) : $slug;
+        $converted   = ImageWebpService::convert($file);
+        $filename    = $converted['filename'];
+        $slug        = Str::slug(pathinfo($filename, PATHINFO_FILENAME));
+        $ext         = pathinfo($filename, PATHINFO_EXTENSION);
+        $sluggedName = $ext ? ($slug . '.' . $ext) : $slug;
 
-        return $model
-            ->addMedia($file)
+        $adder = $model
+            ->addMedia($converted['path'])
             ->usingFileName($sluggedName)
             ->toMediaCollection($collectionName);
+
+        if ($converted['isWebp']) {
+            @unlink($converted['path']);
+        }
+
+        return $adder;
     }
 
     public static function update($request, $model, $media)
     {
         if ($request->hasFile($media)) {
-            $newImageFile = $request->file($media);
+            $file        = $request->file($media);
+            $converted   = ImageWebpService::convert($file);
+            $filename    = $converted['filename'];
+            $slug        = Str::slug(pathinfo($filename, PATHINFO_FILENAME));
+            $ext         = pathinfo($filename, PATHINFO_EXTENSION);
+            $newImageName = $ext ? ($slug . '.' . $ext) : $slug;
+
             $existingImage = $model->getFirstMedia($media);
 
-            $original = $newImageFile->getClientOriginalName();
-            $basename = pathinfo($original, PATHINFO_FILENAME);
-            $extension = strtolower(pathinfo($original, PATHINFO_EXTENSION));
-            $slug = Str::slug($basename);
-            $newImageName = $extension ? ($slug . '.' . $extension) : $slug;
-
             if (!$existingImage || $existingImage->file_name !== $newImageName) {
-                return $model
-                    ->addMedia($newImageFile)
+                $adder = $model
+                    ->addMedia($converted['path'])
                     ->usingFileName($newImageName)
                     ->toMediaCollection($media);
+
+                if ($converted['isWebp']) {
+                    @unlink($converted['path']);
+                }
+
+                return $adder;
+            }
+
+            // Same file — cleanup temp if created
+            if ($converted['isWebp']) {
+                @unlink($converted['path']);
             }
         }
         return null;
