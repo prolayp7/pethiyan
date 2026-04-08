@@ -28,6 +28,7 @@ use App\Services\GlobalAttributeService;
 use App\Services\ProductService;
 use App\Traits\ChecksPermissions;
 use App\Traits\PanelAware;
+use App\Services\FrontendRevalidateService;
 use App\Types\Api\ApiResponseType;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Builder;
@@ -453,6 +454,7 @@ class ProductController extends Controller
             $this->authorize('delete', $product);
 
             $product->delete();
+            FrontendRevalidateService::revalidateProducts();
             return ApiResponseType::sendJsonResponse(success: true, message: 'labels.product_deleted_successfully', data: []);
         } catch (AuthorizationException $e) {
             return ApiResponseType::sendJsonResponse(success: false, message: 'labels.permission_denied', data: []);
@@ -656,6 +658,7 @@ class ProductController extends Controller
                 ? $request->input('rejection_reason')
                 : null;
             $product->save();
+            FrontendRevalidateService::revalidateProducts();
 
             return ApiResponseType::sendJsonResponse(success: true, message: 'Verification status updated successfully', data: [
                 'id' => $product->id,
@@ -686,6 +689,7 @@ class ProductController extends Controller
 
             $product->status = $newStatus;
             $product->save();
+            FrontendRevalidateService::revalidateProducts();
 
             $statusLabel = $newStatus === ProductStatusEnum::ACTIVE->value ? 'Active' : 'Draft';
 

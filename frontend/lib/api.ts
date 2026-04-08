@@ -384,6 +384,7 @@ export interface RealApiProduct {
     symbol: string;
     code: string;
   };
+  category?: { id: number; title: string; slug: string } | null;
   variants: RealApiVariant[];
 }
 
@@ -467,13 +468,19 @@ export async function getProductFaqs(slug: string): Promise<ApiFaq[]> {
 }
 
 export async function getCategories(): Promise<ApiCategory[]> {
-  const res = await apiFetch<ApiResponse<ApiCategory[]> | ApiCategory[]>(
-    "/api/categories"
-  );
-  if (!res) return [];
-  if (Array.isArray(res)) return res;
-  if ("data" in res && Array.isArray(res.data)) return res.data;
-  return [];
+  try {
+    const res = await fetch(`${API_BASE}/api/categories`, {
+      headers: { Accept: "application/json" },
+      next: { revalidate: 300, tags: ["categories"] },
+    } as RequestInit);
+    if (!res.ok) return [];
+    const json = await res.json();
+    if (Array.isArray(json)) return json;
+    if ("data" in json && Array.isArray(json.data)) return json.data;
+    return [];
+  } catch {
+    return [];
+  }
 }
 
 // ─── Normalise price to number ────────────────────────────────────────────────

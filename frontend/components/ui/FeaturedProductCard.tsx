@@ -290,10 +290,10 @@ export default function FeaturedProductCard({ p }: { p: FallbackProduct }) {
 
   return (
     <>
+    <div className="featured-card-border transition-all duration-300 hover:-translate-y-1">
     <Link
       href={p.href}
-      className="group flex flex-col rounded-2xl overflow-hidden border transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
-      style={{ background: "#fff", borderColor: "rgba(0,0,0,0.08)" }}
+      className="group"
     >
       {/* Image */}
       <div className="relative aspect-square overflow-hidden bg-gray-50">
@@ -430,6 +430,7 @@ export default function FeaturedProductCard({ p }: { p: FallbackProduct }) {
       </div>
 
     </Link>
+    </div>
 
       {quickViewOpen && typeof document !== "undefined" && createPortal(
         <div

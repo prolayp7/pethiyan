@@ -90,9 +90,13 @@ export default function SearchBar() {
         className={cn(
           "relative flex items-center rounded-full border-2 transition-all duration-200",
           open || query
-            ? "border-(--color-primary) bg-white shadow-sm shadow-(--color-primary)/10"
+            ? "bg-white"
             : "border-gray-200 bg-gray-50 hover:border-gray-300"
         )}
+        style={open || query ? {
+          borderColor: "#2f6f9f",
+          boxShadow: "0 0 0 3px rgba(47,111,159,0.15), 0 2px 8px rgba(23,57,111,0.12)",
+        } : undefined}
       >
         <Search
           className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none"

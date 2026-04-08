@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Jobs\ProductImportJob;
+use App\Services\FrontendRevalidateService;
 use App\Services\ProductCsvImportService;
 use App\Services\ProductService;
 use Illuminate\Http\JsonResponse;
@@ -84,6 +85,10 @@ class ProductImportController extends Controller
         $failedReportUrl = null;
         if (!empty($result['failed_report_id'])) {
             $failedReportUrl = route('admin.products.import.failed-report', ['reportId' => $result['failed_report_id']]);
+        }
+
+        if ($result['created'] > 0 || $result['updated'] > 0) {
+            FrontendRevalidateService::revalidateProducts();
         }
 
         return response()->json([

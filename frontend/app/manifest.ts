@@ -6,7 +6,7 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: "Pethiyan",
     description: "Premium packaging products delivered across India. Shop pouches, kraft bags, jars and more.",
     start_url: "/",
-    display: "browser",
+    display: "standalone",
     background_color: "#f7f9fc",
     theme_color: "#1f4f8a",
     lang: "en-IN",

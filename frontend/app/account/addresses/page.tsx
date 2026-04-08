@@ -100,8 +100,7 @@ function AddressForm({
         <button
           onClick={onSave}
           disabled={saving || !valid}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold text-white disabled:opacity-50 disabled:cursor-not-allowed"
-          style={{ background: "linear-gradient(135deg,#1f4f8a,#0f2f5f)" }}
+          className="btn-brand flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
           Save Address
@@ -161,7 +160,7 @@ function AddressCard({
           <button
             onClick={onSetDefault}
             disabled={settingDefault}
-            className="flex items-center gap-1.5 text-xs font-semibold text-(--color-primary) border border-(--color-primary) px-3 py-1.5 rounded-lg hover:bg-blue-50 transition-colors disabled:opacity-50"
+            className="btn-brand flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg disabled:opacity-50"
           >
             {settingDefault ? <Loader2 className="h-3 w-3 animate-spin" /> : <Star className="h-3 w-3" />}
             Set as Default
@@ -288,7 +287,7 @@ export default function AddressesPage() {
         {!showAddForm && editId === null && (
           <button
             onClick={() => setShowAddForm(true)}
-            className="flex items-center gap-1.5 text-sm font-bold text-(--color-primary) border-2 border-(--color-primary) px-4 py-2 rounded-xl hover:bg-blue-50 transition-colors"
+            className="btn-brand flex items-center gap-1.5 text-sm font-bold px-4 py-2 rounded-xl"
           >
             <Plus className="h-4 w-4" />
             Add Address

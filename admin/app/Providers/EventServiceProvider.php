@@ -27,6 +27,7 @@ use App\Listeners\Order\UpdateStockOnOrderStatusChange;
 use App\Listeners\Product\ProductCreatedNotification;
 use App\Listeners\Product\ProductUpdatedNotification;
 use App\Listeners\Product\ProductStatusUpdatedNotification;
+use App\Listeners\Product\RevalidateFrontendCache;
 use Illuminate\Support\ServiceProvider;
 
 class EventServiceProvider extends ServiceProvider
@@ -79,14 +80,17 @@ class EventServiceProvider extends ServiceProvider
         // Product Events
         ProductAfterCreate::class => [
             ProductCreatedNotification::class,
+            RevalidateFrontendCache::class,
         ],
 
         ProductAfterUpdate::class => [
             ProductUpdatedNotification::class,
+            RevalidateFrontendCache::class,
         ],
 
         ProductStatusAfterUpdate::class => [
             ProductStatusUpdatedNotification::class,
+            RevalidateFrontendCache::class,
         ],
     ];
 
