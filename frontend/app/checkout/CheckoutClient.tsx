@@ -384,7 +384,7 @@ export default function CheckoutClient() {
 
   // Payment state
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("razorpay");
-  const [availablePaymentMethods, setAvailablePaymentMethods] = useState<PaymentMethod[]>(["razorpay", "cod"]);
+  const [availablePaymentMethods, setAvailablePaymentMethods] = useState<PaymentMethod[]>([]);
   const [processingPayment, setProcessingPayment] = useState(false);
   const [paymentError, setPaymentError] = useState("");
 
@@ -407,15 +407,20 @@ export default function CheckoutClient() {
   }, [authLoading, isLoggedIn]);
 
   useEffect(() => {
-    getPaymentSettings().then((settings) => {
-      const methods: PaymentMethod[] = [];
-      if (settings.razorpayEnabled) methods.push("razorpay");
-      if (settings.easepayEnabled) methods.push("easepay");
-      if (settings.codEnabled) methods.push("cod");
-      if (methods.length === 0) methods.push("cod");
-      setAvailablePaymentMethods(methods);
-      setPaymentMethod((current) => (methods.includes(current) ? current : methods[0]));
-    });
+    getPaymentSettings()
+      .then((settings) => {
+        const methods: PaymentMethod[] = [];
+        if (settings.razorpayEnabled) methods.push("razorpay");
+        if (settings.easepayEnabled) methods.push("easepay");
+        if (settings.codEnabled) methods.push("cod");
+        if (methods.length === 0) methods.push("cod");
+        setAvailablePaymentMethods(methods);
+        setPaymentMethod((current) => (methods.includes(current) ? current : methods[0]));
+      })
+      .catch(() => {
+        // Fallback: show razorpay + cod if settings fetch fails
+        setAvailablePaymentMethods(["razorpay", "cod"]);
+      });
   }, []);
 
   // Derived values
@@ -626,7 +631,7 @@ export default function CheckoutClient() {
       image: "/pethiyan-logo.png",
       prefill: {
         name: user?.name ?? "",
-        contact: `+91${user?.phone ?? ""}`,
+        contact: `+91${user?.mobile ?? ""}`,
         email: user?.email ?? "",
       },
       theme: { color: "#1f4f8a" },
@@ -1008,43 +1013,55 @@ export default function CheckoutClient() {
                 <div className="space-y-3 mb-6">
                   <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Payment Method</p>
 
-                  {availablePaymentMethods.map((method) => (
-                    <label
-                      key={method}
-                      className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${
-                        paymentMethod === method ? "border-(--color-primary) bg-blue-50" : "border-gray-100 hover:border-gray-200"
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="payment"
-                        value={method}
-                        checked={paymentMethod === method}
-                        onChange={() => setPaymentMethod(method)}
-                        className="accent-(--color-primary)"
-                      />
-                      {method === "cod" ? (
-                        <Banknote className="h-5 w-5 text-green-600" />
-                      ) : (
-                        <CreditCard className="h-5 w-5 text-(--color-primary)" />
-                      )}
-                      <div>
-                        <p className="text-sm font-semibold text-(--color-secondary)">
-                          {method === "cod" ? "Cash on Delivery" : method === "easepay" ? "Online Payment (Easepay)" : "Online Payment (Razorpay)"}
-                        </p>
-                        <p className="text-xs text-gray-400">
-                          {method === "cod"
-                            ? "Pay when your order arrives"
-                            : method === "easepay"
-                              ? "UPI, Cards, Net Banking via Easepay"
-                              : "UPI, Cards, Net Banking via Razorpay"}
-                        </p>
-                      </div>
-                      {method === "razorpay" && (
-                        <img src="/razorpay-logo.svg" alt="Razorpay" className="h-5 ml-auto" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
-                      )}
-                    </label>
-                  ))}
+                  {availablePaymentMethods.length === 0 ? (
+                    <div className="space-y-3">
+                      {[1, 2].map((i) => (
+                        <div key={i} className="h-16 rounded-xl border-2 border-gray-100 bg-gray-50 animate-pulse" />
+                      ))}
+                    </div>
+                  ) : (
+                    availablePaymentMethods.map((method) => (
+                      <label
+                        key={method}
+                        className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                          paymentMethod === method ? "border-(--color-primary) bg-blue-50" : "border-gray-100 hover:border-gray-200"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="payment"
+                          value={method}
+                          checked={paymentMethod === method}
+                          onChange={() => setPaymentMethod(method)}
+                          className="accent-(--color-primary)"
+                        />
+                        {method === "cod" ? (
+                          <Banknote className="h-5 w-5 text-green-600" />
+                        ) : (
+                          <CreditCard className="h-5 w-5 text-(--color-primary)" />
+                        )}
+                        <div>
+                          <p className="text-sm font-semibold text-(--color-secondary)">
+                            {method === "cod"
+                              ? "Cash on Delivery"
+                              : method === "easepay"
+                                ? "Easebuzz"
+                                : "Razorpay"}
+                          </p>
+                          <p className="text-xs text-gray-400">
+                            {method === "cod"
+                              ? "Pay when your order arrives"
+                              : method === "easepay"
+                                ? "UPI, Cards, Net Banking via Easebuzz"
+                                : "UPI, Cards, Net Banking via Razorpay"}
+                          </p>
+                        </div>
+                        {method === "razorpay" && (
+                          <img src="/razorpay-logo.svg" alt="Razorpay" className="h-5 ml-auto" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                        )}
+                      </label>
+                    ))
+                  )}
                 </div>
 
                 {/* Error */}
