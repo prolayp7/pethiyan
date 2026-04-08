@@ -90,8 +90,15 @@ function colorSwatchStyle(color: string): CSSProperties {
     pink: "#ec4899",
     grey: "#9ca3af",
     gray: "#9ca3af",
+    "light gray": "#d1d5db",
+    "light grey": "#d1d5db",
+    "dark gray": "#374151",
+    "dark grey": "#374151",
     silver: "#c0c0c0",
     gold: "#d4af37",
+    navy: "#1e3a5f",
+    maroon: "#800000",
+    beige: "#e8dcc8",
   };
 
   if (normalized === "colorful" || normalized === "multicolor" || normalized === "multi color") {
@@ -670,13 +677,13 @@ export default function ProductDetailClient({ product, reviews: initialReviews, 
                         onClick={() => setSelectedVariantId(variant.id)}
                         className={`text-left border rounded-xl p-3 transition-all ${
                           selected
-                            ? "border-(--color-primary) bg-(--color-primary)/5"
+                            ? "btn-brand border-transparent shadow-md"
                             : "border-(--color-border) hover:border-(--color-primary)/50"
                         }`}
                         aria-pressed={selected}
                       >
-                        <p className="text-sm font-semibold text-(--color-secondary)">{variant.title}</p>
-                        {attributeLabel && <p className="text-xs text-gray-500 mt-0.5">{attributeLabel}</p>}
+                        <p className={`text-sm font-semibold ${selected ? "text-white" : "text-(--color-secondary)"}`}>{variant.title}</p>
+                        {attributeLabel && <p className={`text-xs mt-0.5 ${selected ? "text-white/80" : "text-gray-500"}`}>{attributeLabel}</p>}
                       </button>
                     );
                   })}
@@ -697,9 +704,9 @@ export default function ProductDetailClient({ product, reviews: initialReviews, 
                       <button
                         key={store.store_id}
                         onClick={() => setSelectedStoreId(store.store_id)}
-                        className={`px-3 py-1.5 rounded-lg text-sm border transition-all ${
+                        className={`px-3 py-1.5 rounded-lg text-sm font-semibold border transition-all ${
                           selected
-                            ? "border-(--color-primary) bg-(--color-primary) text-white"
+                            ? "btn-brand border-transparent shadow-md"
                             : "border-(--color-border) text-(--color-secondary) hover:border-(--color-primary)/60"
                         }`}
                         aria-pressed={selected}
