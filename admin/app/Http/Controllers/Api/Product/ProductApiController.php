@@ -59,6 +59,7 @@ class ProductApiController extends Controller
                 ->where('verification_status', ProductVarificationStatusEnum::APPROVED->value)
                 ->where('status', ProductStatusEnum::ACTIVE->value)
                 ->with([
+                    'category:id,title,slug',
                     'taxClasses:id,title',
                     'taxClasses.taxRates:id,title,rate',
                     'variants.attributes.attribute:id,title,slug',

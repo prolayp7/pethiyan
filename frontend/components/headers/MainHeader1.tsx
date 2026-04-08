@@ -135,7 +135,7 @@ export default function MainHeader() {
               pointer-events-auto re-enables it on the actual search box.
             */}
             <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 justify-center pointer-events-none hidden md:flex">
-              <div className="w-full max-w-2xl lg:max-w-4xl px-6 pointer-events-auto">
+              <div className="w-full max-w-xl lg:max-w-4xl pl-6 pr-10 pointer-events-auto">
                 <SearchBar />
               </div>
             </div>

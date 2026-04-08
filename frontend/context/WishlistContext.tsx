@@ -36,9 +36,15 @@ const LS_KEY = "wishlist";
 
 // ─── Context ──────────────────────────────────────────────────────────────────
 
-const WishlistContext = createContext<WishlistContextType | undefined>(
-  undefined
-);
+const WishlistContext = createContext<WishlistContextType>({
+  items: [],
+  isWishlisted: () => false,
+  add: () => {},
+  toggle: () => {},
+  remove: () => {},
+  clear: () => {},
+  count: 0,
+});
 
 export function WishlistProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<WishlistItem[]>([]);
@@ -130,9 +136,5 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
 }
 
 export function useWishlist() {
-  const context = useContext(WishlistContext);
-  if (!context) {
-    throw new Error("useWishlist must be used within a WishlistProvider");
-  }
-  return context;
+  return useContext(WishlistContext);
 }

@@ -14,7 +14,7 @@ interface BreadcrumbProps {
 
 export default function Breadcrumb({ items }: BreadcrumbProps) {
   return (
-    <div className="bg-white border-b border-(--color-border)">
+    <div className="bg-white">
       <Container>
         <nav
           className="flex items-center gap-1.5 text-sm py-3 text-gray-500"

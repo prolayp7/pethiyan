@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import withPWA from "@ducanh2912/next-pwa";
 
 // Extract hostname and port from the API URL for image remote patterns
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -16,6 +17,11 @@ const nextConfig: NextConfig = {
   // ── Performance ────────────────────────────────────────────────────────────
   compress: true,
   poweredByHeader: false,
+
+  // ── Turbopack (Next.js 16 default) ─────────────────────────────────────────
+  // Empty config tells Next.js we're aware of Turbopack and suppresses the
+  // "webpack config present but no turbopack config" warning from next-pwa.
+  turbopack: {},
 
   // ── Images ─────────────────────────────────────────────────────────────────
   images: {
@@ -77,12 +83,93 @@ const nextConfig: NextConfig = {
   // ── Redirects ──────────────────────────────────────────────────────────────
   async redirects() {
     return [
-      // Old slug typo → correct route
-      { source: "/return-policy", destination: "/returns-policy", permanent: true },
-      // Remove trailing slashes (canonical)
-      { source: "/:path+/", destination: "/:path+", permanent: true },
+      { source: "/return-policy",  destination: "/returns-policy", permanent: true },
+      { source: "/:path+/",        destination: "/:path+",          permanent: true },
     ];
   },
 };
 
-export default nextConfig;
+// ── PWA configuration ──────────────────────────────────────────────────────────
+// Service worker is only active in production (NODE_ENV=production).
+// In dev mode the SW is disabled so hot-reload works normally.
+export default withPWA({
+  dest: "public",
+  disable: process.env.NODE_ENV !== "production",
+  register: true,
+  skipWaiting: true,
+  cacheOnFrontEndNav: true,
+  aggressiveFrontEndNavCaching: true,
+  reloadOnOnline: true,
+  // Custom Workbox runtime caching rules
+  workboxOptions: {
+    // ── Product API ── NetworkFirst: always try network, fall back to cache
+    // Keeps data fresh while still working offline
+    runtimeCaching: [
+      {
+        urlPattern: /\/api\/products(\/|$|\?)/,
+        handler: "NetworkFirst" as const,
+        options: {
+          cacheName: "products-api",
+          networkTimeoutSeconds: 5,
+          expiration: {
+            maxEntries: 20,
+            maxAgeSeconds: 300, // 5 min — matches ISR revalidate
+          },
+          cacheableResponse: { statuses: [0, 200] },
+        },
+      },
+      // ── Categories API ── StaleWhileRevalidate: instant load, bg refresh
+      {
+        urlPattern: /\/api\/categories(\/|$|\?)/,
+        handler: "StaleWhileRevalidate" as const,
+        options: {
+          cacheName: "categories-api",
+          expiration: {
+            maxEntries: 5,
+            maxAgeSeconds: 3600, // 1 hour — categories rarely change
+          },
+          cacheableResponse: { statuses: [0, 200] },
+        },
+      },
+      // ── Shop & product pages ── StaleWhileRevalidate: instant, refresh bg
+      {
+        urlPattern: /^\/(shop|products)(\/|$|\?)/,
+        handler: "StaleWhileRevalidate" as const,
+        options: {
+          cacheName: "shop-pages",
+          expiration: {
+            maxEntries: 50,
+            maxAgeSeconds: 300,
+          },
+          cacheableResponse: { statuses: [0, 200] },
+        },
+      },
+      // ── Product images ── CacheFirst: images rarely change, serve from cache
+      {
+        urlPattern: /\.(png|jpg|jpeg|webp|avif|gif|svg)$/i,
+        handler: "CacheFirst" as const,
+        options: {
+          cacheName: "product-images",
+          expiration: {
+            maxEntries: 200,
+            maxAgeSeconds: 86400, // 1 day
+          },
+          cacheableResponse: { statuses: [0, 200] },
+        },
+      },
+      // ── Fonts ── CacheFirst: fonts never change once deployed
+      {
+        urlPattern: /^https:\/\/fonts\.(googleapis|gstatic)\.com\/.*/i,
+        handler: "CacheFirst" as const,
+        options: {
+          cacheName: "google-fonts",
+          expiration: {
+            maxEntries: 10,
+            maxAgeSeconds: 31536000, // 1 year
+          },
+          cacheableResponse: { statuses: [0, 200] },
+        },
+      },
+    ],
+  },
+})(nextConfig);

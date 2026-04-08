@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Services\FrontendRevalidateService;
 use App\Services\ProductCsvImportService;
 use App\Services\ProductService;
 use Illuminate\Bus\Queueable;
@@ -46,6 +47,10 @@ class ProductImportJob implements ShouldQueue
             'errors' => $result['errors'] ?? [],
             'failed_report_id' => $result['failed_report_id'] ?? null,
         ], now()->addHours(24));
+
+        if (($result['created'] ?? 0) > 0 || ($result['updated'] ?? 0) > 0) {
+            FrontendRevalidateService::revalidateProducts();
+        }
     }
 
     public function failed(\Throwable $exception): void

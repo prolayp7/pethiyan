@@ -94,6 +94,56 @@ body {
   box-shadow: 0 10px 24px rgba(23, 57, 111, 0.28);
 }
 
+/* =============================================
+   FEATURED PRODUCT CARD — Animated gradient border
+   ============================================= */
+@keyframes fpc-rotate {
+  to { transform: rotate(360deg); }
+}
+
+.featured-card-border {
+  position: relative;
+  border-radius: 16px;
+  padding: 2px;
+  overflow: hidden;
+  box-shadow: 0 2px 14px rgba(23, 57, 111, 0.14);
+  transition: box-shadow 0.3s, transform 0.3s;
+}
+
+/* The spinning conic gradient that forms the border */
+.featured-card-border::before {
+  content: '';
+  position: absolute;
+  inset: -80%;
+  background: conic-gradient(
+    from 0deg,
+    #17396f 0deg,
+    #2f6f9f 80deg,
+    #7ec8e3 140deg,   /* glossy light-blue highlight */
+    #49ad57 200deg,   /* logo green */
+    #7ec8e3 240deg,   /* second highlight */
+    #2f6f9f 300deg,
+    #17396f 360deg
+  );
+  animation: fpc-rotate 4s linear infinite;
+  border-radius: 0;
+}
+
+/* Inner white card sits above the spinning pseudo */
+.featured-card-border > a {
+  position: relative;
+  z-index: 1;
+  background: #fff;
+  border-radius: 14px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.featured-card-border:hover {
+  box-shadow: 0 4px 24px rgba(23, 57, 111, 0.28);
+}
+
 /* Safe area for mobile bottom nav */
 .safe-area-pb {
   padding-bottom: env(safe-area-inset-bottom, 0px);

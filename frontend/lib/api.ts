@@ -8,10 +8,14 @@ const LS_TOKEN_KEY = "auth_token";
 
 export interface ApiCategory {
   id: number;
-  name: string;
+  name: string;   // mapped from title for backwards compat
+  title: string;
   slug: string;
   image?: string;
   parent_id?: number | null;
+  subcategory_count?: number;
+  product_count?: number;
+  status?: string;
 }
 
 export interface ApiProduct {
@@ -384,6 +388,8 @@ export interface RealApiProduct {
     symbol: string;
     code: string;
   };
+  category_id?: number | null;
+  category?: { id: number; title: string; slug: string } | null;
   variants: RealApiVariant[];
 }
 
@@ -466,14 +472,50 @@ export async function getProductFaqs(slug: string): Promise<ApiFaq[]> {
   return [];
 }
 
-export async function getCategories(): Promise<ApiCategory[]> {
-  const res = await apiFetch<ApiResponse<ApiCategory[]> | ApiCategory[]>(
-    "/api/categories"
-  );
-  if (!res) return [];
-  if (Array.isArray(res)) return res;
-  if ("data" in res && Array.isArray(res.data)) return res.data;
+function normaliseCats(raw: unknown[]): ApiCategory[] {
+  return raw.map((c: unknown) => {
+    const cat = c as Record<string, unknown>;
+    const title = (cat.title ?? cat.name ?? "") as string;
+    return { ...cat, title, name: title } as ApiCategory;
+  });
+}
+
+function extractCatArray(json: unknown): ApiCategory[] {
+  if (Array.isArray(json)) return normaliseCats(json);
+  const j = json as Record<string, unknown>;
+  // paginated: { data: { data: [...] } }
+  if (j.data && typeof j.data === "object" && !Array.isArray(j.data)) {
+    const inner = (j.data as Record<string, unknown>).data;
+    if (Array.isArray(inner)) return normaliseCats(inner);
+  }
+  if (Array.isArray(j.data)) return normaliseCats(j.data as unknown[]);
   return [];
+}
+
+export async function getCategories(): Promise<ApiCategory[]> {
+  try {
+    const res = await fetch(`${API_BASE}/api/categories`, {
+      headers: { Accept: "application/json" },
+      next: { revalidate: 300, tags: ["categories"] },
+    } as RequestInit);
+    if (!res.ok) return [];
+    return extractCatArray(await res.json());
+  } catch {
+    return [];
+  }
+}
+
+export async function getSubCategories(): Promise<ApiCategory[]> {
+  try {
+    const res = await fetch(`${API_BASE}/api/categories/sub-categories`, {
+      headers: { Accept: "application/json" },
+      next: { revalidate: 300, tags: ["categories"] },
+    } as RequestInit);
+    if (!res.ok) return [];
+    return extractCatArray(await res.json());
+  } catch {
+    return [];
+  }
 }
 
 // ─── Normalise price to number ────────────────────────────────────────────────

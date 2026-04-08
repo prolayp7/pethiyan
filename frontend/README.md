@@ -1,36 +1,95 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Pethiyan — Frontend
+
+E-commerce storefront for [Pethiyan](https://pethiyan.com), built with Next.js 16, TypeScript, and Tailwind CSS v4.
+
+## Tech Stack
+
+- **Framework**: Next.js 16 (App Router)
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS v4
+- **Auth & DB**: Firebase
+- **UI Primitives**: Radix UI (Dialog, Dropdown)
+- **Carousel**: Embla Carousel
+- **Icons**: Lucide React
+- **Notifications**: React Hot Toast
+
+## Project Structure
+
+```
+app/               # Next.js App Router pages
+  products/        # Product listing & detail pages
+  shop/            # Shop page
+  cart/            # Cart page
+  checkout/        # Checkout flow
+  wishlist/        # Wishlist page
+  account/         # User account
+  search/          # Search results
+  order-confirmed/ # Post-order confirmation
+  track-order/     # Order tracking
+  category/        # Category browsing
+  login/           # Authentication
+  about/           # About page
+  contact/         # Contact page
+  faq/             # FAQ page
+  privacy-policy/  # Legal pages
+  returns-policy/
+  shipping-policy/
+  terms-and-conditions/
+components/        # Reusable UI components
+  auth/            # Auth-related components
+  common/          # Shared components
+  headers/         # Top bar, nav, announcement bar
+  hero/            # Hero/banner sections
+  layout/          # Footer, page layout
+  navigation/      # Navigation menus
+  popups/          # Modal popups (e.g. coupon)
+  product/         # Product card, gallery, etc.
+  sections/        # Page sections
+  shop/            # Shop-specific components
+  ui/              # Generic UI (cart drawer, bottom nav, etc.)
+context/           # React context providers
+  AuthContext.tsx  # Firebase authentication state
+  CartContext.tsx  # Shopping cart state
+  WishlistContext.tsx # Wishlist state
+lib/               # Utilities & helpers
+  api.ts           # Backend API calls
+  firebase.ts      # Firebase config & init
+  structured-data.ts # JSON-LD schema markup
+  utils.ts         # General utilities
+```
 
 ## Getting Started
 
-First, run the development server:
-
 ```bash
+# Install dependencies
+npm install
+
+# Start development server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Environment Variables
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Create a `.env.local` file in this directory:
 
-## Learn More
+```env
+NEXT_PUBLIC_SITE_URL=https://pethiyan.com
+NEXT_PUBLIC_FIREBASE_API_KEY=
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=
+NEXT_PUBLIC_FIREBASE_APP_ID=
+NEXT_PUBLIC_API_BASE_URL=
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Scripts
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start development server |
+| `npm run build` | Build for production |
+| `npm run start` | Start production server |
+| `npm run lint` | Run ESLint |

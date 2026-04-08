@@ -18,7 +18,7 @@ export default function NotFound() {
           <div className="absolute inset-0 flex items-center justify-center">
             <div
               className="w-20 h-20 rounded-2xl flex items-center justify-center"
-              style={{ background: "linear-gradient(135deg,#1f4f8a,#0f2f5f)" }}
+              style={{ background: "var(--brand-gradient)" }}
             >
               <ShoppingBag className="h-10 w-10 text-white" />
             </div>
@@ -37,22 +37,21 @@ export default function NotFound() {
         <div className="flex flex-col sm:flex-row gap-3 justify-center mb-10">
           <Link
             href="/"
-            className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-sm font-bold text-white transition-all hover:-translate-y-0.5"
-            style={{ background: "linear-gradient(135deg,#1f4f8a,#0f2f5f)" }}
+            className="btn-brand inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-sm font-bold transition-all hover:-translate-y-0.5"
           >
             <Home className="h-4 w-4" />
             Back to Home
           </Link>
           <Link
             href="/shop"
-            className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-sm font-bold text-(--color-primary) border-2 border-(--color-primary) hover:bg-blue-50 transition-all"
+            className="btn-brand inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-sm font-bold transition-all hover:-translate-y-0.5"
           >
             <ShoppingBag className="h-4 w-4" />
             Browse Products
           </Link>
           <Link
             href="/search"
-            className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-sm font-bold text-gray-600 border-2 border-gray-200 hover:bg-gray-50 transition-all"
+            className="btn-brand inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-sm font-bold transition-all hover:-translate-y-0.5"
           >
             <Search className="h-4 w-4" />
             Search
