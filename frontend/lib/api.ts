@@ -432,6 +432,24 @@ export async function getFeaturedProducts(): Promise<RealApiProduct[]> {
   }
 }
 
+export async function getNewArrivals(days = 30, limit = 40): Promise<RealApiProduct[]> {
+  try {
+    const res = await fetch(
+      `${API_BASE}/api/products/new-arrivals?days=${days}&limit=${limit}`,
+      {
+        headers: { Accept: "application/json" },
+        next: { revalidate: 60, tags: ["new-arrivals"] },
+      } as RequestInit
+    );
+    if (!res.ok) return [];
+    const json = await res.json();
+    if ("data" in json && Array.isArray(json.data)) return json.data;
+    return [];
+  } catch {
+    return [];
+  }
+}
+
 export async function searchProducts(keywords: string): Promise<ApiProduct[]> {
   const res = await apiFetch<ApiResponse<ApiProduct[]> | ApiProduct[]>(
     `/api/products/search-by-keywords?keywords=${encodeURIComponent(keywords)}`

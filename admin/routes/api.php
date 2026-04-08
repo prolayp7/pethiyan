@@ -189,6 +189,7 @@ Route::get('brands', [BrandApiController::class, 'index']);
 Route::prefix('products')->name('products.')->middleware('throttle:60,1')->group(function () {
     Route::get('/', [ProductApiController::class, 'getAllProduct']);
     Route::get('/featured', [ProductApiController::class, 'getFeaturedProduct']);
+    Route::get('/new-arrivals', [ProductApiController::class, 'getNewArrivals']);
     Route::get('/search-by-keywords', [ProductApiController::class, 'searchByKeywords']);
     Route::get('/store-wise', [ProductApiController::class, 'storeWise']);
     Route::get('/{slug}', [ProductApiController::class, 'show']);

@@ -397,6 +397,70 @@ class ProductApiController extends Controller
     }
 
     /**
+     * Get newly added products ordered by creation date.
+     */
+    #[QueryParameter('days', description: 'How many days back to look for new arrivals', type: 'int', default: 30, example: 30)]
+    #[QueryParameter('limit', description: 'Maximum number of products to return', type: 'int', default: 20, example: 20)]
+    #[QueryParameter('customer_state_code', description: 'Customer state code for GST calculation', type: 'string', example: 'TN')]
+    public function getNewArrivals(Request $request): JsonResponse
+    {
+        try {
+            $validated = $request->validate([
+                'days'                => ['nullable', 'integer', 'min:1', 'max:365'],
+                'limit'               => ['nullable', 'integer', 'min:1', 'max:100'],
+                'customer_state_code' => 'nullable|string|max:10',
+            ]);
+
+            $days  = (int) ($validated['days']  ?? 30);
+            $limit = (int) ($validated['limit'] ?? 20);
+
+            $products = Product::query()
+                ->where('verification_status', ProductVarificationStatusEnum::APPROVED->value)
+                ->where('status', ProductStatusEnum::ACTIVE->value)
+                ->where('created_at', '>=', now()->subDays($days))
+                ->with([
+                    'category:id,title,slug',
+                    'brand:id,title,slug',
+                    'taxClasses:id,title',
+                    'taxClasses.taxRates:id,title,rate',
+                    'variants' => function ($variantQuery) {
+                        $variantQuery->with([
+                            'attributes.attribute:id,title,slug',
+                            'attributes.attributeValue:id,title,swatche_value',
+                            'storeProductVariants' => function ($spvQuery) {
+                                $spvQuery->with('store:id,name,slug,state_code,state_name');
+                            },
+                        ]);
+                    },
+                ])
+                ->orderByDesc('created_at')
+                ->limit($limit)
+                ->get()
+                ->map(fn($product) => new ProductCatalogResource($product))
+                ->values();
+
+            return ApiResponseType::sendJsonResponse(
+                success: true,
+                message: 'labels.product_fetched_successfully',
+                data: $products
+            );
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return ApiResponseType::sendJsonResponse(
+                success: false,
+                message: 'labels.validation_error',
+                data: $e->errors()
+            );
+        } catch (\Exception $e) {
+            Log::error('New arrivals API failed.', ['message' => $e->getMessage()]);
+            return ApiResponseType::sendJsonResponse(
+                success: false,
+                message: 'labels.error_fetching_products',
+                data: [],
+            );
+        }
+    }
+
+    /**
      * Search products by keywords and group results by keyword.
      */
     #[QueryParameter('latitude', description: 'Latitude of the user location', required: true, type: 'float', example: 23.11684540)]
