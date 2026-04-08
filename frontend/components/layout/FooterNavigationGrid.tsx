@@ -19,9 +19,8 @@ export default async function FooterNavigationGrid({
 
   return (
     <div
-      className="relative border-t"
+      className="relative"
       style={{
-        borderColor: "rgba(255,255,255,0.05)",
         background: "linear-gradient(180deg, #040b1a 0%, #050b19 100%)",
       }}
     >

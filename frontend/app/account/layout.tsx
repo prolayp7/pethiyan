@@ -66,7 +66,7 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
               <div className="flex items-center gap-3">
                 <div
                   className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg shrink-0"
-                  style={{ background: "linear-gradient(135deg,#1f4f8a,#0f2f5f)" }}
+                  style={{ background: "var(--brand-gradient)" }}
                 >
                   {initials}
                 </div>
@@ -89,7 +89,7 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
                     key={href}
                     href={href}
                     className={`flex-1 flex flex-col items-center gap-1 py-2 px-2 rounded-xl text-[11px] font-semibold transition-colors whitespace-nowrap min-w-fit ${
-                      active ? "bg-blue-50 text-(--color-primary)" : "text-gray-500 hover:bg-gray-50"
+                      active ? "text-white shadow-sm" : "text-gray-500 hover:bg-gray-50"
                     }`}
                   >
                     <Icon className="h-4 w-4" />
@@ -111,18 +111,19 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
                     className={`flex items-center gap-3 px-5 py-3.5 text-sm font-semibold transition-colors ${
                       i > 0 ? "border-t border-gray-50" : ""
                     } ${active
-                      ? "bg-blue-50 text-(--color-primary)"
+                      ? "text-white"
                       : "text-gray-600 hover:bg-gray-50 hover:text-(--color-secondary)"
                     }`}
+                    style={active ? { background: "var(--brand-gradient)" } : undefined}
                   >
-                    <Icon className={`h-4 w-4 shrink-0 ${active ? "text-(--color-primary)" : "text-gray-400"}`} />
+                    <Icon className={`h-4 w-4 shrink-0 ${active ? "text-white" : "text-gray-400"}`} />
                     {label}
                     {badge && (
-                      <span className="ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full bg-(--color-primary) text-white">
+                      <span className={`ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full ${active ? "bg-white/20 text-white" : "bg-(--color-primary) text-white"}`}>
                         {badge}
                       </span>
                     )}
-                    <ChevronRight className={`h-3.5 w-3.5 ml-auto ${active ? "text-(--color-primary)" : "text-gray-200"}`} />
+                    <ChevronRight className={`h-3.5 w-3.5 ml-auto ${active ? "text-white/70" : "text-gray-200"}`} />
                   </Link>
                 );
               })}

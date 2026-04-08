@@ -142,8 +142,7 @@ function OrderResult({ order }: { order: ApiOrder }) {
 
       {/* Summary banner */}
       <div
-        className="rounded-2xl p-5 text-white"
-        style={{ background: "linear-gradient(135deg,#1f4f8a,#0f2f5f)" }}
+        className="btn-brand rounded-2xl p-5 text-white"
       >
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div>
@@ -290,8 +289,7 @@ export default function TrackOrderClient() {
 
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4"
-            style={{ background: "linear-gradient(135deg,#1f4f8a,#0f2f5f)" }}>
+          <div className="btn-brand inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4">
             <Package className="h-8 w-8 text-white" />
           </div>
           <h1 className="text-3xl font-extrabold text-(--color-secondary)">Track Your Order</h1>
@@ -363,8 +361,7 @@ export default function TrackOrderClient() {
             <button
               onClick={handleTrack}
               disabled={loading || !orderNumber.trim() || phone.trim().length < 10}
-              className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-bold text-white transition-all hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:translate-y-0"
-              style={{ background: "linear-gradient(135deg,#1f4f8a,#0f2f5f)" }}
+              className="btn-brand w-full flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-bold transition-all hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:translate-y-0"
             >
               {loading ? (
                 <><Loader2 className="h-4 w-4 animate-spin" /> Tracking…</>

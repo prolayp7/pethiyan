@@ -44,8 +44,7 @@ function EmptyOrders() {
       </p>
       <Link
         href="/shop"
-        className="inline-flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-bold text-white"
-        style={{ background: "linear-gradient(135deg,#1f4f8a,#0f2f5f)" }}
+        className="btn-brand inline-flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-bold"
       >
         Start Shopping <ArrowRight className="h-4 w-4" />
       </Link>
