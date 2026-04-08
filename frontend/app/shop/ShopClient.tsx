@@ -172,7 +172,10 @@ export default function ShopClient({ initialProducts, initialCategories, initial
   const filtered = sortProducts(
     products.filter((p) => {
       if (priceMax < INR_MAX && getPrice(p) > priceMax) return false;
-      if (selectedIds.size > 0 && !selectedIds.has(p.category?.id ?? -1)) return false;
+      if (selectedIds.size > 0) {
+        const catId = p.category?.id ?? p.category_id ?? -1;
+        if (!selectedIds.has(catId)) return false;
+      }
       return true;
     }),
     sort

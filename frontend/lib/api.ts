@@ -388,6 +388,7 @@ export interface RealApiProduct {
     symbol: string;
     code: string;
   };
+  category_id?: number | null;
   category?: { id: number; title: string; slug: string } | null;
   variants: RealApiVariant[];
 }

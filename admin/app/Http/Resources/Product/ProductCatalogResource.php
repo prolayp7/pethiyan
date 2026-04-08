@@ -99,6 +99,11 @@ class ProductCatalogResource extends JsonResource
             'uuid' => $this->uuid,
             'seller_id' => $this->seller_id,
             'category_id' => $this->category_id,
+            'category' => $this->whenLoaded('category', fn() => $this->category ? [
+                'id'    => $this->category->id,
+                'title' => $this->category->title,
+                'slug'  => $this->category->slug,
+            ] : null),
             'brand_id' => $this->brand_id,
             'title' => $this->title,
             'slug' => $this->slug,
