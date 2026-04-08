@@ -60,6 +60,10 @@ class ProductVariantResource extends JsonResource
             'currency_symbol' => $currency->getSymbol(),
             'currency_code' => $currency->getCode(),
             'attributes' => $attributes,
+            'metadata' => $this->metadata ?? null,
+            'seo_title' => $this->metadata['seo_title'] ?? null,
+            'seo_description' => $this->metadata['seo_description'] ?? null,
+            'seo_keywords' => $this->metadata['seo_keywords'] ?? null,
         ];
     }
 }

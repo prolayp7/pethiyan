@@ -120,6 +120,8 @@ class ProductService
             'made_in' => $validated['made_in'] ?? null,
             'tags' => json_encode($validated['tags'] ?? []),
             'custom_fields' => $validated['custom_fields'] ?? null,
+            'metadata' => $validated['metadata'] ?? null,
+            'is_indexable' => $validated['is_indexable'] ?? true,
         ]);
         $category = Category::findOrFail($validated['category_id']);
         if ($category->requires_approval) {
@@ -181,6 +183,7 @@ class ProductService
                     'availability' => $variantData['availability'] === 'no' ? false : true,
                     'barcode' => !empty($variantData['barcode']) ? $variantData['barcode'] : null,
                     'is_default' => $variantData['is_default'] == 'on' ? true : false,
+                    'metadata' => array_merge($variant->metadata ?? [], $variantData['metadata'] ?? []),
                 ]);
 
 
@@ -210,6 +213,7 @@ class ProductService
                     'availability' => $variantData['availability'] === 'no' ? false : true,
                     'barcode' => !empty($variantData['barcode']) ? $variantData['barcode'] : null,
                     'is_default' => $variantData['is_default'] == 'on' ? true : false,
+                    'metadata' => $variantData['metadata'] ?? null,
                 ]);
 
 
@@ -489,6 +493,8 @@ class ProductService
             'made_in' => $validated['made_in'] ?? null,
             'tags' => json_encode($validated['tags'] ?? []),
             'custom_fields' => $validated['custom_fields'] ?? null,
+            'metadata' => array_merge($product->metadata ?? [], $validated['metadata'] ?? []),
+            'is_indexable' => $validated['is_indexable'] ?? true,
         ]);
         $category = Category::findOrFail($validated['category_id']);
         if ($category->requires_approval) {

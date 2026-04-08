@@ -39,11 +39,13 @@ class ProductVariant extends Model implements HasMedia
         'provider_json',
         'barcode',
         'visibility',
-        'is_default'
+        'is_default',
+        'metadata',
     ];
 
     protected $casts = [
         'provider_json' => 'array',
+        'metadata' => 'array',
         'availability' => 'boolean',
         'is_default' => 'boolean',
     ];

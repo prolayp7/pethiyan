@@ -122,6 +122,16 @@
                         </svg>
                         {{ __('labels.pricing_and_taxes') }}
                     </button>
+                    <button type="button" class="nav-link" data-step="8" aria-selected="false">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                             class="icon icon-tabler icons-tabler-outline icon-tabler-search">
+                            <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                            <path d="M10 10m-7 0a7 7 0 1 0 14 0a7 7 0 1 0 -14 0"/>
+                            <path d="M21 21l-6 -6"/>
+                        </svg>
+                        SEO
+                    </button>
                 </nav>
             </div>
 
@@ -633,6 +643,53 @@
                         </div>
                     </div>
                 </div>
+                {{-- Step 8: SEO --}}
+                <div class="wizard-step d-none" data-step="8">
+                    <div class="container">
+                        <div class="mb-4">
+                            <h4 class="mb-1">SEO Settings</h4>
+                            <p class="text-muted small mb-0">These fields override the default title and description shown by search engines for this product.</p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="row">
+                                <span class="col">Allow search engines to index this product</span>
+                                <span class="col-auto">
+                                    <label class="form-check form-check-single form-switch">
+                                        <input class="form-check-input" type="checkbox" name="is_indexable"
+                                               value="1" {{ !empty($product) && $product->is_indexable === false ? '' : 'checked' }}/>
+                                    </label>
+                                </span>
+                            </label>
+                            <small class="form-hint">Uncheck to add <code>noindex</code> for this product (e.g. discontinued, out-of-stock, duplicate).</small>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">SEO Title</label>
+                            <input type="text" class="form-control" name="seo_title" id="seoTitle" maxlength="60"
+                                   placeholder="e.g. Buy 500ml Kraft Standup Pouches | Pethiyan"
+                                   value="{{ old('seo_title', !empty($product) ? ($product->metadata['seo_title'] ?? '') : '') }}"/>
+                            <div class="d-flex justify-content-between mt-1">
+                                <small class="form-hint">Recommended: 50–60 characters. Leave blank to use product title.</small>
+                                <small class="text-muted" id="seoTitleCount">0 / 60</small>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">SEO Description</label>
+                            <textarea class="form-control" name="seo_description" id="seoDescription" rows="3" maxlength="160"
+                                      placeholder="e.g. Buy premium 500ml kraft standup pouches with zip lock. GST invoice, bulk pricing available.">{{ old('seo_description', !empty($product) ? ($product->metadata['seo_description'] ?? '') : '') }}</textarea>
+                            <div class="d-flex justify-content-between mt-1">
+                                <small class="form-hint">Recommended: 120–160 characters. Leave blank to use short description.</small>
+                                <small class="text-muted" id="seoDescCount">0 / 160</small>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">SEO Keywords</label>
+                            <input type="text" class="form-control" name="seo_keywords" maxlength="255"
+                                   placeholder="e.g. standup pouch, kraft pouch, packaging bags"
+                                   value="{{ old('seo_keywords', !empty($product) ? ($product->metadata['seo_keywords'] ?? '') : '') }}"/>
+                            <small class="form-hint">Comma-separated keywords. Most search engines ignore this, but useful for internal search.</small>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div class="card-footer d-flex justify-content-between">
@@ -686,6 +743,26 @@
         window._gstStates = @json($gstStates ?? []);
         window._taxClassRateMap = @json($taxClassRateMap);
         window._productGstRate = @json(!empty($product) ? $product->gst_rate : null);
+    </script>
+
+    <script>
+        // SEO character counters
+        document.addEventListener('DOMContentLoaded', function () {
+            function initCounter(inputId, countId, max) {
+                const el = document.getElementById(inputId);
+                const counter = document.getElementById(countId);
+                if (!el || !counter) return;
+                function update() {
+                    const len = el.value.length;
+                    counter.textContent = len + ' / ' + max;
+                    counter.style.color = len > max ? '#d63939' : (len >= max * 0.9 ? '#f59f00' : '');
+                }
+                el.addEventListener('input', update);
+                update();
+            }
+            initCounter('seoTitle', 'seoTitleCount', 60);
+            initCounter('seoDescription', 'seoDescCount', 160);
+        });
     </script>
 
     @if(!empty($product) && !empty($productVariants))

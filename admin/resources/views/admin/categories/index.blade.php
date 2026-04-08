@@ -233,6 +233,51 @@
                                 </div>
 
                             </div>{{-- end .row --}}
+
+                            {{-- SEO Section --}}
+                            <hr class="mt-4 mb-3">
+                            <div class="mb-1">
+                                <h6 class="text-muted fw-semibold text-uppercase mb-3" style="font-size:.7rem;letter-spacing:.05em;">SEO Settings</h6>
+                                <div class="mb-3">
+                                    <label class="row">
+                                        <span class="col">Allow search engines to index this category</span>
+                                        <span class="col-auto">
+                                            <label class="form-check form-check-single form-switch">
+                                                <input class="form-check-input" type="checkbox" name="is_indexable"
+                                                       id="is-indexable-switch" value="1" checked/>
+                                            </label>
+                                        </span>
+                                    </label>
+                                    <small class="form-hint">Uncheck to add <code>noindex</code> (e.g. draft, unlisted, or duplicate category).</small>
+                                </div>
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label">SEO Title</label>
+                                        <input type="text" class="form-control" name="seo_title" maxlength="60"
+                                               placeholder="e.g. Buy Standup Pouches | Pethiyan"/>
+                                        <div class="d-flex justify-content-between mt-1">
+                                            <small class="form-hint">Recommended: 50–60 characters.</small>
+                                            <small class="text-muted" id="catSeoTitleCount">0 / 60</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">SEO Keywords</label>
+                                        <input type="text" class="form-control" name="seo_keywords" maxlength="255"
+                                               placeholder="e.g. standup pouch, kraft bag"/>
+                                        <small class="form-hint">Comma-separated keywords.</small>
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label">SEO Description</label>
+                                        <textarea class="form-control" name="seo_description" rows="2" maxlength="160"
+                                                  placeholder="e.g. Shop premium standup pouches at Pethiyan. GST invoice, bulk pricing."></textarea>
+                                        <div class="d-flex justify-content-between mt-1">
+                                            <small class="form-hint">Recommended: 120–160 characters.</small>
+                                            <small class="text-muted" id="catSeoDescCount">0 / 160</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                         </div>
 
                         <div class="modal-footer">
@@ -325,3 +370,28 @@
         </div>
     </div>
 @endsection
+
+@push('scripts')
+<script>
+    (function () {
+        function initCatSeoCounters() {
+            function counter(inputSel, countId, max) {
+                const el = document.querySelector(inputSel);
+                const cnt = document.getElementById(countId);
+                if (!el || !cnt) return;
+                function update() {
+                    const len = el.value.length;
+                    cnt.textContent = len + ' / ' + max;
+                    cnt.style.color = len > max ? '#d63939' : (len >= max * 0.9 ? '#f59f00' : '');
+                }
+                el.addEventListener('input', update);
+                update();
+            }
+            counter('input[name="seo_title"]',          'catSeoTitleCount', 60);
+            counter('textarea[name="seo_description"]', 'catSeoDescCount',  160);
+        }
+        document.getElementById('category-modal')
+            ?.addEventListener('shown.bs.modal', initCatSeoCounters);
+    })();
+</script>
+@endpush

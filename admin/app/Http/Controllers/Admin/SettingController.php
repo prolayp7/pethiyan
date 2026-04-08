@@ -441,6 +441,9 @@ class SettingController extends Controller
         $webValues['twitterTitle'] = $request->input('twitterTitle', $webValues['twitterTitle'] ?? '');
         $webValues['twitterDescription'] = $request->input('twitterDescription', $webValues['twitterDescription'] ?? '');
         $webValues['seoSchemaJson'] = $request->input('seoSchemaJson', $webValues['seoSchemaJson'] ?? '');
+        $webValues['googleAnalyticsId'] = $request->input('googleAnalyticsId', $webValues['googleAnalyticsId'] ?? '');
+        $webValues['googleTagManagerId'] = $request->input('googleTagManagerId', $webValues['googleTagManagerId'] ?? '');
+        $webValues['facebookPixelId'] = $request->input('facebookPixelId', $webValues['facebookPixelId'] ?? '');
 
         if ($request->hasFile('seoOgImage')) {
             $file = $request->file('seoOgImage');

@@ -71,6 +71,7 @@ class Product extends Model implements HasMedia
         'guarantee_period',
         'made_in',
         'metadata',
+        'is_indexable',
         'image_fit',
         'gst_rate',
         'created_at',
@@ -81,7 +82,23 @@ class Product extends Model implements HasMedia
         'metadata' => 'array',
         'custom_fields' => 'array',
         'base_prep_time' => 'integer',
+        'is_indexable' => 'boolean',
     ];
+
+    public function getSeoTitleAttribute(): ?string
+    {
+        return $this->metadata['seo_title'] ?? null;
+    }
+
+    public function getSeoDescriptionAttribute(): ?string
+    {
+        return $this->metadata['seo_description'] ?? null;
+    }
+
+    public function getSeoKeywordsAttribute(): ?string
+    {
+        return $this->metadata['seo_keywords'] ?? null;
+    }
 
     public function getEstimatedDeliveryTimeAttribute()
     {

@@ -70,7 +70,24 @@ class StoreUpdateProductRequest extends FormRequest
             'length_unit' => 'nullable|in:mm,cm,inch,m',
             'color_value_id' => 'nullable|integer|exists:global_product_attribute_values,id',
             'barcode' => 'required_if:type,simple|nullable|string',
+            'metadata' => 'nullable|array',
+            'metadata.seo_title' => 'nullable|string|max:255',
+            'metadata.seo_description' => 'nullable|string|max:500',
+            'metadata.seo_keywords' => 'nullable|string|max:255',
+            'is_indexable' => 'nullable|boolean',
         ];
+    }
+
+    protected function prepareForValidation(): void
+    {
+        $this->merge([
+            'metadata' => array_merge($this->metadata ?? [], [
+                'seo_title'       => $this->input('seo_title') ?: null,
+                'seo_description' => $this->input('seo_description') ?: null,
+                'seo_keywords'    => $this->input('seo_keywords') ?: null,
+            ]),
+            'is_indexable' => $this->has('is_indexable') ? (bool)$this->input('is_indexable') : true,
+        ]);
     }
 
     public function attributes(): array

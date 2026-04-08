@@ -66,6 +66,9 @@ class WebSettingType implements SettingInterface
     public string $twitterDescription = '';
     public string $twitterImage = '';
     public string $seoSchemaJson = '';
+    public string $googleAnalyticsId = '';
+    public string $googleTagManagerId = '';
+    public string $facebookPixelId = '';
     public bool $footerSeoEnabled = true;
     public string $footerSeoTitle = '';
     public string $footerSeoIntro = '';
@@ -145,6 +148,9 @@ class WebSettingType implements SettingInterface
             'twitterDescription' => 'nullable|string|max:500',
             'twitterImage' => 'nullable|image|mimes:png,jpg,jpeg,webp|max:4096',
             'seoSchemaJson' => 'nullable|string',
+            'googleAnalyticsId' => 'nullable|string|max:50',
+            'googleTagManagerId' => 'nullable|string|max:50',
+            'facebookPixelId' => 'nullable|string|max:50',
             'footerSeoEnabled' => 'nullable|boolean',
             'footerSeoTitle' => 'nullable|string|max:255',
             'footerSeoIntro' => 'nullable|string',
