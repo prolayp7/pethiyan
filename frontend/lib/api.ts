@@ -296,6 +296,8 @@ export interface RealApiStorePricing {
   store_id: number;
   store_name: string;
   store_slug: string;
+  store_state_name?: string;
+  store_state_code?: string;
   sku: string;
   price: number;
   special_price: number;
@@ -327,10 +329,14 @@ export interface RealApiVariant {
   availability: boolean;
   weight: number | null;
   weight_unit: string;
+  height?: number | null;
+  height_unit?: string;
   breadth: number | null;
   breadth_unit: string;
   length: number | null;
   length_unit: string;
+  capacity?: number | null;
+  capacity_unit?: string;
   attributes: Record<string, string>;
   store_pricing: RealApiStorePricing[];
 }
@@ -354,16 +360,25 @@ export interface RealApiProduct {
   };
   features: {
     made_in?: string;
+    warranty_period?: string;
+    guarantee_period?: string;
   };
   policies: {
     minimum_order_quantity: number;
+    quantity_step_size?: number;
     is_returnable: boolean;
     is_cancelable: boolean;
+    requires_otp?: boolean;
   };
   tax: {
     gst_rate: string;
     hsn_code: string;
     is_inclusive_tax: boolean;
+    tax_groups?: string[];
+    customer_state_code?: string;
+  };
+  video?: {
+    video_link?: string;
   };
   currency?: {
     symbol: string;

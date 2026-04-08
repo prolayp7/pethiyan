@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, type CSSProperties } from "react";
+import { useState, useEffect, useRef, useMemo, type CSSProperties } from "react";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import toast from "react-hot-toast";
@@ -337,6 +337,25 @@ export default function ProductDetailClient({ product, reviews: initialReviews, 
   const [wishlistBusy, setWishlistBusy] = useState(false);
   const [addedToCart, setAddedToCart] = useState(false);
   const [activeTab, setActiveTab] = useState<"description" | "specs" | "reviews" | "faqs">("description");
+  const [variantsMaxH, setVariantsMaxH] = useState<number>(300);
+
+  const rightColRef = useRef<HTMLDivElement>(null);
+  const galleryWrapRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const update = () => {
+      if (!rightColRef.current || !galleryWrapRef.current) return;
+      const rightH = rightColRef.current.offsetHeight;
+      const galleryH = galleryWrapRef.current.offsetHeight;
+      const gap = 24; // gap-6
+      setVariantsMaxH(Math.max(80, rightH - galleryH - gap));
+    };
+    const ro = new ResizeObserver(update);
+    if (rightColRef.current) ro.observe(rightColRef.current);
+    if (galleryWrapRef.current) ro.observe(galleryWrapRef.current);
+    update();
+    return () => ro.disconnect();
+  }, []);
 
   const productName = product.title ?? "Product";
   const variantList = useMemo(() => product.variants ?? [], [product.variants]);
@@ -567,15 +586,50 @@ export default function ProductDetailClient({ product, reviews: initialReviews, 
   return (
     <Container>
       <div className="py-10">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-10 lg:gap-16">
-          <Gallery
-            key={`gallery-${selectedVariant?.id ?? "base"}`}
-            images={galleryImages}
-            name={productName}
-            videoUrl={isVideoLink(product.video?.video_link) ? product.video.video_link : null}
-          />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-10 lg:gap-16 md:items-stretch">
+          <div className="flex flex-col gap-6 overflow-hidden">
+            <div ref={galleryWrapRef}>
+              <Gallery
+                key={`gallery-${selectedVariant?.id ?? "base"}`}
+                images={galleryImages}
+                name={productName}
+                videoUrl={isVideoLink(product.video?.video_link) ? product.video?.video_link : null}
+              />
+            </div>
 
-          <div className="flex flex-col">
+            {variantList.length > 0 && (
+              <div className="flex flex-col space-y-3">
+                <p className="text-sm font-semibold text-(--color-secondary) flex items-center gap-2 shrink-0">
+                  <Layers className="h-4 w-4" /> Product Variants
+                </p>
+                <div className="overflow-y-auto pr-1 grid gap-2 content-start" style={{ maxHeight: variantsMaxH }}>
+                  {variantList.map((variant) => {
+                    const selected = selectedVariant?.id === variant.id;
+                    const attributeLabel = Object.entries(variant.attributes ?? {})
+                      .map(([k, v]) => `${k}: ${v}`)
+                      .join(" | ");
+                    return (
+                      <button
+                        key={variant.id}
+                        onClick={() => setSelectedVariantId(variant.id)}
+                        className={`text-left border rounded-xl p-3 transition-all ${
+                          selected
+                            ? "btn-brand border-transparent shadow-md"
+                            : "border-(--color-border) hover:border-(--color-primary)/50"
+                        }`}
+                        aria-pressed={selected}
+                      >
+                        <p className={`text-sm font-semibold ${selected ? "text-white" : "text-(--color-secondary)"}`}>{variant.title}</p>
+                        {attributeLabel && <p className={`text-xs mt-0.5 ${selected ? "text-white/80" : "text-gray-500"}`}>{attributeLabel}</p>}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div ref={rightColRef} className="flex flex-col">
             <div className="flex items-center flex-wrap gap-2 mb-3">
               <span className="text-xs font-semibold text-(--color-primary) bg-(--color-primary)/10 px-2.5 py-1 rounded-full">
                 {product.type === "variant" ? "Variant Product" : "Simple Product"}
@@ -644,7 +698,7 @@ export default function ProductDetailClient({ product, reviews: initialReviews, 
                         onClick={() => setSelectedVariantId(opt.variantId)}
                         className={`h-10 w-10 rounded-full border-2 transition-all ${
                           selected
-                            ? "border-(--color-primary) shadow-[0_0_0_2px_rgba(31,79,138,0.18)]"
+                            ? "border-white shadow-[0_0_0_3px_#17396f,_0_0_0_5px_#49ad57]"
                             : "border-(--color-border) hover:border-(--color-primary)/60"
                         }`}
                         style={colorSwatchStyle(opt.color)}
@@ -653,37 +707,6 @@ export default function ProductDetailClient({ product, reviews: initialReviews, 
                         title={opt.color}
                       >
                         <span className="sr-only">{opt.color}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {variantList.length > 0 && (
-              <div className="space-y-3 mt-5">
-                <p className="text-sm font-semibold text-(--color-secondary) flex items-center gap-2">
-                  <Layers className="h-4 w-4" /> Product Variants
-                </p>
-                <div className="grid gap-2 max-h-44 overflow-auto pr-1">
-                  {variantList.map((variant) => {
-                    const selected = selectedVariant?.id === variant.id;
-                    const attributeLabel = Object.entries(variant.attributes ?? {})
-                      .map(([k, v]) => `${k}: ${v}`)
-                      .join(" | ");
-                    return (
-                      <button
-                        key={variant.id}
-                        onClick={() => setSelectedVariantId(variant.id)}
-                        className={`text-left border rounded-xl p-3 transition-all ${
-                          selected
-                            ? "btn-brand border-transparent shadow-md"
-                            : "border-(--color-border) hover:border-(--color-primary)/50"
-                        }`}
-                        aria-pressed={selected}
-                      >
-                        <p className={`text-sm font-semibold ${selected ? "text-white" : "text-(--color-secondary)"}`}>{variant.title}</p>
-                        {attributeLabel && <p className={`text-xs mt-0.5 ${selected ? "text-white/80" : "text-gray-500"}`}>{attributeLabel}</p>}
                       </button>
                     );
                   })}
