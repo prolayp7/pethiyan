@@ -264,6 +264,28 @@
                                             <textarea class="form-control" name="seoSchemaJson" rows="5"
                                                       placeholder='Paste valid JSON-LD schema for homepage'>{{ $settings['seoSchemaJson'] ?? '' }}</textarea>
                                         </div>
+                                        <hr class="my-4">
+                                        <div class="mb-3">
+                                            <label class="form-label">Google Analytics 4 Measurement ID</label>
+                                            <input type="text" class="form-control" name="googleAnalyticsId"
+                                                   placeholder="e.g. G-XXXXXXXXXX"
+                                                   value="{{ $settings['googleAnalyticsId'] ?? '' }}" maxlength="50"/>
+                                            <small class="form-hint">Found in Google Analytics → Admin → Data Streams → your stream → Measurement ID.</small>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Google Tag Manager Container ID</label>
+                                            <input type="text" class="form-control" name="googleTagManagerId"
+                                                   placeholder="e.g. GTM-XXXXXXX"
+                                                   value="{{ $settings['googleTagManagerId'] ?? '' }}" maxlength="50"/>
+                                            <small class="form-hint">Found in Google Tag Manager → your container → Container ID (top-right).</small>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Facebook / Meta Pixel ID</label>
+                                            <input type="text" class="form-control" name="facebookPixelId"
+                                                   placeholder="e.g. 1234567890123456"
+                                                   value="{{ $settings['facebookPixelId'] ?? '' }}" maxlength="50"/>
+                                            <small class="form-hint">Found in Meta Events Manager → your pixel → Pixel ID.</small>
+                                        </div>
                                     </div>
                                 </div>
                                 {{-- Social Media card removed here to avoid duplicate with the unified

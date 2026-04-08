@@ -42,9 +42,11 @@ class UpdateCategoryRequest extends FormRequest
             'status' => ['nullable', new Enum(CategoryStatusEnum::class)],
             'requires_approval' => 'boolean',
             'commission' => 'nullable|numeric|min:0|max:100',
-            'meta_title' => 'nullable|string|max:255',
-            'meta_keywords' => 'nullable|string|max:255',
-            'meta_description' => 'nullable|string',
+            'metadata' => 'nullable|array',
+            'metadata.seo_title' => 'nullable|string|max:255',
+            'metadata.seo_description' => 'nullable|string|max:500',
+            'metadata.seo_keywords' => 'nullable|string|max:255',
+            'is_indexable' => 'nullable|boolean',
         ];
     }
 
@@ -59,6 +61,12 @@ class UpdateCategoryRequest extends FormRequest
             'commission'        => $this->commission !== '' ? $this->commission : null,
             'background_color'  => $this->background_color ?: null,
             'font_color'        => $this->font_color ?: null,
+            'metadata'          => array_merge($this->metadata ?? [], [
+                'seo_title'       => $this->input('seo_title') ?: null,
+                'seo_description' => $this->input('seo_description') ?: null,
+                'seo_keywords'    => $this->input('seo_keywords') ?: null,
+            ]),
+            'is_indexable' => $this->has('is_indexable') ? (bool)$this->input('is_indexable') : true,
         ]);
     }
 }

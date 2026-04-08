@@ -37,7 +37,8 @@ class Category extends Model implements HasMedia
         'background_type',
         'background_color',
         'font_color',
-        'metadata'
+        'metadata',
+        'is_indexable',
     ];
 
     protected $casts = [
@@ -45,6 +46,7 @@ class Category extends Model implements HasMedia
         'commission' => 'decimal:2',
         'background_type' => CategoryBackgroundTypeEnum::class,
         'metadata' => 'array',
+        'is_indexable' => 'boolean',
     ];
 
     /**

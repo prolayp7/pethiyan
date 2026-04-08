@@ -435,6 +435,9 @@ function initializeVariantAttributes() {
                 availability: serverVariant.availability || '',
                 barcode: serverVariant.barcode || '',
                 is_default: serverVariant.is_default || '',
+                seo_title: serverVariant.metadata?.seo_title || serverVariant.seo_title || '',
+                seo_description: serverVariant.metadata?.seo_description || serverVariant.seo_description || '',
+                seo_keywords: serverVariant.metadata?.seo_keywords || serverVariant.seo_keywords || '',
             };
         });
 
@@ -676,6 +679,33 @@ function renderVariants() {
                             <input class="form-check-input" name='is_defaults' type="radio" id="flexRadioDefault${v.id}" onchange="setDefaultVariant('${v.id}')" ${isDefaultVariant(v.is_default) ? 'checked' : ''}>
                             <label class="form-check-label" for="flexRadioDefault${v.id}">Set as Default</label>
                         </div>
+                    </div>
+                    <div class="col-12">
+                        <details>
+                            <summary class="text-muted small fw-semibold" style="cursor:pointer;user-select:none;">SEO (optional)</summary>
+                            <div class="row g-2 mt-1">
+                                <div class="col-12">
+                                    <label class="form-label form-label-sm mb-1">SEO Title <span class="text-muted">(max 60)</span></label>
+                                    <input type="text" class="form-control form-control-sm" maxlength="60"
+                                           placeholder="Variant SEO title"
+                                           value="${v.seo_title || ''}"
+                                           onchange="updateVariant('${v.id}', 'seo_title', this.value)">
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label form-label-sm mb-1">SEO Description <span class="text-muted">(max 160)</span></label>
+                                    <textarea class="form-control form-control-sm" maxlength="160" rows="2"
+                                              placeholder="Variant SEO description"
+                                              onchange="updateVariant('${v.id}', 'seo_description', this.value)">${v.seo_description || ''}</textarea>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label form-label-sm mb-1">SEO Keywords</label>
+                                    <input type="text" class="form-control form-control-sm" maxlength="255"
+                                           placeholder="keyword1, keyword2"
+                                           value="${v.seo_keywords || ''}"
+                                           onchange="updateVariant('${v.id}', 'seo_keywords', this.value)">
+                                </div>
+                            </div>
+                        </details>
                     </div>
                 </div>
             </div>
@@ -1842,7 +1872,12 @@ function addVariantInputsToForm() {
             availability: variant.availability || '',
             barcode: variant.barcode || '',
             is_default: variant.is_default || '',
-            attributes: []
+            attributes: [],
+            metadata: {
+                seo_title: variant.seo_title || null,
+                seo_description: variant.seo_description || null,
+                seo_keywords: variant.seo_keywords || null,
+            },
         };
 
         // Add attributes in a simpler format

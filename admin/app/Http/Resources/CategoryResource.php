@@ -29,6 +29,10 @@ class CategoryResource extends JsonResource
             'status' => $this->status,
             'requires_approval' => $this->requires_approval,
             'metadata' => $this->metadata,
+            'is_indexable' => $this->is_indexable ?? true,
+            'seo_title' => $this->metadata['seo_title'] ?? null,
+            'seo_description' => $this->metadata['seo_description'] ?? null,
+            'seo_keywords' => $this->metadata['seo_keywords'] ?? null,
             'subcategory_count' => $this->children_count ?? 0,
             'product_count' => $this->products_count ?? 0,
         ];

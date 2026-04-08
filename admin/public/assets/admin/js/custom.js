@@ -49,6 +49,15 @@ document.addEventListener('show.bs.modal', function (event) {
                     form.querySelector('input[name="background_color"]').value = data.background_color || '';
                     form.querySelector('input[name="font_color"]').value = data.font_color || '';
 
+                    // is_indexable toggle
+                    const isIndexableSwitch = form.querySelector('input[name="is_indexable"]');
+                    if (isIndexableSwitch) isIndexableSwitch.checked = data.is_indexable !== false;
+
+                    // SEO fields
+                    form.querySelector('input[name="seo_title"]').value = data.metadata?.seo_title || '';
+                    form.querySelector('textarea[name="seo_description"]').value = data.metadata?.seo_description || '';
+                    form.querySelector('input[name="seo_keywords"]').value = data.metadata?.seo_keywords || '';
+
                     // Set parent_id in TomSelect (auto-select)
                     if (tomSelectInstance) {
                         // If the parent is not in the options yet, load it
@@ -131,6 +140,11 @@ document.addEventListener('show.bs.modal', function (event) {
             }
             form.querySelector('input[name="background_color"]').value = '';
             form.querySelector('input[name="font_color"]').value = '';
+            const isIndexableSwitchNew = form.querySelector('input[name="is_indexable"]');
+            if (isIndexableSwitchNew) isIndexableSwitchNew.checked = true;
+            form.querySelector('input[name="seo_title"]').value = '';
+            form.querySelector('textarea[name="seo_description"]').value = '';
+            form.querySelector('input[name="seo_keywords"]').value = '';
 
             // Set action for create
             form.querySelector('input[id="category-id"]').value = "";

@@ -129,6 +129,10 @@ class ProductCatalogResource extends JsonResource
                 'made_in' => $this->made_in,
                 'custom_fields' => $this->custom_fields ?? [],
                 'metadata' => $this->metadata ?? [],
+                'is_indexable' => $this->is_indexable ?? true,
+                'seo_title' => $this->metadata['seo_title'] ?? null,
+                'seo_description' => $this->metadata['seo_description'] ?? null,
+                'seo_keywords' => $this->metadata['seo_keywords'] ?? null,
             ],
             'policies' => [
                 'minimum_order_quantity' => $this->minimum_order_quantity,
