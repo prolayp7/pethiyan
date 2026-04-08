@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { X, ArrowRight, Mail, User as UserIcon, Lock, Eye, EyeOff } from "lucide-react";
 import Image from "next/image";
+import { useSiteSettings } from "@/context/SiteSettingsContext";
 import Link from "next/link";
 import MobileInput, { isValidIndianMobile } from "@/components/auth/MobileInput";
 import OtpInput from "@/components/auth/OtpInput";
@@ -57,6 +58,7 @@ function validatePassword(pw: string): string {
 export default function LoginModal({ open, onClose, onSuccess, redirectTo }: LoginModalProps) {
   const router = useRouter();
   const { login } = useAuth();
+  const { appName, logo } = useSiteSettings();
 
   const completeLogin = useCallback((user: AuthUser, token: string) => {
     login(user, token);
@@ -429,7 +431,11 @@ export default function LoginModal({ open, onClose, onSuccess, redirectTo }: Log
 
         {/* Brand strip */}
         <div className="px-8 pt-8 pb-5 text-center" style={{ background: "linear-gradient(135deg,#1f4f8a 0%,#0f2f5f 100%)" }}>
-          <Image src="/pethiyan-logo.png" alt="Pethiyan" width={120} height={60} className="mx-auto h-14 w-auto object-contain brightness-0 invert" />
+          {logo ? (
+            <Image src={logo} alt={appName} width={120} height={60} className="mx-auto h-14 w-auto object-contain brightness-0 invert" unoptimized />
+          ) : (
+            <span className="text-2xl font-extrabold text-white">{appName}</span>
+          )}
           <p className="mt-2 text-sm text-blue-200">The Power of Perfect Packaging</p>
         </div>
 

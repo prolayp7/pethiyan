@@ -1092,10 +1092,14 @@ export async function getPaymentSettings(): Promise<ApiPaymentSettings> {
 }
 
 export async function getSystemSettings(): Promise<ApiSystemSettings | null> {
-  const res = await apiFetch<{
+  // Use fetch directly (not apiFetch) so Next.js ISR caching works server-side.
+  const res = await fetch(`${API_BASE}/api/settings/system`, {
+    headers: { Accept: "application/json" },
+    next: { revalidate: 3600, tags: ["site-settings"] },
+  } as RequestInit).then((r) => r.json()).catch(() => null) as {
     success?: boolean;
     data?: { value?: Record<string, unknown> } | Record<string, unknown>;
-  }>("/api/settings/system");
+  } | null;
 
   if (!res || !res.success || !res.data) return null;
 
