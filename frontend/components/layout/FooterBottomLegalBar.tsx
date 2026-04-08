@@ -55,13 +55,6 @@ export default function FooterBottomLegalBar({
             ))}
           </div>
 
-          <p
-            className="text-[10px] text-center leading-relaxed"
-            style={{ color: "rgba(255,255,255,0.22)" }}
-          >
-            Pethiyan Packaging Pvt. Ltd.&nbsp;&nbsp;·&nbsp;&nbsp;CIN
-            U74999MH2020PTC345678&nbsp;&nbsp;·&nbsp;&nbsp;GST 27AABCP1234F1Z5
-          </p>
 
           <div className="flex items-center gap-2 shrink-0">
             <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.28)" }}>

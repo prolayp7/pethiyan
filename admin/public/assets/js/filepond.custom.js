@@ -55,7 +55,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const filePondServerLoad = {
             load: (source, load, error, progress, abort) => {
                 fetch(normalizeLocalhostOrigin(source))
-                    .then(response => response.blob())
+                    .then(response => {
+                        // Preserve Content-Type so FilePond type-validation doesn't reject it
+                        const contentType = (response.headers.get('content-type') || 'image/jpeg').split(';')[0].trim();
+                        return response.blob().then(blob => new Blob([blob], { type: contentType }));
+                    })
                     .then(blob => load(blob))
                     .catch(err => error(err));
                 return { abort: () => {} };

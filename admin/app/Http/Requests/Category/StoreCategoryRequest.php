@@ -30,7 +30,7 @@ class StoreCategoryRequest extends FormRequest
             'parent_id' => 'nullable|integer|exists:categories,id',
             'title' => 'required|string|max:255|unique:categories,title',
             'description' => 'nullable|string',
-            'image' => 'required|image|mimes:jpeg,png,jpg,webp|max:5120',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
             'banner' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
             'icon' => 'nullable|image|mimes:jpeg,png,jpg,webp,svg',
             'active_icon' => 'nullable|image|mimes:jpeg,png,jpg,webp,svg',
@@ -52,10 +52,12 @@ class StoreCategoryRequest extends FormRequest
      */
     protected function prepareForValidation(): void
     {
-        // Set default values
         $this->merge([
-            'status' => $this->status ?? CategoryStatusEnum::INACTIVE->value,
-            'requires_approval' => $this->requires_approval ?? false,
+            'status'             => $this->status ?? CategoryStatusEnum::INACTIVE->value,
+            'requires_approval'  => false, // always auto-approved
+            'commission'         => $this->commission !== '' ? $this->commission : null,
+            'background_color'   => $this->background_color ?: null,
+            'font_color'         => $this->font_color ?: null,
         ]);
     }
 }
