@@ -31,15 +31,28 @@ export interface FallbackProduct {
 }
 
 const COLOR_MAP: Record<string, string> = {
-  Transparent: "#c8e6f5",
-  Brown:       "#8B6347",
-  Colorful:    "linear-gradient(135deg,#f44,#4f4,#44f)",
-  Black:       "#222",
-  White:       "#eee",
-  Red:         "#e53",
-  Blue:        "#36f",
-  Green:       "#4b8",
-  Yellow:      "#fb0",
+  Transparent:  "#c8e6f5",
+  Brown:        "#8B6347",
+  Colorful:     "linear-gradient(135deg,#f44,#4f4,#44f)",
+  Black:        "#111",
+  White:        "#f0f0f0",
+  Red:          "#e53",
+  Blue:         "#36f",
+  Green:        "#4b8",
+  Yellow:       "#fb0",
+  Gray:         "#9ca3af",
+  Grey:         "#9ca3af",
+  "Light Gray": "#d1d5db",
+  "Light Grey": "#d1d5db",
+  "Dark Gray":  "#374151",
+  "Dark Grey":  "#374151",
+  Silver:       "#c0c0c0",
+  Orange:       "#f97316",
+  Purple:       "#a855f7",
+  Pink:         "#ec4899",
+  Beige:        "#e8dcc8",
+  Navy:         "#1e3a5f",
+  Maroon:       "#800000",
 };
 
 function normalizeImageUrl(src?: string | null): string | null {
@@ -315,7 +328,7 @@ export default function FeaturedProductCard({ p }: { p: FallbackProduct }) {
         )}
 
         {/* Quick action stack */}
-        <div className="absolute right-3 bottom-[12%] z-10 flex flex-col gap-2.5">
+        <div className="absolute right-3 bottom-[10%] z-10 flex flex-col gap-2.5">
           <button
             type="button"
             onClick={handleAddToCart}

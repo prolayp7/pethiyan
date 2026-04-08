@@ -96,7 +96,7 @@ export default function MainHeader() {
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* 3-section row: logo | [centered search] | icons */}
-          <div className="relative flex items-center justify-between py-0">
+          <div className="relative flex items-center justify-between py-3">
 
             {/* ── LEFT: Logo + mobile hamburger ── */}
             <div className="flex items-center gap-2 shrink-0 z-10">
@@ -114,15 +114,17 @@ export default function MainHeader() {
                 className="flex items-center"
                 aria-label={`${appName} — Home`}
               >
-                <Image
-                  src={headerLogo}
-                  alt={appName}
-                  width={112}
-                  height={112}
-                  className="h-20 sm:h-24 lg:h-28 w-auto object-contain"
-                  onError={() => setHeaderLogo("/pethiyan-logo.png")}
-                  priority
-                />
+                <div className="relative" style={{ width: 160, height: 52 }}>
+                  <Image
+                    src={headerLogo}
+                    alt={appName}
+                    fill
+                    className="object-contain object-left"
+                    onError={() => setHeaderLogo("/pethiyan-logo.png")}
+                    unoptimized
+                    priority
+                  />
+                </div>
               </Link>
             </div>
 

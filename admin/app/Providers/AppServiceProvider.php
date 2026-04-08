@@ -3,6 +3,8 @@
 namespace App\Providers;
 
 
+use App\Models\Product;
+use App\Observers\ProductObserver;
 use App\Services\CurrencyService;
 use App\Services\SettingService;
 use Dedoc\Scramble\Scramble;
@@ -35,6 +37,8 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Schema::defaultStringLength(191);
+
+        Product::observe(ProductObserver::class);
 
         $systemSettings = [];
 

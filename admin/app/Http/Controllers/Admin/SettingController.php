@@ -39,6 +39,16 @@ class SettingController extends Controller
     private const PAYMENT_UNLOCK_SESSION_KEY = 'admin_payment_settings_unlocked_at';
     private const PAYMENT_UNLOCK_TTL_MINUTES = 10;
 
+    /** Fields belonging to each system-settings section for partial saves */
+    private const SYSTEM_SECTION_FIELDS = [
+        'general'  => ['appName', 'systemTimezone', 'copyrightDetails', 'currency', 'currencySymbol', 'logo', 'favicon', 'companyAddress', 'adminSignature'],
+        'support'  => ['sellerSupportEmail', 'sellerSupportNumber'],
+        'cart'     => ['checkoutType', 'minimumCartAmount', 'maximumItemsAllowedInCart', 'lowStockLimit'],
+        'order'    => ['customerInvoiceDownloadEnabled', 'customerInvoiceDownloadMinStatus'],
+        'demomode' => ['demoMode', 'adminDemoModeMessage', 'sellerDemoModeMessage', 'customerDemoModeMessage', 'customerLocationDemoModeMessage', 'deliveryBoyDemoModeMessage'],
+        'social'   => ['socialLinks'],
+    ];
+
     protected SettingService $settingService;
     protected TotpService $totpService;
 
@@ -115,6 +125,22 @@ class SettingController extends Controller
                 }
             }
 
+            // Partial section save: merge submitted fields with existing values so
+            // saving one section does not reset all other sections to defaults.
+            $section = $request->input('_section');
+            if ($type === SettingTypeEnum::SYSTEM() && $section && isset(self::SYSTEM_SECTION_FIELDS[$section])) {
+                $sectionKeys = self::SYSTEM_SECTION_FIELDS[$section];
+                // Seed with class defaults so required fields from other sections
+                // always have valid values even when no DB row exists yet.
+                $defaults = get_object_vars(new $method());
+                $merged = array_merge($defaults, $existingValues);
+                foreach ($sectionKeys as $field) {
+                    // Submitted value takes priority; missing = unchecked checkbox → null
+                    $merged[$field] = array_key_exists($field, $payload) ? $payload[$field] : null;
+                }
+                $payload = $merged;
+            }
+
             // Initialize settings object from request data
             $settings = $method::fromArray($payload);
 
@@ -146,10 +172,13 @@ class SettingController extends Controller
                 );
             }
 
+            $shouldSyncWeb = $type === SettingTypeEnum::SYSTEM()
+                && (!$section || $section === 'general');
+
             // Update or create setting
             if ($setting) {
                 $setting->update($data);
-                if ($type === SettingTypeEnum::SYSTEM()) {
+                if ($shouldSyncWeb) {
                     $this->syncMergedWebGeneralSettings($request);
                 }
                 return ApiResponseType::sendJsonResponse(
@@ -160,7 +189,7 @@ class SettingController extends Controller
             }
 
             $res = Setting::create($data);
-            if ($type === SettingTypeEnum::SYSTEM()) {
+            if ($shouldSyncWeb) {
                 $this->syncMergedWebGeneralSettings($request);
             }
             return ApiResponseType::sendJsonResponse(

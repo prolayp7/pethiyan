@@ -69,7 +69,7 @@ function adapt(p: RealApiProduct): FallbackProduct {
     v.store_pricing.some((s) => s.stock_status === "in_stock")
   );
 
-  const image = defaultVariant?.image ?? p.images.main_image;
+  const image = defaultVariant?.image || p.images.main_image || undefined;
 
   return {
     id:               String(p.id),

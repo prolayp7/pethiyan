@@ -40,8 +40,7 @@ function EmptyWishlist() {
       </p>
       <Link
         href="/shop"
-        className="inline-flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-bold text-white"
-        style={{ background: "linear-gradient(135deg,#1f4f8a,#0f2f5f)" }}
+        className="btn-brand inline-flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-bold"
       >
         Explore Products <ArrowRight className="h-4 w-4" />
       </Link>
@@ -242,8 +241,7 @@ export default function WishlistPage() {
                   <button
                     onClick={() => handleAddToCart(item)}
                     disabled={busy}
-                    className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-bold text-white transition-all hover:-translate-y-0.5"
-                    style={{ background: "linear-gradient(135deg,#1f4f8a,#0f2f5f)" }}
+                    className="btn-brand flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-bold transition-all hover:-translate-y-0.5"
                   >
                     <ShoppingCart className="h-4 w-4" />
                     Add to Cart

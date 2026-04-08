@@ -296,6 +296,8 @@ export interface RealApiStorePricing {
   store_id: number;
   store_name: string;
   store_slug: string;
+  store_state_name?: string;
+  store_state_code?: string;
   sku: string;
   price: number;
   special_price: number;
@@ -327,10 +329,14 @@ export interface RealApiVariant {
   availability: boolean;
   weight: number | null;
   weight_unit: string;
+  height?: number | null;
+  height_unit?: string;
   breadth: number | null;
   breadth_unit: string;
   length: number | null;
   length_unit: string;
+  capacity?: number | null;
+  capacity_unit?: string;
   attributes: Record<string, string>;
   store_pricing: RealApiStorePricing[];
 }
@@ -354,16 +360,25 @@ export interface RealApiProduct {
   };
   features: {
     made_in?: string;
+    warranty_period?: string;
+    guarantee_period?: string;
   };
   policies: {
     minimum_order_quantity: number;
+    quantity_step_size?: number;
     is_returnable: boolean;
     is_cancelable: boolean;
+    requires_otp?: boolean;
   };
   tax: {
     gst_rate: string;
     hsn_code: string;
     is_inclusive_tax: boolean;
+    tax_groups?: string[];
+    customer_state_code?: string;
+  };
+  video?: {
+    video_link?: string;
   };
   currency?: {
     symbol: string;
@@ -376,25 +391,39 @@ export interface RealApiProduct {
 
 export async function getProducts(params?: Record<string, string>): Promise<RealApiProduct[]> {
   const query = params ? "?" + new URLSearchParams(params).toString() : "";
-  const res = await apiFetch<{ success: boolean; data: { data: RealApiProduct[] } | RealApiProduct[] }>(
-    `/api/products${query}`
-  );
-  if (!res) return [];
-  if ("data" in res) {
-    const d = res.data;
-    if (Array.isArray(d)) return d;
-    if (d && "data" in d && Array.isArray(d.data)) return d.data;
+  try {
+    const res = await fetch(`${API_BASE}/api/products${query}`, {
+      headers: { Accept: "application/json" },
+      next: { revalidate: 60, tags: ["products"] },
+    } as RequestInit);
+    if (!res.ok) return [];
+    const json = await res.json();
+    if ("data" in json) {
+      const d = json.data;
+      if (Array.isArray(d)) return d;
+      if (d && "data" in d && Array.isArray(d.data)) return d.data;
+    }
+    return [];
+  } catch {
+    return [];
   }
-  return [];
 }
 
 export async function getFeaturedProducts(): Promise<RealApiProduct[]> {
-  const res = await apiFetch<{ success: boolean; data: RealApiProduct[] }>(
-    "/api/products/featured"
-  );
-  if (!res) return [];
-  if ("data" in res && Array.isArray(res.data)) return res.data;
-  return [];
+  try {
+    // Use fetch directly so Next.js ISR cache + tags work on the server.
+    // In the browser the `next` option is ignored and data is fetched fresh.
+    const res = await fetch(`${API_BASE}/api/products/featured`, {
+      headers: { Accept: "application/json" },
+      next: { revalidate: 60, tags: ["featured-products"] },
+    } as RequestInit);
+    if (!res.ok) return [];
+    const json = await res.json();
+    if ("data" in json && Array.isArray(json.data)) return json.data;
+    return [];
+  } catch {
+    return [];
+  }
 }
 
 export async function searchProducts(keywords: string): Promise<ApiProduct[]> {
@@ -980,21 +1009,26 @@ export async function getPaymentSettings(): Promise<ApiPaymentSettings> {
     codEnabled: true,
   };
 
-  const res = await apiFetch<{
-    success?: boolean;
-    data?: { value?: Record<string, unknown> } | Record<string, unknown>;
-  }>("/api/settings/payment");
+  try {
+    const res = await apiFetch<{
+      success?: boolean;
+      data?: Record<string, unknown>;
+    }>("/api/settings/payment");
 
-  if (!res || !res.success || !res.data) return fallback;
+    if (!res || !res.success || !res.data) return fallback;
 
-  const setting = ("value" in res.data ? res.data.value : res.data) as Record<string, unknown> | undefined;
-  if (!setting) return fallback;
+    // Response: { data: { variable: "payment", value: { razorpayPayment: true, ... } } }
+    const data = res.data as Record<string, unknown>;
+    const value = (data.value ?? data) as Record<string, unknown>;
 
-  return {
-    razorpayEnabled: Boolean(setting.razorpayPayment),
-    easepayEnabled: Boolean(setting.easepayPayment),
-    codEnabled: Boolean(setting.cod),
-  };
+    return {
+      razorpayEnabled: Boolean(value.razorpayPayment),
+      easepayEnabled: Boolean(value.easepayPayment),
+      codEnabled: Boolean(value.cod),
+    };
+  } catch {
+    return fallback;
+  }
 }
 
 export async function getSystemSettings(): Promise<ApiSystemSettings | null> {

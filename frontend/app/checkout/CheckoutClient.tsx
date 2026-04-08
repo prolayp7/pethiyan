@@ -228,8 +228,7 @@ function AddressForm({ value, onChange, onSave, onCancel, saving, errorMessage, 
         <button
           onClick={onSave}
           disabled={saving || !value.name || !value.phone || !value.address_line1 || !value.city || !value.state || !value.pincode}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold text-white disabled:opacity-50 disabled:cursor-not-allowed"
-          style={{ background: "linear-gradient(135deg,#1f4f8a,#0f2f5f)" }}
+          className="btn-brand flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : isEditing ? <Edit2 className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
           {isEditing ? "Update Address" : "Save Address"}
@@ -269,22 +268,24 @@ function OrderSummary({ subtotal, discount, shippingCharge, couponResult, curren
       <div className="space-y-2.5 mb-4 max-h-48 overflow-y-auto">
         {items.map((item, i) => (
           <div key={i} className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg overflow-hidden border border-gray-100 bg-gray-50 relative shrink-0">
-              {item.image ? (
-                <Image
-                  src={item.image}
-                  alt={item.name}
-                  fill
-                  className="object-cover"
-                  unoptimized={shouldBypassOptimizer(item.image)}
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <ShoppingBag className="h-4 w-4 text-gray-300" />
-                </div>
-              )}
-              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-(--color-primary) text-white text-[9px] flex items-center justify-center font-bold">
-                {item.quantity}
+            <div className="relative shrink-0 w-10 h-10 mt-1.5 mr-1.5">
+              <div className="w-10 h-10 rounded-lg overflow-hidden border border-gray-100 bg-gray-50 relative">
+                {item.image ? (
+                  <Image
+                    src={item.image}
+                    alt={item.name}
+                    fill
+                    className="object-cover"
+                    unoptimized
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <ShoppingBag className="h-4 w-4 text-gray-300" />
+                  </div>
+                )}
+              </div>
+              <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-(--color-primary) text-white text-[9px] flex items-center justify-center font-bold z-10">
+                {item.quantity > 99 ? "99+" : item.quantity}
               </span>
             </div>
             <div className="flex-1 min-w-0">
@@ -384,7 +385,7 @@ export default function CheckoutClient() {
 
   // Payment state
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("razorpay");
-  const [availablePaymentMethods, setAvailablePaymentMethods] = useState<PaymentMethod[]>(["razorpay", "cod"]);
+  const [availablePaymentMethods, setAvailablePaymentMethods] = useState<PaymentMethod[]>([]);
   const [processingPayment, setProcessingPayment] = useState(false);
   const [paymentError, setPaymentError] = useState("");
 
@@ -407,15 +408,20 @@ export default function CheckoutClient() {
   }, [authLoading, isLoggedIn]);
 
   useEffect(() => {
-    getPaymentSettings().then((settings) => {
-      const methods: PaymentMethod[] = [];
-      if (settings.razorpayEnabled) methods.push("razorpay");
-      if (settings.easepayEnabled) methods.push("easepay");
-      if (settings.codEnabled) methods.push("cod");
-      if (methods.length === 0) methods.push("cod");
-      setAvailablePaymentMethods(methods);
-      setPaymentMethod((current) => (methods.includes(current) ? current : methods[0]));
-    });
+    getPaymentSettings()
+      .then((settings) => {
+        const methods: PaymentMethod[] = [];
+        if (settings.razorpayEnabled) methods.push("razorpay");
+        if (settings.easepayEnabled) methods.push("easepay");
+        if (settings.codEnabled) methods.push("cod");
+        if (methods.length === 0) methods.push("cod");
+        setAvailablePaymentMethods(methods);
+        setPaymentMethod((current) => (methods.includes(current) ? current : methods[0]));
+      })
+      .catch(() => {
+        // Fallback: show razorpay + cod if settings fetch fails
+        setAvailablePaymentMethods(["razorpay", "cod"]);
+      });
   }, []);
 
   // Derived values
@@ -626,7 +632,7 @@ export default function CheckoutClient() {
       image: "/pethiyan-logo.png",
       prefill: {
         name: user?.name ?? "",
-        contact: `+91${user?.phone ?? ""}`,
+        contact: `+91${user?.mobile ?? ""}`,
         email: user?.email ?? "",
       },
       theme: { color: "#1f4f8a" },
@@ -704,8 +710,7 @@ export default function CheckoutClient() {
             <div className="flex items-center justify-center gap-3">
               <button
                 onClick={() => setLoginModalDismissed(false)}
-                className="px-6 py-3 rounded-xl text-sm font-bold text-white"
-                style={{ background: "linear-gradient(135deg,#1f4f8a,#0f2f5f)" }}
+                className="btn-brand px-6 py-3 rounded-xl text-sm font-bold"
               >
                 Login / Register
               </button>
@@ -770,7 +775,7 @@ export default function CheckoutClient() {
                             key={addr.id}
                             className={`flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${
                               selectedAddressId === addr.id
-                                ? "border-(--color-primary) bg-blue-50"
+                                ? "border-transparent bg-blue-50 shadow-[0_0_0_2px_#17396f,0_0_0_3.5px_#49ad57]"
                                 : "border-gray-100 hover:border-gray-200"
                             }`}
                           >
@@ -839,8 +844,7 @@ export default function CheckoutClient() {
                 {!showAddressForm && selectedAddressId && (
                   <button
                     onClick={handleContinueToShipping}
-                    className="mt-6 w-full flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-bold text-white transition-all hover:-translate-y-0.5"
-                    style={{ background: "linear-gradient(135deg,#1f4f8a,#0f2f5f)" }}
+                    className="btn-brand mt-6 w-full flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-bold transition-all hover:-translate-y-0.5"
                   >
                     Continue to Shipping
                     <ChevronRight className="h-4 w-4" />
@@ -897,7 +901,7 @@ export default function CheckoutClient() {
                         key={rate.id}
                         className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${
                           selectedRateId === rate.id
-                            ? "border-(--color-primary) bg-blue-50"
+                            ? "border-transparent bg-blue-50 shadow-[0_0_0_2px_#17396f,0_0_0_3.5px_#49ad57]"
                             : "border-gray-100 hover:border-gray-200"
                         }`}
                       >
@@ -937,8 +941,7 @@ export default function CheckoutClient() {
                 {selectedRateId !== null && (
                   <button
                     onClick={() => setStep(3)}
-                    className="mt-6 w-full flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-bold text-white transition-all hover:-translate-y-0.5"
-                    style={{ background: "linear-gradient(135deg,#1f4f8a,#0f2f5f)" }}
+                    className="btn-brand mt-6 w-full flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-bold transition-all hover:-translate-y-0.5"
                   >
                     Continue to Payment
                     <ChevronRight className="h-4 w-4" />
@@ -994,8 +997,7 @@ export default function CheckoutClient() {
                       <button
                         onClick={handleApplyCoupon}
                         disabled={!couponCode.trim() || couponLoading}
-                        className="px-4 py-2.5 rounded-xl text-sm font-bold text-white disabled:opacity-50"
-                        style={{ background: "linear-gradient(135deg,#1f4f8a,#0f2f5f)" }}
+                        className="btn-brand px-4 py-2.5 rounded-xl text-sm font-bold disabled:opacity-50"
                       >
                         {couponLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Apply"}
                       </button>
@@ -1008,43 +1010,55 @@ export default function CheckoutClient() {
                 <div className="space-y-3 mb-6">
                   <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Payment Method</p>
 
-                  {availablePaymentMethods.map((method) => (
-                    <label
-                      key={method}
-                      className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${
-                        paymentMethod === method ? "border-(--color-primary) bg-blue-50" : "border-gray-100 hover:border-gray-200"
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="payment"
-                        value={method}
-                        checked={paymentMethod === method}
-                        onChange={() => setPaymentMethod(method)}
-                        className="accent-(--color-primary)"
-                      />
-                      {method === "cod" ? (
-                        <Banknote className="h-5 w-5 text-green-600" />
-                      ) : (
-                        <CreditCard className="h-5 w-5 text-(--color-primary)" />
-                      )}
-                      <div>
-                        <p className="text-sm font-semibold text-(--color-secondary)">
-                          {method === "cod" ? "Cash on Delivery" : method === "easepay" ? "Online Payment (Easepay)" : "Online Payment (Razorpay)"}
-                        </p>
-                        <p className="text-xs text-gray-400">
-                          {method === "cod"
-                            ? "Pay when your order arrives"
-                            : method === "easepay"
-                              ? "UPI, Cards, Net Banking via Easepay"
-                              : "UPI, Cards, Net Banking via Razorpay"}
-                        </p>
-                      </div>
-                      {method === "razorpay" && (
-                        <img src="/razorpay-logo.svg" alt="Razorpay" className="h-5 ml-auto" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
-                      )}
-                    </label>
-                  ))}
+                  {availablePaymentMethods.length === 0 ? (
+                    <div className="space-y-3">
+                      {[1, 2].map((i) => (
+                        <div key={i} className="h-16 rounded-xl border-2 border-gray-100 bg-gray-50 animate-pulse" />
+                      ))}
+                    </div>
+                  ) : (
+                    availablePaymentMethods.map((method) => (
+                      <label
+                        key={method}
+                        className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                          paymentMethod === method ? "border-transparent bg-blue-50 shadow-[0_0_0_2px_#17396f,0_0_0_3.5px_#49ad57]" : "border-gray-100 hover:border-gray-200"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="payment"
+                          value={method}
+                          checked={paymentMethod === method}
+                          onChange={() => setPaymentMethod(method)}
+                          className="accent-(--color-primary)"
+                        />
+                        {method === "cod" ? (
+                          <Banknote className="h-5 w-5 text-green-600" />
+                        ) : (
+                          <CreditCard className="h-5 w-5 text-(--color-primary)" />
+                        )}
+                        <div>
+                          <p className="text-sm font-semibold text-(--color-secondary)">
+                            {method === "cod"
+                              ? "Cash on Delivery"
+                              : method === "easepay"
+                                ? "Easebuzz"
+                                : "Razorpay"}
+                          </p>
+                          <p className="text-xs text-gray-400">
+                            {method === "cod"
+                              ? "Pay when your order arrives"
+                              : method === "easepay"
+                                ? "UPI, Cards, Net Banking via Easebuzz"
+                                : "UPI, Cards, Net Banking via Razorpay"}
+                          </p>
+                        </div>
+                        {method === "razorpay" && (
+                          <img src="/razorpay-logo.svg" alt="Razorpay" className="h-5 ml-auto" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                        )}
+                      </label>
+                    ))
+                  )}
                 </div>
 
                 {/* Error */}
@@ -1058,8 +1072,7 @@ export default function CheckoutClient() {
                 <button
                   onClick={handlePlaceOrder}
                   disabled={processingPayment}
-                  className="w-full flex items-center justify-center gap-2 py-4 rounded-xl text-sm font-bold text-white transition-all hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-not-allowed disabled:translate-y-0"
-                  style={{ background: "linear-gradient(135deg,#1f4f8a,#0f2f5f)" }}
+                  className="btn-brand w-full flex items-center justify-center gap-2 py-4 rounded-xl text-sm font-bold transition-all hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-not-allowed disabled:translate-y-0"
                 >
                   {processingPayment ? (
                     <>

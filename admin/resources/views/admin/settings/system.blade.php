@@ -67,10 +67,12 @@
                 <div class="col-sm">
                     <div class="row row-cards">
                         <div class="col-12">
+                            {{-- ── GENERAL ─────────────────────────────────────────── --}}
                             <form action="{{route('admin.settings.store')}}" class="form-submit" method="post"
                                   enctype="multipart/form-data">
                                 @csrf
                                 <input type="hidden" name="type" value="system">
+                                <input type="hidden" name="_section" value="general">
                                 <div class="card mb-4" id="pills-general">
                                     <div class="card-header">
                                         <h4 class="card-title">{{ __('labels.general') }}</h4>
@@ -159,7 +161,19 @@
                                             </div>
                                         @endcan
                                     </div>
+                                    <div class="card-footer text-end">
+                                        @can('updateSetting', [\App\Models\Setting::class, 'system'])
+                                            <button type="submit" class="btn btn-primary">{{ __('labels.submit') }}</button>
+                                        @endcan
+                                    </div>
                                 </div>
+                            </form>
+
+                            {{-- ── SUPPORT INFORMATION ─────────────────────────────── --}}
+                            <form action="{{route('admin.settings.store')}}" class="form-submit" method="post">
+                                @csrf
+                                <input type="hidden" name="type" value="system">
+                                <input type="hidden" name="_section" value="support">
                                 <div class="card mb-4" id="pills-support">
                                     <div class="card-header">
                                         <h4 class="card-title">{{ __('labels.support_information') }}</h4>
@@ -186,7 +200,19 @@
                                             </div>
                                         </div>
                                     </div>
+                                    <div class="card-footer text-end">
+                                        @can('updateSetting', [\App\Models\Setting::class, 'system'])
+                                            <button type="submit" class="btn btn-primary">{{ __('labels.submit') }}</button>
+                                        @endcan
+                                    </div>
                                 </div>
+                            </form>
+
+                            {{-- ── CART & INVENTORY ────────────────────────────────── --}}
+                            <form action="{{route('admin.settings.store')}}" class="form-submit" method="post">
+                                @csrf
+                                <input type="hidden" name="type" value="system">
+                                <input type="hidden" name="_section" value="cart">
                                 <div class="card mb-4" id="pills-cart">
                                     <div class="card-header">
                                         <h4 class="card-title">{{ __('labels.cart_inventory_settings') }}</h4>
@@ -241,8 +267,19 @@
 {{--                                                   value="{{$settings['maximumDistanceToNearestStore'] ?? ''}}"/>--}}
 {{--                                        </div>--}}
                                     </div>
+                                    <div class="card-footer text-end">
+                                        @can('updateSetting', [\App\Models\Setting::class, 'system'])
+                                            <button type="submit" class="btn btn-primary">{{ __('labels.submit') }}</button>
+                                        @endcan
+                                    </div>
                                 </div>
+                            </form>
 
+                            {{-- ── ORDER SETTINGS ──────────────────────────────────── --}}
+                            <form action="{{route('admin.settings.store')}}" class="form-submit" method="post">
+                                @csrf
+                                <input type="hidden" name="type" value="system">
+                                <input type="hidden" name="_section" value="order">
                                 <div class="card mb-4" id="pills-order-settings">
                                     <div class="card-header">
                                         <h4 class="card-title">Order Settings</h4>
@@ -274,7 +311,13 @@
                                             <small class="form-hint">Default is <strong>Dispatched</strong> as requested.</small>
                                         </div>
                                     </div>
+                                    <div class="card-footer text-end">
+                                        @can('updateSetting', [\App\Models\Setting::class, 'system'])
+                                            <button type="submit" class="btn btn-primary">{{ __('labels.submit') }}</button>
+                                        @endcan
+                                    </div>
                                 </div>
+                            </form>
 
                                 {{-- Wallet Settings (temporarily disabled)
                                 <div class="card mb-4" id="pills-wallet">
@@ -342,8 +385,13 @@
                                     </div>
                                 </div>
                                 --}}
-                                <div class="card mb-4" id="pills-demomode">
 
+                            {{-- ── DEMO MODE ────────────────────────────────────────── --}}
+                            <form action="{{route('admin.settings.store')}}" class="form-submit" method="post">
+                                @csrf
+                                <input type="hidden" name="type" value="system">
+                                <input type="hidden" name="_section" value="demomode">
+                                <div class="card mb-4" id="pills-demomode">
                                     <div class="card-header">
                                         <h4 class="card-title">{{ __('labels.demo_mode') }}</h4>
                                     </div>
@@ -394,7 +442,13 @@
                                                    value="{{$settings['deliveryBoyDemoModeMessage'] ?? ''}}"/>
                                         </div>
                                     </div>
+                                    <div class="card-footer text-end">
+                                        @can('updateSetting', [\App\Models\Setting::class, 'system'])
+                                            <button type="submit" class="btn btn-primary">{{ __('labels.submit') }}</button>
+                                        @endcan
+                                    </div>
                                 </div>
+                            </form>
 
                                 {{--                                <div class="card mb-4" id="pills-referral">--}}
                                 {{--                                    <div class="card-header">--}}
@@ -493,19 +547,24 @@
                                 {{--                                        </div>--}}
                                 {{--                                    </div>--}}
                                 {{--                                </div>--}}
-                                <!-- Social Media Links -->
-                                @php
-                                    $socialPlatforms = [
-                                        'facebook'  => 'Facebook',
-                                        'instagram' => 'Instagram',
-                                        'twitter'   => 'Twitter / X',
-                                        'youtube'   => 'YouTube',
-                                        'linkedin'  => 'LinkedIn',
-                                        'pinterest' => 'Pinterest',
-                                        'whatsapp'  => 'WhatsApp',
-                                        'telegram'  => 'Telegram',
-                                    ];
-                                @endphp
+
+                            {{-- ── SOCIAL MEDIA ─────────────────────────────────────── --}}
+                            @php
+                                $socialPlatforms = [
+                                    'facebook'  => 'Facebook',
+                                    'instagram' => 'Instagram',
+                                    'twitter'   => 'Twitter / X',
+                                    'youtube'   => 'YouTube',
+                                    'linkedin'  => 'LinkedIn',
+                                    'pinterest' => 'Pinterest',
+                                    'whatsapp'  => 'WhatsApp',
+                                    'telegram'  => 'Telegram',
+                                ];
+                            @endphp
+                            <form action="{{route('admin.settings.store')}}" class="form-submit" method="post">
+                                @csrf
+                                <input type="hidden" name="type" value="system">
+                                <input type="hidden" name="_section" value="social">
                                 <div class="card mb-4" id="pills-social">
                                     <div class="card-header">
                                         <h4 class="card-title">Social Media Links</h4>
@@ -546,13 +605,9 @@
                                             </div>
                                         @endforeach
                                     </div>
-                                </div>
-
-                                <div class="card-footer text-end">
-                                    <div class="d-flex">
+                                    <div class="card-footer text-end">
                                         @can('updateSetting', [\App\Models\Setting::class, 'system'])
-                                            <button type="submit"
-                                                    class="btn btn-primary ms-auto">{{ __('labels.submit') }}</button>
+                                            <button type="submit" class="btn btn-primary">{{ __('labels.submit') }}</button>
                                         @endcan
                                     </div>
                                 </div>
