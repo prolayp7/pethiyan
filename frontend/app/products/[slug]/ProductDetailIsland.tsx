@@ -11,6 +11,7 @@ interface ProductDetailIslandProps {
   product: RealApiProduct;
   reviews: ApiReview[];
   faqs: ApiFaq[];
+  initialVariantSlug?: string;
 }
 
 export default function ProductDetailIsland(props: ProductDetailIslandProps) {

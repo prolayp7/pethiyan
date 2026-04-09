@@ -34,14 +34,26 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   // ─── Dynamic product pages (exclude non-indexable) ────────────────────────
   const products = await getProducts();
-  const productPages: MetadataRoute.Sitemap = products
-    .filter((p) => p.features?.is_indexable !== false)
-    .map((p) => ({
-      url: `${SITE_URL}/products/${p.slug}`,
-      lastModified: new Date(),
-      changeFrequency: "weekly" as const,
-      priority: 0.8,
-    }));
+  const indexableProducts = products.filter((p) => p.features?.is_indexable !== false);
 
-  return [...staticPages, ...categoryPages, ...productPages];
+  const productPages: MetadataRoute.Sitemap = indexableProducts.map((p) => ({
+    url: `${SITE_URL}/products/${p.slug}`,
+    lastModified: new Date(),
+    changeFrequency: "weekly" as const,
+    priority: 0.8,
+  }));
+
+  // ─── Per-variant URLs (exclude non-indexable variants or products) ─────────
+  const variantPages: MetadataRoute.Sitemap = indexableProducts.flatMap((p) =>
+    (p.variants ?? [])
+      .filter((v) => v.slug && v.is_indexable !== false)
+      .map((v) => ({
+        url: `${SITE_URL}/products/${p.slug}/${v.slug}`,
+        lastModified: new Date(),
+        changeFrequency: "weekly" as const,
+        priority: 0.75,
+      }))
+  );
+
+  return [...staticPages, ...categoryPages, ...productPages, ...variantPages];
 }
