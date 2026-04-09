@@ -142,6 +142,14 @@ class SettingController extends Controller
                     $merged[$field] = array_key_exists($field, $payload) ? $payload[$field] : null;
                 }
                 $payload = $merged;
+
+                // The merge re-introduces logo/favicon/adminSignature as stored path strings.
+                // Strip them again so the image validation rules only run against actual uploads.
+                foreach (['logo', 'favicon', 'adminSignature'] as $mediaField) {
+                    if (!$request->hasFile($mediaField)) {
+                        unset($payload[$mediaField]);
+                    }
+                }
             }
 
             // Initialize settings object from request data
