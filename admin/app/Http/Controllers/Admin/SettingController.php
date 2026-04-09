@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Enums\SettingTypeEnum;
 use App\Http\Controllers\Controller;
 use App\Models\Setting;
+use App\Services\FrontendRevalidateService;
 use App\Services\SettingService;
 use App\Services\TotpService;
 use App\Types\Api\ApiResponseType;
@@ -186,11 +187,21 @@ class SettingController extends Controller
             $shouldSyncWeb = $type === SettingTypeEnum::SYSTEM()
                 && (!$section || $section === 'general');
 
+            // Determine which frontend cache tags to bust after save
+            $revalidateTags = match ($type) {
+                SettingTypeEnum::SYSTEM() => ['site-settings'],
+                SettingTypeEnum::WEB()    => ['site-settings', 'web-settings'],
+                default                   => [],
+            };
+
             // Update or create setting
             if ($setting) {
                 $setting->update($data);
                 if ($shouldSyncWeb) {
                     $this->syncMergedWebGeneralSettings($request);
+                }
+                if ($revalidateTags) {
+                    FrontendRevalidateService::revalidate(tags: $revalidateTags, paths: ['/']);
                 }
                 return ApiResponseType::sendJsonResponse(
                     success: true,
@@ -202,6 +213,9 @@ class SettingController extends Controller
             $res = Setting::create($data);
             if ($shouldSyncWeb) {
                 $this->syncMergedWebGeneralSettings($request);
+            }
+            if ($revalidateTags) {
+                FrontendRevalidateService::revalidate(tags: $revalidateTags, paths: ['/']);
             }
             return ApiResponseType::sendJsonResponse(
                 success: true,
@@ -322,7 +336,7 @@ class SettingController extends Controller
             $transformedSetting = $this->settingService->getSettingByVariable($variable);
 
             if (!$transformedSetting) {
-                abort(404, __('labels.setting_not_found'));;
+                abort(404, __('labels.setting_not_found'));
             }
             // Authorize module-wise view access
             $this->authorize('viewSetting', [Setting::class, $variable]);
@@ -334,7 +348,7 @@ class SettingController extends Controller
             }
 
             $setting = Setting::find(SettingTypeEnum::AUTHENTICATION());
-            $googleApiKey = $setting->value['googleApiKey'] ?? null;
+            $googleApiKey = $setting?->value['googleApiKey'] ?? null;
             return view('admin.settings.' . $variable, [
                 'settings' => $settings,
                 'webSettings' => $webSettings,
@@ -381,7 +395,11 @@ class SettingController extends Controller
             return ApiResponseType::sendJsonResponse(false, __('Invalid password.'), [], 422);
         }
 
-        if (!$admin->isTotpEnabled()) {
+        $totpEnabled = $admin instanceof \App\Models\AdminUser && method_exists($admin, 'isTotpEnabled')
+            ? $admin->isTotpEnabled()
+            : (!empty($admin->totp_secret) && !empty($admin->totp_enabled_at));
+
+        if (!$totpEnabled) {
             return ApiResponseType::sendJsonResponse(false, __('Admin TOTP is not enabled.'), [], 422);
         }
 

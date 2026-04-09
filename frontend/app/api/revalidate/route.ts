@@ -21,7 +21,7 @@ const TAG_PATH_MAP: Record<string, string[]> = {
   categories:          ["/shop"],
   "featured-products": ["/"],
   "new-arrivals":      ["/new-arrivals"],
-  "site-settings":     ["/"],
+  "site-settings":     ["/", "/shop", "/new-arrivals"],
   // category-specific tags bust /category/[slug] pages
 };
 
@@ -71,7 +71,7 @@ async function handleRevalidate(req: NextRequest) {
 
   // Revalidate requested tags
   for (const tag of tags) {
-    revalidateTag(tag);
+    revalidateTag(tag, "max");
     // Also revalidate known pages associated with this tag
     for (const p of TAG_PATH_MAP[tag] ?? []) {
       if (!paths.includes(p)) paths.push(p);

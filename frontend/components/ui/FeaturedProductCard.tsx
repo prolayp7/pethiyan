@@ -9,6 +9,7 @@ import { Tag, Package, ShoppingBag, Heart, Eye, X, ChevronLeft, ChevronRight, Mi
 import { useCart } from "@/context/CartContext";
 import { useWishlist } from "@/context/WishlistContext";
 import { useAuth } from "@/context/AuthContext";
+import { useSiteSettings } from "@/context/SiteSettingsContext";
 import { API_BASE, addToWishlist, getProduct, getWishlistItems, removeWishlistItem, type RealApiProduct, type RealApiVariant } from "@/lib/api";
 import toast from "react-hot-toast";
 
@@ -72,6 +73,12 @@ export default function FeaturedProductCard({ p }: { p: FallbackProduct }) {
   const { addItem, openCart } = useCart();
   const { isWishlisted, toggle } = useWishlist();
   const { isLoggedIn } = useAuth();
+  const {
+    showVariantColorsInGrid,
+    showGstInGrid,
+    showCategoryNameInGrid,
+    showMinQtyInGrid,
+  } = useSiteSettings();
   const [quickViewOpen, setQuickViewOpen] = useState(false);
   const [quickViewLoading, setQuickViewLoading] = useState(false);
   const [wishlistBusy, setWishlistBusy] = useState(false);
@@ -368,7 +375,7 @@ export default function FeaturedProductCard({ p }: { p: FallbackProduct }) {
       {/* Body */}
       <div className="flex flex-col flex-1 p-3 gap-1.5">
         {/* Category */}
-        {p.category && (
+        {showCategoryNameInGrid && p.category && (
           <p className="text-[10px] text-[#1f4f8a] font-semibold uppercase tracking-wider">
             {p.category}
           </p>
@@ -379,7 +386,7 @@ export default function FeaturedProductCard({ p }: { p: FallbackProduct }) {
         </p>
 
         {/* Color swatches + variant count */}
-        {(p.colors.length > 0 || p.variantCount > 1) && (
+        {showVariantColorsInGrid && (p.colors.length > 0 || p.variantCount > 1) && (
           <div className="flex items-center gap-1.5">
             {p.colors.slice(0, 5).map((c) => (
               <span key={c} title={c} className="w-3 h-3 rounded-full border border-black/10 shrink-0" style={{ background: COLOR_MAP[c] ?? "#aaa" }} />
@@ -393,13 +400,19 @@ export default function FeaturedProductCard({ p }: { p: FallbackProduct }) {
         {/* Bottom row: meta left, price+cart right */}
         <div className="flex items-end justify-between gap-2 mt-auto pt-2 border-t border-gray-100">
           {/* Left: GST + min qty */}
-          <div className="flex flex-col gap-0.5 min-w-0">
-            <span className="text-[10px] text-gray-400">+{p.gstRate}% GST</span>
-            <span className="flex items-center gap-1 text-[10px] text-gray-400">
-              <Tag className="h-2.5 w-2.5 shrink-0" />
-              Min: {p.minQty} pcs
-            </span>
-          </div>
+          {(showGstInGrid && p.gstRate) || (showMinQtyInGrid && p.minQty) ? (
+            <div className="flex flex-col gap-0.5 min-w-0">
+              {showGstInGrid && p.gstRate && (
+                <span className="text-[10px] text-gray-400">+{p.gstRate}% GST</span>
+              )}
+              {showMinQtyInGrid && p.minQty && (
+                <span className="flex items-center gap-1 text-[10px] text-gray-400">
+                  <Tag className="h-2.5 w-2.5 shrink-0" />
+                  Min: {p.minQty} pcs
+                </span>
+              )}
+            </div>
+          ) : null}
 
           {/* Right: price + add to cart */}
           <div className="flex flex-col items-end gap-1.5 shrink-0">
