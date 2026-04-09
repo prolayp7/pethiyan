@@ -1,8 +1,9 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { flushPurchaseEvent } from "@/lib/analytics";
 import { CheckCircle2, Package, ArrowRight, Home, ShoppingBag } from "lucide-react";
 
 // ─── Inner component (uses useSearchParams) ───────────────────────────────────
@@ -11,6 +12,11 @@ function OrderConfirmedInner() {
   const searchParams = useSearchParams();
   const orderNumber = searchParams.get("order_number") ?? "";
   const orderId = searchParams.get("order_id") ?? "";
+
+  // Fire GA4 purchase + FB Purchase event once, using data stored before checkout redirect
+  useEffect(() => {
+    flushPurchaseEvent();
+  }, []);
 
   return (
     <div

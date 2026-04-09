@@ -15,44 +15,64 @@ import {
 } from "@/lib/structured-data";
 import Breadcrumb from "@/components/common/Breadcrumb";
 import RelatedProducts from "@/components/product/RelatedProducts";
-import ProductDetailIsland from "./ProductDetailIsland";
+import ProductDetailIsland from "../ProductDetailIsland";
 
-// ─── Pre-render all known product slugs at build time ─────────────────────────
+// ─── Pre-render all known product+variant slug pairs at build time ─────────────
 
 export async function generateStaticParams() {
   try {
     const products = await getProducts();
-    return products.map((p) => ({ slug: p.slug }));
+    return products.flatMap((p) =>
+      (p.variants ?? [])
+        .filter((v) => v.slug)
+        .map((v) => ({ slug: p.slug, variantSlug: v.slug }))
+    );
   } catch {
     return [];
   }
 }
 
-// ─── Dynamic SEO metadata ─────────────────────────────────────────────────────
+// ─── Dynamic SEO metadata (variant-level with product fallbacks) ──────────────
 
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ slug: string; variantSlug: string }>;
 }): Promise<Metadata> {
-  const { slug } = await params;
+  const { slug, variantSlug } = await params;
   const product = await getProduct(slug);
 
   if (!product) return { title: "Product Not Found" };
 
-  const firstVariant = product.variants?.[0];
-  const firstStorePricing = firstVariant?.store_pricing?.[0];
+  const variant = product.variants?.find((v) => v.slug === variantSlug);
+  if (!variant) return { title: "Variant Not Found" };
+
+  const firstStorePricing = variant.store_pricing?.[0];
   const price = toNum(firstStorePricing?.special_price ?? firstStorePricing?.price ?? 0);
-  const image = product.images?.main_image ?? product.images?.all?.[0];
-  const rawTitle = product.title ?? "Product";
-  const title = product.features?.seo_title || rawTitle;
+  const image = variant.image || product.images?.main_image || product.images?.all?.[0];
+
+  const productTitle = product.title ?? "Product";
+  const variantTitle = variant.title ?? variantSlug;
+
+  // SEO fallback chain: variant → product → auto-generated
+  const variantSeoTitle = variant.metadata?.seo_title ?? variant.seo_title;
+  const variantSeoDesc  = variant.metadata?.seo_description ?? variant.seo_description;
+  const variantSeoKw    = variant.metadata?.seo_keywords ?? variant.seo_keywords;
+
+  const title =
+    variantSeoTitle ||
+    product.features?.seo_title ||
+    `${productTitle} - ${variantTitle}`;
+
   const description =
+    variantSeoDesc ||
     product.features?.seo_description ||
     product.short_description ||
-    `Buy ${rawTitle} online at Pethiyan. Premium packaging with GST invoice and fast shipping across India.`;
-  const keywords = product.features?.seo_keywords || undefined;
-  const indexable = product.features?.is_indexable !== false;
-  const inStock = firstVariant?.availability !== false;
+    `Buy ${productTitle} (${variantTitle}) online at Pethiyan. Premium packaging with GST invoice and fast shipping across India.`;
+
+  const keywords = variantSeoKw || product.features?.seo_keywords || undefined;
+
+  const indexable = variant.is_indexable !== false && product.features?.is_indexable !== false;
 
   return {
     title,
@@ -62,20 +82,20 @@ export async function generateMetadata({
       ? { index: true,  follow: true,  googleBot: { index: true,  follow: true  } }
       : { index: false, follow: false, googleBot: { index: false, follow: false } },
     alternates: {
-      canonical: `/products/${slug}`,
-      languages: { "en": `/products/${slug}`, "x-default": `/products/${slug}` },
+      canonical: `/products/${slug}/${variantSlug}`,
+      languages: { "en": `/products/${slug}/${variantSlug}`, "x-default": `/products/${slug}/${variantSlug}` },
     },
     openGraph: {
       title: `${title} | Pethiyan`,
       description,
-      url: `/products/${slug}`,
-      ...(image ? { images: [{ url: image, alt: rawTitle }] } : {}),
+      url: `/products/${slug}/${variantSlug}`,
+      ...(image ? { images: [{ url: image, alt: `${productTitle} - ${variantTitle}` }] } : {}),
     },
     other: {
       "og:type": "og:product",
       "product:price:amount": String(price),
       "product:price:currency": "INR",
-      "product:availability": inStock ? "in stock" : "out of stock",
+      "product:availability": variant.availability !== false ? "in stock" : "out of stock",
       "product:brand": "Pethiyan",
     },
   };
@@ -83,14 +103,13 @@ export async function generateMetadata({
 
 // ─── Page (Server Component) ──────────────────────────────────────────────────
 
-export default async function ProductPage({
+export default async function ProductVariantPage({
   params,
 }: {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ slug: string; variantSlug: string }>;
 }) {
-  const { slug } = await params;
+  const { slug, variantSlug } = await params;
 
-  // All fetches in parallel
   const [product, reviews, faqs] = await Promise.all([
     getProduct(slug),
     getProductReviews(slug),
@@ -98,6 +117,9 @@ export default async function ProductPage({
   ]);
 
   if (!product) notFound();
+
+  const variant = product.variants?.find((v) => v.slug === variantSlug);
+  if (!variant) notFound();
 
   // ── JSON-LD schemas ──
   const pSchema = productSchema(product, reviews);
@@ -111,6 +133,7 @@ export default async function ProductPage({
         }]
       : []),
     { label: product.title, href: `/products/${slug}` },
+    { label: variant.title, href: `/products/${slug}/${variantSlug}` },
   ]);
 
   return (
@@ -132,14 +155,19 @@ export default async function ProductPage({
                 href: `/category/${(product as unknown as { category: { slug: string } }).category.slug}`,
               }]
             : []),
-          { label: product.title },
+          { label: product.title, href: `/products/${slug}` },
+          { label: variant.title },
         ]}
       />
 
-      {/* All interactive product UI */}
-      <ProductDetailIsland product={product} reviews={reviews} faqs={faqs} />
+      {/* All interactive product UI — variant pre-selected via initialVariantSlug */}
+      <ProductDetailIsland
+        product={product}
+        reviews={reviews}
+        faqs={faqs}
+        initialVariantSlug={variantSlug}
+      />
 
-      {/* Related products (server-fetched, same category) */}
       {(product as unknown as { category?: { slug: string } | null }).category && (
         <RelatedProducts
           categorySlug={(product as unknown as { category: { slug: string } }).category.slug}
@@ -147,7 +175,6 @@ export default async function ProductPage({
         />
       )}
 
-      {/* Mobile bottom nav padding */}
       <div className="h-16 lg:hidden" aria-hidden="true" />
     </div>
   );

@@ -122,15 +122,24 @@ export function productSchema(product: ApiProduct | RealApiProduct, reviews: Api
     (product as Partial<ApiProduct>).stock ??
     null;
 
+  const productSku =
+    (product as Partial<ApiProduct>).sku ||
+    (product as Partial<RealApiProduct>).features?.["sku" as never] ||
+    String(product.id);
+
+  const firstVariantBarcode =
+    (product as Partial<RealApiProduct>).variants?.[0]?.barcode || undefined;
+
   const schema: Record<string, unknown> = {
     "@context": "https://schema.org",
     "@type": "Product",
     name: productName,
     description: productDescription,
-    sku: String(product.id),
+    sku: productSku,
+    ...(firstVariantBarcode ? { mpn: firstVariantBarcode } : {}),
     brand: (product as Partial<ApiProduct>).brand
       ? { "@type": "Brand", name: (product as Partial<ApiProduct>).brand?.name }
-      : undefined,
+      : { "@type": "Brand", name: "Pethiyan" },
     image: imageList,
     offers: {
       "@type": "Offer",

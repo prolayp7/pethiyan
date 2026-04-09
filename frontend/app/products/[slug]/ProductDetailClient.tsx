@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo, type CSSProperties } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback, type CSSProperties } from "react";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import toast from "react-hot-toast";
@@ -46,6 +46,7 @@ import {
   getProductReviews,
   getProductFaqs,
 } from "@/lib/api";
+import { trackViewItem, trackAddToCart } from "@/lib/analytics";
 
 function formatCurrency(amount: number | null | undefined, symbol = "₹"): string {
   const value = toNum(amount);
@@ -320,9 +321,10 @@ interface ProductDetailClientProps {
   product: RealApiProduct;
   reviews: ApiReview[];
   faqs: ApiFaq[];
+  initialVariantSlug?: string;
 }
 
-export default function ProductDetailClient({ product, reviews: initialReviews, faqs: initialFaqs }: ProductDetailClientProps) {
+export default function ProductDetailClient({ product, reviews: initialReviews, faqs: initialFaqs, initialVariantSlug }: ProductDetailClientProps) {
   const { addItem, openCart, items } = useCart();
   const { isLoggedIn } = useAuth();
   const { isWishlisted, add, remove } = useWishlist();
@@ -337,28 +339,54 @@ export default function ProductDetailClient({ product, reviews: initialReviews, 
   const [wishlistBusy, setWishlistBusy] = useState(false);
   const [addedToCart, setAddedToCart] = useState(false);
   const [activeTab, setActiveTab] = useState<"description" | "specs" | "reviews" | "faqs">("description");
-  const [variantsMaxH, setVariantsMaxH] = useState<number>(300);
+  const [leftColMaxH, setLeftColMaxH] = useState<number | undefined>(undefined);
 
   const rightColRef = useRef<HTMLDivElement>(null);
-  const galleryWrapRef = useRef<HTMLDivElement>(null);
 
+  // On desktop (≥768 px) cap the left column to the right column's natural height
+  // so the variant list never extends below the Add to Cart section.
+  // Uses items-start on the grid so the right column height is its own content height.
   useEffect(() => {
+    const isMd = () => window.matchMedia("(min-width: 768px)").matches;
+
     const update = () => {
-      if (!rightColRef.current || !galleryWrapRef.current) return;
-      const rightH = rightColRef.current.offsetHeight;
-      const galleryH = galleryWrapRef.current.offsetHeight;
-      const gap = 24; // gap-6
-      setVariantsMaxH(Math.max(80, rightH - galleryH - gap));
+      if (!rightColRef.current || !isMd()) {
+        setLeftColMaxH(undefined);
+        return;
+      }
+      setLeftColMaxH(rightColRef.current.offsetHeight);
     };
+
     const ro = new ResizeObserver(update);
     if (rightColRef.current) ro.observe(rightColRef.current);
-    if (galleryWrapRef.current) ro.observe(galleryWrapRef.current);
+
+    const mq = window.matchMedia("(min-width: 768px)");
+    mq.addEventListener("change", update);
     update();
-    return () => ro.disconnect();
+
+    return () => {
+      ro.disconnect();
+      mq.removeEventListener("change", update);
+    };
   }, []);
 
   const productName = product.title ?? "Product";
   const variantList = useMemo(() => product.variants ?? [], [product.variants]);
+
+  // Initialise selected variant from URL slug (variant page pre-selection)
+  useEffect(() => {
+    if (!initialVariantSlug) return;
+    const match = variantList.find((v) => v.slug === initialVariantSlug);
+    if (match) setSelectedVariantId(match.id);
+  }, [initialVariantSlug, variantList]);
+
+  // Navigate to variant URL when user selects a variant (updates canonical URL)
+  const navigateToVariant = useCallback((variant: RealApiVariant) => {
+    setSelectedVariantId(variant.id);
+    if (variant.slug) {
+      router.push(`/products/${product.slug}/${variant.slug}`, { scroll: false });
+    }
+  }, [product.slug, router]);
 
   useEffect(() => {
     if (initialReviews.length === 0) {
@@ -369,21 +397,37 @@ export default function ProductDetailClient({ product, reviews: initialReviews, 
     }
   }, [product.slug, initialReviews.length, initialFaqs.length]);
 
-  const selectedVariantIdSafe = useMemo(() => {
-    if (variantList.length === 0) return null;
-    if (selectedVariantId && variantList.some((v) => v.id === selectedVariantId)) return selectedVariantId;
-    const def = variantList.find((v) => v.is_default);
-    return def?.id ?? variantList[0].id;
+  // Single memo resolves both "which variant is selected" and "what is its id".
+  // Keeping it as one memo avoids the chained-memo TDZ that Turbopack flags.
+  const selectedVariant = useMemo<RealApiVariant | undefined>(() => {
+    if (variantList.length === 0) return undefined;
+    if (selectedVariantId) {
+      const match = variantList.find((v) => v.id === selectedVariantId);
+      if (match) return match;
+    }
+    return variantList.find((v) => v.is_default) ?? variantList[0];
   }, [selectedVariantId, variantList]);
 
-  const selectedVariant: RealApiVariant | undefined = useMemo(() => {
-    if (!selectedVariantIdSafe) return variantList[0];
-    return variantList.find((v) => v.id === selectedVariantIdSafe) ?? variantList[0];
-  }, [variantList, selectedVariantIdSafe]);
+  // Stable primitive — derived synchronously (not another useMemo) to keep Turbopack happy.
+  const selectedVariantIdSafe = selectedVariant?.id ?? null;
+
+  // Fire view_item whenever the selected variant changes (initial load + variant switch).
+  useEffect(() => {
+    if (!selectedVariant) return;
+    const price = toNum(selectedVariant.store_pricing?.[0]?.special_price ?? selectedVariant.store_pricing?.[0]?.price ?? 0);
+    trackViewItem({
+      item_id:       String(product.id),
+      item_name:     product.title,
+      item_variant:  selectedVariant.title,
+      item_category: (product as unknown as { category?: { title: string } | null }).category?.title,
+      price,
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedVariant]);
 
   const selectedVariantStorePricing = useMemo(
     () => selectedVariant?.store_pricing ?? [],
-    [selectedVariant?.store_pricing]
+    [selectedVariant]
   );
 
   const selectedStoreIdSafe = useMemo(() => {
@@ -415,7 +459,7 @@ export default function ProductDetailClient({ product, reviews: initialReviews, 
       ...(product.images?.variant_images ?? []),
       ...(product.images?.all ?? []),
     ]);
-  }, [selectedVariant?.image, product.images]);
+  }, [selectedVariant, product.images]);
 
   const basePrice = toNum(selectedStorePricing?.price ?? selectedStorePricing?.special_price ?? 0);
   const effectivePrice = toNum(selectedStorePricing?.special_price ?? selectedStorePricing?.price ?? 0);
@@ -484,6 +528,15 @@ export default function ProductDetailClient({ product, reviews: initialReviews, 
         storeId: selectedStoreIdSafe ?? undefined,
       });
     }
+
+    trackAddToCart({
+      item_id:      String(product.id),
+      item_name:    selectedVariant.title || productName,
+      item_variant: selectedVariant.title,
+      item_category: (product as unknown as { category?: { title: string } | null }).category?.title,
+      price:        effectivePrice,
+      quantity:     safeQty,
+    });
 
     setAddedToCart(true);
     openCart();
@@ -586,9 +639,12 @@ export default function ProductDetailClient({ product, reviews: initialReviews, 
   return (
     <Container>
       <div className="py-10">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-10 lg:gap-16 md:items-stretch">
-          <div className="flex flex-col gap-6 overflow-hidden">
-            <div ref={galleryWrapRef}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-10 lg:gap-16 md:items-start">
+          <div
+            className="flex flex-col gap-6 overflow-hidden"
+            style={leftColMaxH !== undefined ? { maxHeight: leftColMaxH } : undefined}
+          >
+            <div>
               <Gallery
                 key={`gallery-${selectedVariant?.id ?? "base"}`}
                 images={galleryImages}
@@ -598,11 +654,11 @@ export default function ProductDetailClient({ product, reviews: initialReviews, 
             </div>
 
             {variantList.length > 0 && (
-              <div className="flex flex-col space-y-3">
+              <div className="flex flex-col space-y-3 flex-1 min-h-0">
                 <p className="text-sm font-semibold text-(--color-secondary) flex items-center gap-2 shrink-0">
                   <Layers className="h-4 w-4" /> Product Variants
                 </p>
-                <div className="overflow-y-auto pr-1 grid gap-2 content-start" style={{ maxHeight: variantsMaxH }}>
+                <div className="overflow-y-auto pr-1 grid gap-2 content-start flex-1 min-h-0">
                   {variantList.map((variant) => {
                     const selected = selectedVariant?.id === variant.id;
                     const attributeLabel = Object.entries(variant.attributes ?? {})
@@ -611,7 +667,7 @@ export default function ProductDetailClient({ product, reviews: initialReviews, 
                     return (
                       <button
                         key={variant.id}
-                        onClick={() => setSelectedVariantId(variant.id)}
+                        onClick={() => navigateToVariant(variant)}
                         className={`text-left border rounded-xl p-3 transition-all ${
                           selected
                             ? "btn-brand border-transparent shadow-md"
@@ -695,7 +751,7 @@ export default function ProductDetailClient({ product, reviews: initialReviews, 
                     return (
                       <button
                         key={`${opt.color}-${opt.variantId}`}
-                        onClick={() => setSelectedVariantId(opt.variantId)}
+                        onClick={() => { const v = variantList.find((vr) => vr.id === opt.variantId); if (v) navigateToVariant(v); }}
                         className={`h-10 w-10 rounded-full border-2 transition-all ${
                           selected
                             ? "border-white shadow-[0_0_0_3px_#17396f,_0_0_0_5px_#49ad57]"

@@ -90,6 +90,22 @@ class SettingApiController extends Controller
         );
     }
 
+    public function seoAdvanced(): JsonResponse
+    {
+        $setting = $this->settingService->getSettingByVariable(SettingTypeEnum::SEO_ADVANCED());
+        $value   = $setting ? ($setting->toArray(request())['value'] ?? []) : [];
+
+        return ApiResponseType::sendJsonResponse(
+            success: true,
+            message: 'labels.setting_fetched_successfully',
+            data: [
+                'robotsDisallowRules' => $value['robotsDisallowRules'] ?? [],
+                'sitemapCustomUrls'   => $value['sitemapCustomUrls']   ?? [],
+                'sitemapExcludeUrls'  => $value['sitemapExcludeUrls']  ?? [],
+            ]
+        );
+    }
+
     public function seo(): JsonResponse
     {
         $web = $this->settingService->getSettingByVariable(SettingTypeEnum::WEB());

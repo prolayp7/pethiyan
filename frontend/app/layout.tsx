@@ -5,7 +5,10 @@ import { CartProvider } from "@/context/CartContext";
 import { AuthProvider } from "@/context/AuthContext";
 import { WishlistProvider } from "@/context/WishlistContext";
 import { SiteSettingsProvider } from "@/context/SiteSettingsContext";
-import { getSystemSettings } from "@/lib/api";
+import { getSystemSettings, getWebSettings } from "@/lib/api";
+import GoogleAnalytics from "@/components/analytics/GoogleAnalytics";
+import { GTMScript, GTMNoScript } from "@/components/analytics/GoogleTagManager";
+import FacebookPixel from "@/components/analytics/FacebookPixel";
 import CartDrawer from "@/components/ui/CartDrawer";
 import TopAnnouncementBar from "@/components/headers/TopAnnouncementBar";
 import OfferTicker from "@/components/headers/OfferTicker";
@@ -34,62 +37,77 @@ export const viewport: Viewport = {
   maximumScale: 5,
 };
 
-export const metadata: Metadata = {
-  metadataBase: new URL(SITE_URL),
-  title: {
-    default: "Pethiyan — The Power of Perfect Packaging",
-    template: "%s | Pethiyan",
-  },
-  description:
-    "High-quality packaging products — pouches, jars, delivery boxes and custom packaging for modern brands. Shop online with GST invoice, fast shipping across India.",
-  keywords: [
-    "packaging",
-    "pouches",
-    "bags",
-    "custom packaging",
-    "ziplock bags",
-    "standup pouches",
-    "packaging products india",
-    "wholesale packaging",
-    "jars",
-    "delivery boxes",
-  ],
-  authors: [{ name: "Pethiyan" }],
-  creator: "Pethiyan",
-  publisher: "Pethiyan",
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: { index: true, follow: true },
-  },
-  openGraph: {
-    type: "website",
-    locale: "en_IN",
-    url: SITE_URL,
-    siteName: "Pethiyan",
-    title: "Pethiyan — The Power of Perfect Packaging",
+export async function generateMetadata(): Promise<Metadata> {
+  const webSettings = await getWebSettings();
+  return {
+    metadataBase: new URL(SITE_URL),
+    title: {
+      default: "Pethiyan — The Power of Perfect Packaging",
+      template: "%s | Pethiyan",
+    },
     description:
-      "High-quality packaging products — pouches, jars, delivery boxes and custom packaging for modern brands.",
-    images: [
-      {
-        url: "/opengraph-image.png",
-        width: 1200,
-        height: 630,
-        alt: "Pethiyan — The Power of Perfect Packaging",
-      },
+      "High-quality packaging products — pouches, jars, delivery boxes and custom packaging for modern brands. Shop online with GST invoice, fast shipping across India.",
+    keywords: [
+      "packaging",
+      "pouches",
+      "bags",
+      "custom packaging",
+      "ziplock bags",
+      "standup pouches",
+      "packaging products india",
+      "wholesale packaging",
+      "jars",
+      "delivery boxes",
     ],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Pethiyan — The Power of Perfect Packaging",
-    description:
-      "High-quality packaging products — pouches, jars, delivery boxes and custom packaging for modern brands.",
-    images: ["/opengraph-image.png"],
-  },
-  alternates: {
-    canonical: SITE_URL,
-  },
-};
+    authors: [{ name: "Pethiyan" }],
+    creator: "Pethiyan",
+    publisher: "Pethiyan",
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: { index: true, follow: true },
+    },
+    openGraph: {
+      type: "website",
+      locale: "en_IN",
+      url: SITE_URL,
+      siteName: "Pethiyan",
+      title: "Pethiyan — The Power of Perfect Packaging",
+      description:
+        "High-quality packaging products — pouches, jars, delivery boxes and custom packaging for modern brands.",
+      images: [
+        {
+          url: "/opengraph-image.png",
+          width: 1200,
+          height: 630,
+          alt: "Pethiyan — The Power of Perfect Packaging",
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: "Pethiyan — The Power of Perfect Packaging",
+      description:
+        "High-quality packaging products — pouches, jars, delivery boxes and custom packaging for modern brands.",
+      images: ["/opengraph-image.png"],
+    },
+    alternates: {
+      canonical: SITE_URL,
+      languages: {
+        "en":        "/",
+        "x-default": "/",
+      },
+    },
+    verification: {
+      ...(webSettings?.googleSiteVerification
+        ? { google: webSettings.googleSiteVerification }
+        : {}),
+      ...(webSettings?.bingSiteVerification
+        ? { other: { "msvalidate.01": webSettings.bingSiteVerification } }
+        : {}),
+    },
+  };
+}
 
 export default async function RootLayout({
   children,
@@ -98,15 +116,22 @@ export default async function RootLayout({
 }>) {
   const orgSchema = organizationSchema();
   const siteSchema = websiteSchema();
-  const siteSettings = (await getSystemSettings()) ?? { appName: "Pethiyan", logo: null, favicon: null };
+  const [siteSettings, webSettings] = await Promise.all([
+    getSystemSettings().then(s => s ?? { appName: "Pethiyan", logo: null, favicon: null }),
+    getWebSettings(),
+  ]);
 
   return (
     <html lang="en" className={inter.variable} suppressHydrationWarning>
       <head>
         <script {...jsonLd(orgSchema)} key="org-schema" />
         <script {...jsonLd(siteSchema)} key="site-schema" />
+        {webSettings?.googleAnalyticsId  && <GoogleAnalytics id={webSettings.googleAnalyticsId} />}
+        {webSettings?.googleTagManagerId && <GTMScript      id={webSettings.googleTagManagerId} />}
       </head>
       <body className="antialiased bg-background text-foreground font-sans">
+        {webSettings?.googleTagManagerId && <GTMNoScript   id={webSettings.googleTagManagerId} />}
+        {webSettings?.facebookPixelId    && <FacebookPixel id={webSettings.facebookPixelId} />}
         {/* Portal root — sits above app-root in z-order, outside its stacking context */}
         <div id="portal-root" />
 

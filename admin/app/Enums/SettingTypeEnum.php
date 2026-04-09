@@ -24,4 +24,5 @@ enum SettingTypeEnum: string
     case HOME_GENERAL_SETTINGS = 'home_general_settings';
     case SMS = 'sms';
     case GST = 'gst';
+    case SEO_ADVANCED = 'seo_advanced';
 }
