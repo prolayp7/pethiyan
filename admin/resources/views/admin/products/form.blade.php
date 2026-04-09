@@ -690,6 +690,94 @@
                                    placeholder="e.g. standup pouch, kraft pouch, packaging bags"/>
                             <small class="form-hint">Comma-separated keywords. Most search engines ignore this, but useful for internal search.</small>
                         </div>
+                        <hr class="my-4">
+                        <div class="mb-4">
+                            <h4 class="mb-1">Open Graph</h4>
+                            <p class="text-muted small mb-0">Optional social sharing overrides for platforms that use Open Graph tags.</p>
+                        </div>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">OG Title</label>
+                                <input type="text" class="form-control" name="og_title"
+                                       placeholder="Leave blank to use SEO title"
+                                       value="{{ old('og_title', !empty($product) ? ($product->metadata['og_title'] ?? '') : '') }}"/>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">OG Image</label>
+                                <input type="file" class="form-control" name="og_image" accept="image/*"/>
+                                <small class="form-hint">
+                                    Recommended: 1200 x 630 px. Max upload size: 4 MB.
+                                    @if(!empty($product) && !empty($product->metadata['og_image']))
+                                        Current: <a href="{{ url('storage/' . $product->metadata['og_image']) }}" target="_blank">View uploaded image</a>
+                                    @endif
+                                </small>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">OG Description</label>
+                                <textarea class="form-control" name="og_description" rows="3"
+                                          placeholder="Leave blank to use SEO description">{{ old('og_description', !empty($product) ? ($product->metadata['og_description'] ?? '') : '') }}</textarea>
+                            </div>
+                        </div>
+                        <hr class="my-4">
+                        <div class="mb-4">
+                            <h4 class="mb-1">Twitter</h4>
+                            <p class="text-muted small mb-0">Optional X/Twitter card overrides. Leave blank to inherit from SEO or Open Graph.</p>
+                        </div>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Twitter Title</label>
+                                <input type="text" class="form-control" name="twitter_title"
+                                       placeholder="Leave blank to use SEO title"
+                                       value="{{ old('twitter_title', !empty($product) ? ($product->metadata['twitter_title'] ?? '') : '') }}"/>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Twitter Card</label>
+                                @php $selectedTwitterCard = old('twitter_card', !empty($product) ? ($product->metadata['twitter_card'] ?? '') : ''); @endphp
+                                <select class="form-select" name="twitter_card">
+                                    <option value="">Use automatic fallback</option>
+                                    <option value="summary" {{ $selectedTwitterCard === 'summary' ? 'selected' : '' }}>Summary</option>
+                                    <option value="summary_large_image" {{ $selectedTwitterCard === 'summary_large_image' ? 'selected' : '' }}>Summary Large Image</option>
+                                    <option value="app" {{ $selectedTwitterCard === 'app' ? 'selected' : '' }}>App</option>
+                                    <option value="player" {{ $selectedTwitterCard === 'player' ? 'selected' : '' }}>Player</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Twitter Image</label>
+                                <input type="file" class="form-control" name="twitter_image" accept="image/*"/>
+                                <small class="form-hint">
+                                    Recommended: 1200 x 675 px. Max upload size: 4 MB.
+                                    @if(!empty($product) && !empty($product->metadata['twitter_image']))
+                                        Current: <a href="{{ url('storage/' . $product->metadata['twitter_image']) }}" target="_blank">View uploaded image</a>
+                                    @endif
+                                </small>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Twitter Description</label>
+                                <textarea class="form-control" name="twitter_description" rows="3"
+                                          placeholder="Leave blank to use SEO description">{{ old('twitter_description', !empty($product) ? ($product->metadata['twitter_description'] ?? '') : '') }}</textarea>
+                            </div>
+                        </div>
+                        <hr class="my-4">
+                        <div class="mb-4">
+                            <h4 class="mb-1">Schema</h4>
+                            <p class="text-muted small mb-0">Use auto-generated structured data by default, or provide custom JSON-LD when needed.</p>
+                        </div>
+                        @php $selectedSchemaMode = old('schema_mode', !empty($product) ? ($product->metadata['schema_mode'] ?? 'auto') : 'auto'); @endphp
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Schema Mode</label>
+                                <select class="form-select" name="schema_mode" id="productSchemaMode">
+                                    <option value="auto" {{ $selectedSchemaMode === 'auto' ? 'selected' : '' }}>Auto-generate</option>
+                                    <option value="custom" {{ $selectedSchemaMode === 'custom' ? 'selected' : '' }}>Custom JSON-LD</option>
+                                </select>
+                            </div>
+                            <div class="col-12" id="productSchemaJsonLdWrap">
+                                <label class="form-label">Schema JSON-LD</label>
+                                <textarea class="form-control" name="schema_json_ld" id="productSchemaJsonLd" rows="8"
+                                          placeholder='{"@@context":"https://schema.org","@@type":"Product"}'>{{ old('schema_json_ld', !empty($product) ? ($product->metadata['schema_json_ld'] ?? '') : '') }}</textarea>
+                                <small class="form-hint">Used only when Schema Mode is set to Custom JSON-LD.</small>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -727,13 +815,13 @@
 @endpush
 @push('scripts')
     @php
-        $taxClassRateMap = ($taxClasses ?? collect())->mapWithKeys(function ($taxClass) {
+        $taxClassRateMap = $taxClassRateMap ?? (($taxClasses ?? collect())->mapWithKeys(function ($taxClass) {
             $rateSum = (float) ($taxClass->taxRates->sum('rate') ?? 0);
             $nearest = collect([0, 5, 12, 18, 28])->sortBy(function ($s) use ($rateSum) {
                 return abs($s - $rateSum);
             })->first();
             return [$taxClass->id => (int) $nearest];
-        });
+        }));
     @endphp
     <script src="{{ hyperAsset('assets/vendor/js_tree/main.min.js') }}" defer></script>
     <script src="{{ hyperAsset('assets/js/product.js') }}" defer></script>
@@ -750,6 +838,9 @@
     <script>
         // SEO character counters
         document.addEventListener('DOMContentLoaded', function () {
+            const schemaMode = document.getElementById('productSchemaMode');
+            const schemaWrap = document.getElementById('productSchemaJsonLdWrap');
+
             function initCounter(inputId, countId, max) {
                 const el = document.getElementById(inputId);
                 const counter = document.getElementById(countId);
@@ -764,6 +855,14 @@
             }
             initCounter('seoTitle', 'seoTitleCount', 60);
             initCounter('seoDescription', 'seoDescCount', 160);
+
+            function toggleSchemaJsonLd() {
+                if (!schemaMode || !schemaWrap) return;
+                schemaWrap.style.display = schemaMode.value === 'custom' ? '' : 'none';
+            }
+
+            toggleSchemaJsonLd();
+            schemaMode?.addEventListener('change', toggleSchemaJsonLd);
         });
     </script>
 

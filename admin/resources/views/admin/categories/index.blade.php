@@ -248,6 +248,74 @@
                                         </div>
                                     </div>
                                 </div>
+
+                                <hr class="my-4">
+                                <h6 class="text-muted fw-semibold text-uppercase mb-3" style="font-size:.7rem;letter-spacing:.05em;">Open Graph</h6>
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label">OG Title</label>
+                                        <input type="text" class="form-control" name="og_title"
+                                               placeholder="Leave blank to use SEO title"/>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">OG Image</label>
+                                        <input type="file" class="form-control" id="category-og-image-upload" name="og_image"/>
+                                        <small class="form-hint">Recommended: 1200 x 630 px. Max upload size: 4 MB.</small>
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label">OG Description</label>
+                                        <textarea class="form-control" name="og_description" rows="2"
+                                                  placeholder="Leave blank to use SEO description"></textarea>
+                                    </div>
+                                </div>
+
+                                <hr class="my-4">
+                                <h6 class="text-muted fw-semibold text-uppercase mb-3" style="font-size:.7rem;letter-spacing:.05em;">Twitter</h6>
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Twitter Title</label>
+                                        <input type="text" class="form-control" name="twitter_title"
+                                               placeholder="Leave blank to use SEO title"/>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Twitter Card</label>
+                                        <select class="form-select" name="twitter_card">
+                                            <option value="">Use automatic fallback</option>
+                                            <option value="summary">Summary</option>
+                                            <option value="summary_large_image">Summary Large Image</option>
+                                            <option value="app">App</option>
+                                            <option value="player">Player</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Twitter Image</label>
+                                        <input type="file" class="form-control" id="category-twitter-image-upload" name="twitter_image"/>
+                                        <small class="form-hint">Recommended: 1200 x 675 px. Max upload size: 4 MB.</small>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Twitter Description</label>
+                                        <textarea class="form-control" name="twitter_description" rows="2"
+                                                  placeholder="Leave blank to use SEO description"></textarea>
+                                    </div>
+                                </div>
+
+                                <hr class="my-4">
+                                <h6 class="text-muted fw-semibold text-uppercase mb-3" style="font-size:.7rem;letter-spacing:.05em;">Schema</h6>
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <label class="form-label">Schema Mode</label>
+                                        <select class="form-select" name="schema_mode" id="category-schema-mode-select">
+                                            <option value="auto">Auto-generate</option>
+                                            <option value="custom">Custom JSON-LD</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-12" id="category-schema-json-ld-wrap">
+                                        <label class="form-label">Schema JSON-LD</label>
+                                        <textarea class="form-control" name="schema_json_ld" rows="6"
+                                                  placeholder='{"@@context":"https://schema.org","@@type":"CollectionPage"}'></textarea>
+                                        <small class="form-hint">Used only when Schema Mode is set to Custom JSON-LD.</small>
+                                    </div>
+                                </div>
                             </div>
 
                         </div>
@@ -360,6 +428,8 @@
         const seoKeywordsValueInput = modal.querySelector('#category-seo-keywords-value');
         const seoTitleCount = document.getElementById('catSeoTitleCount');
         const seoDescriptionCount = document.getElementById('catSeoDescCount');
+        const schemaModeSelect = modal.querySelector('#category-schema-mode-select');
+        const schemaJsonLdWrap = modal.querySelector('#category-schema-json-ld-wrap');
 
         let seoTitleManuallyEdited = false;
         let seoDescriptionManuallyEdited = false;
@@ -411,6 +481,14 @@
         function refreshCounters() {
             updateCounter(seoTitleInput, seoTitleCount, 60);
             updateCounter(seoDescriptionInput, seoDescriptionCount, 160);
+        }
+
+        function toggleSchemaJsonLdField() {
+            if (!schemaModeSelect || !schemaJsonLdWrap) {
+                return;
+            }
+
+            schemaJsonLdWrap.style.display = schemaModeSelect.value === 'custom' ? '' : 'none';
         }
 
         function setSeoFieldValue(field, value) {
@@ -541,16 +619,20 @@
         modal.addEventListener('shown.bs.modal', function () {
             ensureKeywordTagsInput();
             refreshCounters();
+            toggleSchemaJsonLdField();
         });
 
         document.addEventListener('category-modal:state-applied', function (event) {
             ensureKeywordTagsInput();
             hydrateSeoState(event.detail?.mode || 'create');
+            toggleSchemaJsonLdField();
         });
 
         form?.addEventListener('submit', function () {
             syncKeywordInputValue();
         });
+
+        schemaModeSelect?.addEventListener('change', toggleSchemaJsonLdField);
     })();
 </script>
 @endpush

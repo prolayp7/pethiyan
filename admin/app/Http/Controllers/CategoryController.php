@@ -94,6 +94,7 @@ class CategoryController extends Controller
 
             // Handle file uploads for creation
             $this->handleFileUploadsForStore($request, $category);
+            $this->handleSeoImageUploads($request, $category);
 
             return ApiResponseType::sendJsonResponse(
                 success: true,
@@ -177,6 +178,7 @@ class CategoryController extends Controller
 
             // Handle file uploads and removals for update
             $this->handleFileUploadsForUpdate($request, $category);
+            $this->handleSeoImageUploads($request, $category);
 
             return ApiResponseType::sendJsonResponse(
                 success: true,
@@ -318,6 +320,27 @@ class CategoryController extends Controller
         }
         if ($converted['isWebp']) {
             @unlink($converted['path']);
+        }
+    }
+
+    private function handleSeoImageUploads(Request $request, Category $category): void
+    {
+        $metadata = $category->metadata ?? [];
+        $updated = false;
+
+        foreach (['og_image', 'twitter_image'] as $field) {
+            if (!$request->hasFile($field)) {
+                continue;
+            }
+
+            $metadata[$field] = $request->file($field)->store('seo/category', 'public');
+            $updated = true;
+        }
+
+        if ($updated) {
+            $category->update([
+                'metadata' => array_merge($category->metadata ?? [], $metadata),
+            ]);
         }
     }
 

@@ -608,5 +608,28 @@ class ProductService
         } else {
             $product->update(['video_link' => $request['video_link']]);
         }
+
+        $this->handleSeoImageUploads($product, $request);
+    }
+
+    private function handleSeoImageUploads(Product $product, $request): void
+    {
+        $metadata = $product->metadata ?? [];
+        $updated = false;
+
+        foreach (['og_image', 'twitter_image'] as $field) {
+            if (!$request->hasFile($field)) {
+                continue;
+            }
+
+            $metadata[$field] = $request->file($field)->store('seo/product', 'public');
+            $updated = true;
+        }
+
+        if ($updated) {
+            $product->update([
+                'metadata' => array_merge($product->metadata ?? [], $metadata),
+            ]);
+        }
     }
 }

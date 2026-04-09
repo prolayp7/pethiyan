@@ -74,6 +74,15 @@ class StoreUpdateProductRequest extends FormRequest
             'metadata.seo_title' => 'nullable|string|max:255',
             'metadata.seo_description' => 'nullable|string|max:500',
             'metadata.seo_keywords' => 'nullable|string|max:255',
+            'metadata.og_title' => 'nullable|string|max:255',
+            'metadata.og_description' => 'nullable|string|max:500',
+            'metadata.twitter_title' => 'nullable|string|max:255',
+            'metadata.twitter_description' => 'nullable|string|max:500',
+            'metadata.twitter_card' => 'nullable|in:summary,summary_large_image,app,player',
+            'metadata.schema_mode' => 'nullable|in:auto,custom',
+            'metadata.schema_json_ld' => 'nullable|json',
+            'og_image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:4096',
+            'twitter_image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:4096',
             'is_indexable' => 'nullable|boolean',
         ];
     }
@@ -85,6 +94,13 @@ class StoreUpdateProductRequest extends FormRequest
                 'seo_title'       => $this->input('seo_title') ?: null,
                 'seo_description' => $this->input('seo_description') ?: null,
                 'seo_keywords'    => $this->normalizeSeoKeywords(),
+                'og_title' => $this->input('og_title') ?: null,
+                'og_description' => $this->input('og_description') ?: null,
+                'twitter_title' => $this->input('twitter_title') ?: null,
+                'twitter_description' => $this->input('twitter_description') ?: null,
+                'twitter_card' => $this->input('twitter_card') ?: null,
+                'schema_mode' => $this->input('schema_mode') ?: 'auto',
+                'schema_json_ld' => $this->normalizeSchemaJsonLd(),
             ]),
             'is_indexable' => $this->has('is_indexable') ? (bool)$this->input('is_indexable') : true,
         ]);
@@ -101,6 +117,13 @@ class StoreUpdateProductRequest extends FormRequest
             ->values();
 
         return $keywords->isEmpty() ? null : $keywords->implode(', ');
+    }
+
+    private function normalizeSchemaJsonLd(): ?string
+    {
+        $schema = trim((string) $this->input('schema_json_ld', ''));
+
+        return $schema === '' ? null : $schema;
     }
 
     public function attributes(): array

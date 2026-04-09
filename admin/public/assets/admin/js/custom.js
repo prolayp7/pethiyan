@@ -11,6 +11,8 @@ document.addEventListener('show.bs.modal', function (event) {
         const iconUpload = document.querySelector('#icon-upload');
         const activeIconUpload = document.querySelector('#active-icon-upload');
         const backgroundImageUpload = document.querySelector('#background-image-upload');
+        const ogImageUpload = document.querySelector('#category-og-image-upload');
+        const twitterImageUpload = document.querySelector('#category-twitter-image-upload');
         const backgroundTypeSelect = document.querySelector('#background-type-select');
         const modalTitle = document.querySelector('#category-modal .modal-title');
         const submitButton = document.querySelector('#category-modal button[type="submit"]');
@@ -41,6 +43,10 @@ document.addEventListener('show.bs.modal', function (event) {
             if (activeIconPond) activeIconPond.removeFiles();
             const backgroundImagePond = FilePond.find(backgroundImageUpload);
             if (backgroundImagePond) backgroundImagePond.removeFiles();
+            const ogImagePond = FilePond.find(ogImageUpload);
+            if (ogImagePond) ogImagePond.removeFiles();
+            const twitterImagePond = FilePond.find(twitterImageUpload);
+            if (twitterImagePond) twitterImagePond.removeFiles();
         }
         if (categoryId) {
             // Fetch category data
@@ -72,6 +78,13 @@ document.addEventListener('show.bs.modal', function (event) {
                     form.querySelector('input[name="seo_title"]').value = data.metadata?.seo_title || '';
                     form.querySelector('textarea[name="seo_description"]').value = data.metadata?.seo_description || '';
                     form.querySelector('input[name="seo_keywords"]').value = data.metadata?.seo_keywords || '';
+                    form.querySelector('input[name="og_title"]').value = data.metadata?.og_title || '';
+                    form.querySelector('textarea[name="og_description"]').value = data.metadata?.og_description || '';
+                    form.querySelector('input[name="twitter_title"]').value = data.metadata?.twitter_title || '';
+                    form.querySelector('textarea[name="twitter_description"]').value = data.metadata?.twitter_description || '';
+                    form.querySelector('select[name="twitter_card"]').value = data.metadata?.twitter_card || '';
+                    form.querySelector('select[name="schema_mode"]').value = data.metadata?.schema_mode || 'auto';
+                    form.querySelector('textarea[name="schema_json_ld"]').value = data.metadata?.schema_json_ld || '';
 
                     // Set parent_id in TomSelect (auto-select)
                     if (tomSelectInstance) {
@@ -170,6 +183,13 @@ document.addEventListener('show.bs.modal', function (event) {
             setFormFieldValue('input[name="seo_title"]', '');
             setFormFieldValue('textarea[name="seo_description"]', '');
             setFormFieldValue('input[name="seo_keywords"]', '');
+            setFormFieldValue('input[name="og_title"]', '');
+            setFormFieldValue('textarea[name="og_description"]', '');
+            setFormFieldValue('input[name="twitter_title"]', '');
+            setFormFieldValue('textarea[name="twitter_description"]', '');
+            setFormFieldValue('select[name="twitter_card"]', '');
+            setFormFieldValue('select[name="schema_mode"]', 'auto');
+            setFormFieldValue('textarea[name="schema_json_ld"]', '');
 
             // Set action for create
             form.querySelector('input[id="category-id"]').value = "";

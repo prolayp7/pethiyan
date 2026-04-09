@@ -431,23 +431,29 @@ img {
   align-items: center;
   gap: 8px;
   padding: 9px 22px;
-  border-radius: 12px;
-  border: 1px solid transparent;
   background: linear-gradient(135deg, #17396f 0%, #2f6f9f 52%, #49ad57 100%);
-  border: 1px solid transparent;
   color: #ffffff;
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.04em;
   border-radius: 9999px;
-  box-shadow: 0 8px 22px rgba(23, 57, 111, 0.22);
-  transition: box-shadow 280ms ease, transform 280ms ease;
+  /* 3-D effect: solid bottom edge + ambient glow */
+  box-shadow:
+    0 5px 0 0 #0c2248,
+    0 8px 22px rgba(23, 57, 111, 0.30),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  transform: translateY(-2px);
+  transition: box-shadow 220ms ease, transform 220ms ease;
   pointer-events: none;
 }
 .cat-hv-card:hover .cat-hv-btn {
   background: linear-gradient(135deg, #12315f 0%, #275f8e 52%, #3f9e4d 100%);
-  box-shadow: 0 10px 24px rgba(23, 57, 111, 0.28);
-  transform: translateY(-1px);
+  /* Pressed state: depth collapses, button moves down */
+  box-shadow:
+    0 2px 0 0 #0c2248,
+    0 4px 14px rgba(23, 57, 111, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  transform: translateY(1px);
 }
 
 /* ── "View All" bottom CTA ── */
