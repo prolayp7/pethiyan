@@ -1,284 +1,267 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowRight, Package, Box, Truck, Archive, Wrench, Layers, Palette, Leaf, ShoppingBag } from "lucide-react";
+import {
+  motion,
+  useAnimation,
+  type Variants,
+} from "framer-motion";
+import {
+  ArrowRight,
+  Package,
+  Box,
+  Truck,
+  Archive,
+  Wrench,
+  Layers,
+  Palette,
+  Leaf,
+  ShoppingBag,
+} from "lucide-react";
 import type { ApiCategory } from "@/lib/api";
 
 // ─── Static fallback data ─────────────────────────────────────────────────────
-
 const staticCategories = [
-  { icon: Archive, title: "Packaging Pouches", href: "/category/standup-pouches",   desc: "Stand-Up Zipper, Kraft, Foil, Window & Custom Printed pouches", color: "#4ea85f" },
-  { icon: Box,     title: "Mailer Boxes",      href: "/category/mailer-boxes",      desc: "Corrugated mailer boxes for safe eCommerce shipping & custom branding", color: "#2e7c8a" },
-  { icon: Truck,   title: "Courier Bags",      href: "/category/courier-bags",      desc: "Waterproof, tamper-proof courier bags with strong adhesive seal",  color: "#6ea8d8" },
-  { icon: Package, title: "Plastic Jars",      href: "/category/plastic-jars",      desc: "Food-grade plastic jars for spices, dry fruits, snacks & powders", color: "#4ea85f" },
-  { icon: Wrench,  title: "Sealing Machines",  href: "/category/sealing-machines",  desc: "Impulse & heat sealing machines for quick, secure pouch sealing",  color: "#2e7c8a" },
-  { icon: Layers,  title: "Packaging Tape",    href: "/category/packaging-tape",    desc: "Strong BOPP & custom printed tapes for secure box sealing",        color: "#6ea8d8" },
+  { icon: Archive, title: "Packaging Pouches",  href: "/category/standup-pouches",  desc: "Stand-Up Zipper, Kraft, Foil, Window & Custom Printed pouches" },
+  { icon: Box,     title: "Mailer Boxes",        href: "/category/mailer-boxes",     desc: "Corrugated mailer boxes for safe eCommerce shipping & custom branding" },
+  { icon: Truck,   title: "Courier Bags",        href: "/category/courier-bags",     desc: "Waterproof, tamper-proof courier bags with strong adhesive seal" },
+  { icon: Package, title: "Plastic Jars",        href: "/category/plastic-jars",     desc: "Food-grade plastic jars for spices, dry fruits, snacks & powders" },
+  { icon: Wrench,  title: "Sealing Machines",    href: "/category/sealing-machines", desc: "Impulse & heat sealing machines for quick, secure pouch sealing" },
+  { icon: Layers,  title: "Packaging Tape",      href: "/category/packaging-tape",   desc: "Strong BOPP & custom printed tapes for secure box sealing" },
 ];
 
 const fallbackIcons = [Archive, Box, Truck, Package, Wrench, Layers, Palette, Leaf, ShoppingBag];
-const fallbackColors = ["#4ea85f", "#2e7c8a", "#6ea8d8", "#4ea85f", "#2e7c8a", "#6ea8d8", "#4ea85f", "#2e7c8a"];
 
-// ─── Card background colour ───────────────────────────────────────────────────
+// ─── Animation variants ───────────────────────────────────────────────────────
 
-const CARD_BG        = "#0b1f3e";
-const CARD_BG_HOVER  = "#0d2648";
-const CARD_BORDER    = "rgba(110,168,216,0.18)";
-const CARD_GRADIENT  = "linear-gradient(160deg, #07132b 0%, #0a2140 62%, #12344b 100%)";
+const sectionVariants: Variants = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.10 } },
+};
 
-// ─── Props ────────────────────────────────────────────────────────────────────
+const headingVariants: Variants = {
+  hidden:  { opacity: 0, y: 22 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.65, ease: [0.22, 1, 0.36, 1] } },
+};
+
+const cardVariants: Variants = {
+  hidden:  { opacity: 0, y: 36 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.65, ease: [0.22, 1, 0.36, 1] } },
+};
+
+// ─── CategoryCard ─────────────────────────────────────────────────────────────
+
+interface CardProps {
+  href: string;
+  name: string;
+  desc?: string | null;
+  image?: string | null;
+  Icon?: React.ComponentType<{ className?: string }>;
+}
+
+function CategoryCard({ href, name, desc, image, Icon }: CardProps) {
+  const [hovered, setHovered] = useState(false);
+  const shineControls = useAnimation();
+
+  const handleHoverStart = async () => {
+    setHovered(true);
+    // Shine sweeps once across the card on each hover entry
+    await shineControls.start({
+      x: "240%",
+      transition: { duration: 0.75, ease: "easeOut" },
+    });
+    shineControls.set({ x: "-130%" });
+  };
+
+  const handleHoverEnd = () => setHovered(false);
+
+  return (
+    <motion.div variants={cardVariants}>
+      {/* Link wraps the whole card; glass panel "button" is a span (no nested <a>) */}
+      <Link href={href} className="block" aria-label={`Shop ${name}`}>
+        <motion.div
+          className="cat-hv-card relative"
+          onHoverStart={handleHoverStart}
+          onHoverEnd={handleHoverEnd}
+          animate={{ y: hovered ? -10 : 0 }}
+          transition={{ type: "spring", stiffness: 280, damping: 26 }}
+        >
+          {/* ── Card body (3:4 portrait) ─────────────────────── */}
+          <div className="cat-hv-body">
+
+            {/* Image or icon background */}
+            {image ? (
+              <motion.div
+                className="absolute inset-0"
+                animate={{ scale: hovered ? 1.07 : 1 }}
+                transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+              >
+                <Image
+                  src={image}
+                  alt={name}
+                  fill
+                  unoptimized
+                  className="object-cover"
+                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                />
+              </motion.div>
+            ) : (
+              <motion.div
+                className="cat-hv-icon-bg absolute inset-0 flex items-center justify-center"
+                animate={{ scale: hovered ? 1.04 : 1 }}
+                transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                aria-hidden="true"
+              >
+                {Icon && <Icon className="w-20 h-20 text-white/20" />}
+              </motion.div>
+            )}
+
+            {/* Base gradient overlay — darkens on hover */}
+            <motion.div
+              className="cat-hv-overlay absolute inset-0 z-[1]"
+              animate={{ opacity: hovered ? 1.3 : 1 }}
+              transition={{ duration: 0.45 }}
+            />
+
+            {/* Extra dark veil — fades in on hover for more contrast behind glass */}
+            <motion.div
+              className="absolute inset-0 z-[2] bg-black"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: hovered ? 0.22 : 0 }}
+              transition={{ duration: 0.45 }}
+            />
+
+            {/* Shine sweep (one-shot on hover entry) */}
+            <motion.div
+              className="cat-hv-shine absolute inset-0 z-[3] pointer-events-none"
+              initial={{ x: "-130%" }}
+              animate={shineControls}
+            />
+
+            {/* Always-visible name peek — fades out when glass panel appears */}
+            <motion.div
+              className="absolute bottom-0 inset-x-0 z-[4] px-6 pb-5"
+              animate={{ opacity: hovered ? 0 : 1, y: hovered ? 6 : 0 }}
+              transition={{ duration: 0.22 }}
+            >
+              <p className="text-white/80 text-xs font-bold uppercase tracking-[0.18em]">
+                {name}
+              </p>
+            </motion.div>
+
+            {/* ── Glass reveal panel — slides up from below ── */}
+            <motion.div
+              className="cat-hv-glass z-[5]"
+              initial={{ y: "100%" }}
+              animate={{ y: hovered ? "0%" : "100%" }}
+              transition={{ type: "spring", stiffness: 320, damping: 34 }}
+            >
+              <h3 className="text-white text-xl font-black leading-tight mb-2">
+                {name}
+              </h3>
+              {desc && (
+                <p className="text-white/60 text-[11px] leading-relaxed mb-4 line-clamp-2">
+                  {desc}
+                </p>
+              )}
+              <span className="cat-hv-btn font-bold">
+                Shop Now
+                <motion.span
+                  animate={{ x: hovered ? 3 : 0 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 22 }}
+                >
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </motion.span>
+              </span>
+            </motion.div>
+
+          </div>{/* /cat-hv-body */}
+        </motion.div>
+      </Link>
+    </motion.div>
+  );
+}
+
+// ─── Main section ─────────────────────────────────────────────────────────────
 
 interface CategoryGridProps {
   categories?: ApiCategory[];
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
-
 export default function CategoryGrid({ categories = [] }: CategoryGridProps) {
-  const [visible, setVisible] = useState(false);
-  const ref = useRef<HTMLElement>(null);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) setVisible(true); },
-      { threshold: 0.1 }
-    );
-    if (ref.current) observer.observe(ref.current);
-    return () => observer.disconnect();
-  }, []);
-
-  const apiParents = categories.filter((c) => !c.parent_id).slice(0, 8);
+  const apiParents = categories.filter((c) => !c.parent_id).slice(0, 6);
   const hasApiData = apiParents.length > 0;
 
+  const count = hasApiData ? apiParents.length : staticCategories.length;
+  const gridCols =
+    count <= 2 ? "grid-cols-1 sm:grid-cols-2" :
+    count <= 4 ? "grid-cols-2 lg:grid-cols-4" :
+                 "grid-cols-2 md:grid-cols-3";
+
   return (
-    <>
-      <style>{`
-        @keyframes cg-fade-up {
-          from { opacity: 0; transform: translateY(24px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-        .cg-item { opacity: 0; }
-        .cg-item.show { animation: cg-fade-up 560ms cubic-bezier(0.22,1,0.36,1) forwards; }
+    <section className="cat-section py-12 lg:py-16" aria-labelledby="category-heading">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
-        .cg-card { transition: transform 280ms ease, box-shadow 280ms ease; }
-        .cg-card:hover { transform: translateY(-4px); }
-        .cg-card:hover .cg-img { transform: scale(1.06); }
-        .cg-img { transition: transform 500ms cubic-bezier(0.22,1,0.36,1); }
-
-        .cg-arrow {
-          opacity: 0;
-          transform: translateX(-6px);
-          transition: opacity 240ms ease, transform 240ms ease;
-        }
-        .cg-card:hover .cg-arrow {
-          opacity: 1;
-          transform: translateX(0);
-        }
-        .cg-pill {
-          transition: background 240ms ease;
-        }
-        .cg-card:hover .cg-pill {
-          background: rgba(110,168,216,0.22) !important;
-        }
-      `}</style>
-
-      <section
-        ref={ref}
-        className="relative overflow-hidden py-16 lg:py-24"
-        style={{ background: "#ffffff" }}
-        aria-labelledby="category-heading"
-      >
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-
-          {/* ── Heading ── */}
-          <div
-            className={`cg-item mb-12 text-left max-w-3xl${visible ? " show" : ""}`}
-            style={{ animationDelay: "0ms" }}
+        {/* ── Heading ── */}
+        <motion.div
+          className="mb-10"
+          initial={{ opacity: 0, y: 22 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-60px" }}
+          transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <p className="cat-eyebrow-text text-sm font-semibold uppercase tracking-wider mb-2">
+            Browse Range
+          </p>
+          <h2
+            id="category-heading"
+            className="cat-heading-gradient text-3xl sm:text-4xl font-extrabold"
           >
-            <p className="text-xs font-bold tracking-[0.22em] uppercase mb-2" style={{ color: "#2f8f58" }}>
-              Browse Range
-            </p>
-            <h2
-              id="category-heading"
-              className="text-3xl sm:text-4xl font-extrabold"
-              style={{
-                backgroundImage: "linear-gradient(135deg, #1f5d8f 0%, #2d7897 48%, #2e8a78 100%)",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-                backgroundClip: "text",
-              }}
-            >
-              Shop by Category
-            </h2>
-            <p className="mt-3 text-sm" style={{ color: "rgba(15,36,68,0.82)" }}>
-              Find the perfect packaging for every product and every brand story
-            </p>
-          </div>
+            Shop by Category
+          </h2>
+          <p className="cat-subheading mt-3 text-sm">
+            Find the perfect packaging for every product and every brand story
+          </p>
+        </motion.div>
 
-          {/* ── Cards grid ── */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-
-            {/* ── API categories ── */}
-            {hasApiData
-              ? apiParents.map((cat, i) => {
-                  const accentColor = fallbackColors[i % fallbackColors.length];
-                  const Icon        = fallbackIcons[i % fallbackIcons.length];
-                  const cardBg      = cat.background_color || CARD_BG;
-                  const fontColor   = cat.font_color || "#ffffff";
-
-                  return (
-                    <Link
-                      key={cat.id}
-                      href={`/category/${cat.slug}`}
-                      className={`cg-card cg-item group rounded-2xl overflow-hidden flex flex-col${visible ? " show" : ""}`}
-                      style={{
-                        background: CARD_GRADIENT,
-                        backgroundColor: cardBg,
-                        border: `1px solid ${CARD_BORDER}`,
-                        boxShadow: "0 8px 28px rgba(3,10,22,0.32)",
-                        animationDelay: visible ? `${80 + i * 70}ms` : undefined,
-                        textDecoration: "none",
-                      }}
-                      onMouseEnter={(e) => {
-                        (e.currentTarget as HTMLAnchorElement).style.boxShadow = `0 18px 40px rgba(3,10,22,0.48), 0 0 0 1px ${accentColor}55`;
-                      }}
-                      onMouseLeave={(e) => {
-                        (e.currentTarget as HTMLAnchorElement).style.boxShadow = "0 8px 28px rgba(3,10,22,0.32)";
-                      }}
-                    >
-                      {/* Image area */}
-                      {cat.image ? (
-                        <div className="relative overflow-hidden" style={{ aspectRatio: "16/9" }}>
-                          <Image
-                            src={cat.image}
-                            alt={cat.name}
-                            fill
-                            unoptimized
-                            className="cg-img object-cover"
-                            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                          />
-                          {/* Subtle bottom gradient so text below feels connected */}
-                          <div
-                            className="absolute inset-x-0 bottom-0 h-10"
-                            style={{ background: `linear-gradient(to bottom, transparent, ${cardBg})` }}
-                          />
-                        </div>
-                      ) : (
-                        /* Placeholder when no image */
-                        <div
-                          className="flex items-center justify-center"
-                          style={{ aspectRatio: "16/9", background: `${accentColor}14` }}
-                        >
-                          <Icon className="h-12 w-12 opacity-40" style={{ color: accentColor }} />
-                        </div>
-                      )}
-
-                      {/* Content */}
-                      <div className="flex flex-col flex-1 px-5 py-4 gap-2">
-
-                        {/* Name + arrow */}
-                        <div className="flex items-start justify-between gap-2">
-                          <h3
-                            className="text-base font-bold leading-snug"
-                            style={{ color: fontColor }}
-                          >
-                            {cat.name}
-                          </h3>
-                          <span
-                            className="cg-arrow flex-shrink-0 mt-0.5"
-                            aria-hidden="true"
-                          >
-                            <ArrowRight className="h-4 w-4" style={{ color: accentColor }} />
-                          </span>
-                        </div>
-
-                        {/* Description */}
-                        {cat.description && (
-                          <p
-                            className="text-xs leading-relaxed line-clamp-2"
-                            style={{ color: "rgba(255,255,255,0.62)" }}
-                          >
-                            {cat.description}
-                          </p>
-                        )}
-
-                        {/* Shop now pill */}
-                        <div className="mt-auto pt-3">
-                          <span
-                            className="cg-pill inline-flex items-center gap-1.5 text-[11px] font-semibold px-3 py-1.5 rounded-full"
-                            style={{
-                              background: `${accentColor}18`,
-                              color: accentColor,
-                            }}
-                          >
-                            Shop now
-                            <ArrowRight className="h-3 w-3" />
-                          </span>
-                        </div>
-                      </div>
-                    </Link>
-                  );
-                })
-
-              /* ── Static fallback ── */
-              : staticCategories.map(({ icon: Icon, title, href, desc, color }, i) => (
-                <Link
+        {/* ── Cards grid ── */}
+        <motion.div
+          className={`grid ${gridCols} gap-6 lg:gap-8`}
+          variants={sectionVariants}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-80px" }}
+        >
+          {hasApiData
+            ? apiParents.map((cat, i) => {
+                const Icon = fallbackIcons[i % fallbackIcons.length];
+                return (
+                  <CategoryCard
+                    key={cat.id}
+                    href={`/category/${cat.slug}`}
+                    name={cat.name}
+                    desc={cat.description}
+                    image={cat.image ?? null}
+                    Icon={cat.image ? undefined : Icon}
+                  />
+                );
+              })
+            : staticCategories.map(({ icon: Icon, title, href, desc }) => (
+                <CategoryCard
                   key={title}
                   href={href}
-                  className={`cg-card cg-item group rounded-2xl overflow-hidden flex flex-col${visible ? " show" : ""}`}
-                  style={{
-                    background: CARD_GRADIENT,
-                    backgroundColor: CARD_BG,
-                    border: `1px solid ${CARD_BORDER}`,
-                    boxShadow: "0 8px 28px rgba(3,10,22,0.32)",
-                    animationDelay: visible ? `${80 + i * 70}ms` : undefined,
-                    textDecoration: "none",
-                  }}
-                  onMouseEnter={(e) => {
-                    (e.currentTarget as HTMLAnchorElement).style.backgroundColor = CARD_BG_HOVER;
-                    (e.currentTarget as HTMLAnchorElement).style.boxShadow = `0 18px 40px rgba(3,10,22,0.48), 0 0 0 1px ${color}55`;
-                  }}
-                  onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLAnchorElement).style.backgroundColor = CARD_BG;
-                    (e.currentTarget as HTMLAnchorElement).style.boxShadow = "0 8px 28px rgba(3,10,22,0.32)";
-                  }}
-                >
-                  {/* Icon placeholder */}
-                  <div
-                    className="flex items-center justify-center"
-                    style={{ aspectRatio: "16/9", background: `${color}12` }}
-                  >
-                    <Icon className="h-14 w-14 opacity-35" style={{ color }} />
-                  </div>
-
-                  {/* Content */}
-                  <div className="flex flex-col flex-1 px-5 py-4 gap-2">
-                    <div className="flex items-start justify-between gap-2">
-                      <h3 className="text-base font-bold text-white leading-snug">{title}</h3>
-                      <span className="cg-arrow flex-shrink-0 mt-0.5" aria-hidden="true">
-                        <ArrowRight className="h-4 w-4" style={{ color }} />
-                      </span>
-                    </div>
-                    <p className="text-xs leading-relaxed line-clamp-2" style={{ color: "rgba(255,255,255,0.62)" }}>
-                      {desc}
-                    </p>
-                    <div className="mt-auto pt-3">
-                      <span
-                        className="cg-pill inline-flex items-center gap-1.5 text-[11px] font-semibold px-3 py-1.5 rounded-full"
-                        style={{ background: `${color}18`, color }}
-                      >
-                        Shop now
-                        <ArrowRight className="h-3 w-3" />
-                      </span>
-                    </div>
-                  </div>
-                </Link>
+                  name={title}
+                  desc={desc}
+                  Icon={Icon}
+                />
               ))
-            }
-          </div>
-        </div>
-      </section>
-    </>
+          }
+        </motion.div>
+
+
+</div>
+    </section>
   );
 }

@@ -28,13 +28,13 @@ class CategoryApiController extends Controller
      * If slug is not provided, returns root categories.
      */
     #[QueryParameter('page', description: 'Page number for pagination.', type: 'int', default: 1, example: 1)]
-    #[QueryParameter('per_page', description: 'Number of categories per page', type: 'int', default: 15, example: 15)]
+    #[QueryParameter('per_page', description: 'Number of categories per page', type: 'int', default: 20, example: 20)]
     #[QueryParameter('latitude', description: 'Latitude of the user location for zone-wise product counts', type: 'float', example: 23.11684540)]
     #[QueryParameter('longitude', description: 'Longitude of the user location for zone-wise product counts', type: 'float', example: 70.02805670)]
     #[QueryParameter('slug', description: 'Category slug to filter by', type: 'string', example: 'apple')]
     public function index(Request $request): JsonResponse
     {
-        $perPage = (int)$request->input('per_page', 15);
+        $perPage = (int)$request->input('per_page', 20);
 
         // Base query: either children of slug or root categories
         $query = Category::query()->with('parent')->where('status', CategoryStatusEnum::ACTIVE());
@@ -68,7 +68,9 @@ class CategoryApiController extends Controller
 
         $processed = $this->aggregateImmediateChildrenProducts($allCategories, $predicate, $useZoneFilter, $storeIds);
 
-        $filtered = $this->filterNonZeroProducts($processed);
+        // Only filter out zero-product categories when zone filtering is active;
+        // otherwise return all active categories so admin-enabled categories always appear.
+        $filtered = $useZoneFilter ? $this->filterNonZeroProducts($processed) : $processed;
 
         // Paginate and respond
         $paginator = $this->paginateCollection($filtered, (int)$request->input('page', 1), $perPage, $request);
