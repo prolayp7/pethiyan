@@ -46,6 +46,7 @@ import {
   getProductReviews,
   getProductFaqs,
 } from "@/lib/api";
+import { trackViewItem, trackAddToCart } from "@/lib/analytics";
 
 function formatCurrency(amount: number | null | undefined, symbol = "₹"): string {
   const value = toNum(amount);
@@ -396,21 +397,37 @@ export default function ProductDetailClient({ product, reviews: initialReviews, 
     }
   }, [product.slug, initialReviews.length, initialFaqs.length]);
 
-  const selectedVariantIdSafe = useMemo(() => {
-    if (variantList.length === 0) return null;
-    if (selectedVariantId && variantList.some((v) => v.id === selectedVariantId)) return selectedVariantId;
-    const def = variantList.find((v) => v.is_default);
-    return def?.id ?? variantList[0].id;
+  // Single memo resolves both "which variant is selected" and "what is its id".
+  // Keeping it as one memo avoids the chained-memo TDZ that Turbopack flags.
+  const selectedVariant = useMemo<RealApiVariant | undefined>(() => {
+    if (variantList.length === 0) return undefined;
+    if (selectedVariantId) {
+      const match = variantList.find((v) => v.id === selectedVariantId);
+      if (match) return match;
+    }
+    return variantList.find((v) => v.is_default) ?? variantList[0];
   }, [selectedVariantId, variantList]);
 
-  const selectedVariant: RealApiVariant | undefined = useMemo(() => {
-    if (!selectedVariantIdSafe) return variantList[0];
-    return variantList.find((v) => v.id === selectedVariantIdSafe) ?? variantList[0];
-  }, [variantList, selectedVariantIdSafe]);
+  // Stable primitive — derived synchronously (not another useMemo) to keep Turbopack happy.
+  const selectedVariantIdSafe = selectedVariant?.id ?? null;
+
+  // Fire view_item whenever the selected variant changes (initial load + variant switch).
+  useEffect(() => {
+    if (!selectedVariant) return;
+    const price = toNum(selectedVariant.store_pricing?.[0]?.special_price ?? selectedVariant.store_pricing?.[0]?.price ?? 0);
+    trackViewItem({
+      item_id:       String(product.id),
+      item_name:     product.title,
+      item_variant:  selectedVariant.title,
+      item_category: (product as unknown as { category?: { title: string } | null }).category?.title,
+      price,
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedVariant]);
 
   const selectedVariantStorePricing = useMemo(
     () => selectedVariant?.store_pricing ?? [],
-    [selectedVariant?.store_pricing]
+    [selectedVariant]
   );
 
   const selectedStoreIdSafe = useMemo(() => {
@@ -442,7 +459,7 @@ export default function ProductDetailClient({ product, reviews: initialReviews, 
       ...(product.images?.variant_images ?? []),
       ...(product.images?.all ?? []),
     ]);
-  }, [selectedVariant?.image, product.images]);
+  }, [selectedVariant, product.images]);
 
   const basePrice = toNum(selectedStorePricing?.price ?? selectedStorePricing?.special_price ?? 0);
   const effectivePrice = toNum(selectedStorePricing?.special_price ?? selectedStorePricing?.price ?? 0);
@@ -511,6 +528,15 @@ export default function ProductDetailClient({ product, reviews: initialReviews, 
         storeId: selectedStoreIdSafe ?? undefined,
       });
     }
+
+    trackAddToCart({
+      item_id:      String(product.id),
+      item_name:    selectedVariant.title || productName,
+      item_variant: selectedVariant.title,
+      item_category: (product as unknown as { category?: { title: string } | null }).category?.title,
+      price:        effectivePrice,
+      quantity:     safeQty,
+    });
 
     setAddedToCart(true);
     openCart();

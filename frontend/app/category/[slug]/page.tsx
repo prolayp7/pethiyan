@@ -51,7 +51,10 @@ export async function generateMetadata({
     robots: indexable
       ? { index: true,  follow: true,  googleBot: { index: true,  follow: true  } }
       : { index: false, follow: false, googleBot: { index: false, follow: false } },
-    alternates: { canonical: `/category/${slug}` },
+    alternates: {
+      canonical: `/category/${slug}`,
+      languages: { "en": `/category/${slug}`, "x-default": `/category/${slug}` },
+    },
     openGraph: {
       title: `${title} | Pethiyan`,
       description,

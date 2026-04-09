@@ -17,6 +17,7 @@ import {
   createRazorpayOrder, verifyRazorpayPayment, createEasepayOrder, getPaymentSettings, syncCartToServer, createCheckout,
   type ApiAddress, type ApiShippingRate, type ApiCouponResult,
 } from "@/lib/api";
+import { trackBeginCheckout, storePurchaseEvent } from "@/lib/analytics";
 
 // ─── Razorpay types ───────────────────────────────────────────────────────────
 
@@ -394,6 +395,21 @@ export default function CheckoutClient() {
     if (items.length === 0) router.replace("/cart");
   }, [items.length, router]);
 
+  // Fire begin_checkout once when the page mounts with a non-empty cart
+  useEffect(() => {
+    if (items.length === 0) return;
+    trackBeginCheckout({
+      value: total,
+      items: items.map((i) => ({
+        item_id:   String(i.productId ?? i.id.split("-")[0]),
+        item_name: i.name,
+        price:     i.price,
+        quantity:  i.quantity,
+      })),
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Load addresses once auth is ready (prevents empty load before token rehydration).
   useEffect(() => {
     if (authLoading || !isLoggedIn) return;
@@ -571,6 +587,17 @@ export default function CheckoutClient() {
       });
       setProcessingPayment(false);
       if (result.success) {
+        storePurchaseEvent({
+          transaction_id: result.order_number ?? "",
+          value:          grandTotal,
+          currency:       "INR",
+          items: items.map((i) => ({
+            item_id:   String(i.productId ?? i.id.split("-")[0]),
+            item_name: i.name,
+            price:     i.price,
+            quantity:  i.quantity,
+          })),
+        });
         clearCart();
         router.push(`/order-confirmed?order_number=${result.order_number ?? ""}&order_id=${result.order_id ?? ""}`);
       } else {
@@ -602,6 +629,17 @@ export default function CheckoutClient() {
         return;
       }
 
+      storePurchaseEvent({
+        transaction_id: result.order_id ? String(result.order_id) : "",
+        value:          grandTotal,
+        currency:       "INR",
+        items: items.map((i) => ({
+          item_id:   String(i.productId ?? i.id.split("-")[0]),
+          item_name: i.name,
+          price:     i.price,
+          quantity:  i.quantity,
+        })),
+      });
       window.location.href = easepayOrder.payment_url;
       return;
     }
@@ -676,6 +714,17 @@ export default function CheckoutClient() {
 
         setProcessingPayment(false);
         if (result.success) {
+          storePurchaseEvent({
+            transaction_id: result.order_number ?? "",
+            value:          grandTotal,
+            currency:       "INR",
+            items: items.map((i) => ({
+              item_id:   String(i.productId ?? i.id.split("-")[0]),
+              item_name: i.name,
+              price:     i.price,
+              quantity:  i.quantity,
+            })),
+          });
           clearCart();
           router.push(`/order-confirmed?order_number=${result.order_number ?? ""}&order_id=${result.order_id ?? ""}`);
         } else {

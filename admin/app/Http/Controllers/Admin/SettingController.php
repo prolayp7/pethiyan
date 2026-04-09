@@ -20,6 +20,7 @@ use App\Types\Settings\PaymentSettingType;
 use App\Types\Settings\StorageSettingType;
 use App\Types\Settings\SystemSettingType;
 use App\Types\Settings\WebSettingType;
+use App\Types\Settings\SeoAdvancedSettingType;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
@@ -100,6 +101,7 @@ class SettingController extends Controller
                 SettingTypeEnum::HOME_GENERAL_SETTINGS() => HomeGeneralSettingType::class,
                 SettingTypeEnum::SMS() => SmsSettingType::class,
                 SettingTypeEnum::GST() => GstSettingType::class,
+                SettingTypeEnum::SEO_ADVANCED() => SeoAdvancedSettingType::class,
                 default => null,
             };
 

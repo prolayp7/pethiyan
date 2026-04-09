@@ -81,17 +81,22 @@ export async function generateMetadata({
     robots: indexable
       ? { index: true,  follow: true,  googleBot: { index: true,  follow: true  } }
       : { index: false, follow: false, googleBot: { index: false, follow: false } },
-    alternates: { canonical: `/products/${slug}/${variantSlug}` },
+    alternates: {
+      canonical: `/products/${slug}/${variantSlug}`,
+      languages: { "en": `/products/${slug}/${variantSlug}`, "x-default": `/products/${slug}/${variantSlug}` },
+    },
     openGraph: {
       title: `${title} | Pethiyan`,
       description,
       url: `/products/${slug}/${variantSlug}`,
-      type: "website",
       ...(image ? { images: [{ url: image, alt: `${productTitle} - ${variantTitle}` }] } : {}),
     },
     other: {
+      "og:type": "og:product",
       "product:price:amount": String(price),
       "product:price:currency": "INR",
+      "product:availability": variant.availability !== false ? "in stock" : "out of stock",
+      "product:brand": "Pethiyan",
     },
   };
 }

@@ -11,6 +11,7 @@ use App\Http\Resources\Setting\EmailSettingResource;
 use App\Http\Resources\Setting\NotificationSettingResource;
 use App\Http\Resources\Setting\PaymentSettingResource;
 use App\Http\Resources\Setting\GstSettingResource;
+use App\Http\Resources\Setting\SeoAdvancedSettingResource;
 use App\Http\Resources\Setting\SmsSettingResource;
 use App\Http\Resources\Setting\StorageSettingResource;
 use App\Http\Resources\Setting\SystemSettingResource;
@@ -83,6 +84,7 @@ class SettingService
             'home_general_settings' => new HomeGeneralSettingResource($setting),
             'sms' => new SmsSettingResource($setting),
             'gst' => new GstSettingResource($setting),
+            'seo_advanced' => new SeoAdvancedSettingResource($setting),
             default => throw new \InvalidArgumentException("Unsupported setting type: {$setting->variable}")
         };
     }

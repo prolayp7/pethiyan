@@ -52,6 +52,7 @@ export async function generateMetadata({
     `Buy ${rawTitle} online at Pethiyan. Premium packaging with GST invoice and fast shipping across India.`;
   const keywords = product.features?.seo_keywords || undefined;
   const indexable = product.features?.is_indexable !== false;
+  const inStock = firstVariant?.availability !== false;
 
   return {
     title,
@@ -60,17 +61,22 @@ export async function generateMetadata({
     robots: indexable
       ? { index: true,  follow: true,  googleBot: { index: true,  follow: true  } }
       : { index: false, follow: false, googleBot: { index: false, follow: false } },
-    alternates: { canonical: `/products/${slug}` },
+    alternates: {
+      canonical: `/products/${slug}`,
+      languages: { "en": `/products/${slug}`, "x-default": `/products/${slug}` },
+    },
     openGraph: {
       title: `${title} | Pethiyan`,
       description,
       url: `/products/${slug}`,
-      type: "website",
       ...(image ? { images: [{ url: image, alt: rawTitle }] } : {}),
     },
     other: {
+      "og:type": "og:product",
       "product:price:amount": String(price),
       "product:price:currency": "INR",
+      "product:availability": inStock ? "in stock" : "out of stock",
+      "product:brand": "Pethiyan",
     },
   };
 }

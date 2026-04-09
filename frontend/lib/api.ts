@@ -539,9 +539,10 @@ function extractCatArray(json: unknown): ApiCategory[] {
   return [];
 }
 
-export async function getCategories(): Promise<ApiCategory[]> {
+export async function getCategories(params?: Record<string, string>): Promise<ApiCategory[]> {
+  const query = params ? "?" + new URLSearchParams(params).toString() : "";
   try {
-    const res = await fetch(`${API_BASE}/api/categories`, {
+    const res = await fetch(`${API_BASE}/api/categories${query}`, {
       headers: { Accept: "application/json" },
       next: { revalidate: 300, tags: ["categories"] },
     } as RequestInit);
@@ -1171,6 +1172,33 @@ export async function getWebSettings(): Promise<ApiWebSettings | null> {
     metaKeywords:        str("metaKeywords"),
     googleSiteVerification: str("googleSiteVerification"),
     bingSiteVerification:   str("bingSiteVerification"),
+  };
+}
+
+// ─── SEO Advanced Settings ────────────────────────────────────────────────────
+
+export interface ApiSeoAdvancedSettings {
+  robotsDisallowRules: string[];
+  sitemapCustomUrls: Array<{ url: string; priority: string; changeFreq: string }>;
+  sitemapExcludeUrls: string[];
+}
+
+export async function getSeoAdvancedSettings(): Promise<ApiSeoAdvancedSettings | null> {
+  const res = await fetch(`${API_BASE}/api/settings/seo-advanced`, {
+    headers: { Accept: "application/json" },
+    next: { revalidate: 3600, tags: ["seo-advanced-settings"] },
+  } as RequestInit).then((r) => r.json()).catch(() => null) as {
+    success?: boolean;
+    data?: Record<string, unknown>;
+  } | null;
+
+  if (!res?.success || !res.data) return null;
+
+  const d = res.data as Record<string, unknown>;
+  return {
+    robotsDisallowRules: Array.isArray(d.robotsDisallowRules) ? (d.robotsDisallowRules as string[]).filter(Boolean) : [],
+    sitemapCustomUrls:   Array.isArray(d.sitemapCustomUrls)   ? (d.sitemapCustomUrls as ApiSeoAdvancedSettings["sitemapCustomUrls"]) : [],
+    sitemapExcludeUrls:  Array.isArray(d.sitemapExcludeUrls)  ? (d.sitemapExcludeUrls as string[]).filter(Boolean) : [],
   };
 }
 

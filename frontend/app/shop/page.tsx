@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { getProducts, getCategories, getSubCategories, type RealApiProduct } from "@/lib/api";
+import { breadcrumbSchema, jsonLd } from "@/lib/structured-data";
 import ShopClient from "./ShopClient";
 
 export const metadata: Metadata = {
@@ -18,11 +19,19 @@ export default async function ShopPage() {
     getSubCategories(),
   ]);
 
+  const bcSchema = breadcrumbSchema([
+    { label: "Home", href: "/" },
+    { label: "Shop", href: "/shop" },
+  ]);
+
   return (
-    <ShopClient
-      initialProducts={products}
-      initialCategories={categories}
-      initialSubCategories={subCategories}
-    />
+    <>
+      <script {...jsonLd(bcSchema)} key="breadcrumb-schema" />
+      <ShopClient
+        initialProducts={products}
+        initialCategories={categories}
+        initialSubCategories={subCategories}
+      />
+    </>
   );
 }
