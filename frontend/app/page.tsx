@@ -48,7 +48,7 @@ export default async function HomePage() {
         badges={heroData?.badges}
         settings={heroData?.settings}
       />
-      <TrustBadges />
+      {/* <TrustBadges /> */}
       <CategoryGrid categories={categories} />
       <FeaturedProducts apiProducts={featuredProducts} />
       
