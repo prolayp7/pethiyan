@@ -36,15 +36,27 @@ export async function generateMetadata({
   if (!category) {
     return { title: "Category Not Found" };
   }
+  const rawTitle = category.name;
+  const title = category.seo_title || `${rawTitle} Packaging Products`;
+  const description =
+    category.seo_description ||
+    `Shop ${rawTitle} packaging products at Pethiyan — premium quality, GST invoice, fast delivery across India.`;
+  const keywords = category.seo_keywords || undefined;
+  const indexable = category.is_indexable !== false;
+
   return {
-    title: `${category.name} Packaging Products`,
-    description: `Shop ${category.name} packaging products at Pethiyan — premium quality, GST invoice, fast delivery across India.`,
+    title,
+    description,
+    ...(keywords ? { keywords } : {}),
+    robots: indexable
+      ? { index: true,  follow: true,  googleBot: { index: true,  follow: true  } }
+      : { index: false, follow: false, googleBot: { index: false, follow: false } },
     alternates: { canonical: `/category/${slug}` },
     openGraph: {
-      title: `${category.name} Packaging | Pethiyan`,
-      description: `Browse our range of ${category.name} packaging solutions.`,
+      title: `${title} | Pethiyan`,
+      description,
       url: `/category/${slug}`,
-      ...(category.image ? { images: [{ url: category.image, alt: category.name }] } : {}),
+      ...(category.image ? { images: [{ url: category.image, alt: rawTitle }] } : {}),
     },
   };
 }

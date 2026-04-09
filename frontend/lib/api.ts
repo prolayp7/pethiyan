@@ -20,6 +20,10 @@ export interface ApiCategory {
   subcategory_count?: number;
   product_count?: number;
   status?: string;
+  is_indexable?: boolean;
+  seo_title?: string | null;
+  seo_description?: string | null;
+  seo_keywords?: string | null;
 }
 
 export interface ApiProduct {
@@ -227,6 +231,17 @@ export interface ApiSystemSettings {
   favicon: string | null;
 }
 
+export interface ApiWebSettings {
+  googleAnalyticsId: string;
+  googleTagManagerId: string;
+  facebookPixelId: string;
+  metaTitle: string;
+  metaDescription: string;
+  metaKeywords: string;
+  googleSiteVerification: string;
+  bingSiteVerification: string;
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function getToken(): string | null {
@@ -347,6 +362,11 @@ export interface RealApiVariant {
   capacity_unit?: string;
   attributes: Record<string, string>;
   store_pricing: RealApiStorePricing[];
+  metadata?: { seo_title?: string; seo_description?: string; seo_keywords?: string } | null;
+  seo_title?: string | null;
+  seo_description?: string | null;
+  seo_keywords?: string | null;
+  is_indexable?: boolean;
 }
 
 export interface RealApiProduct {
@@ -370,6 +390,11 @@ export interface RealApiProduct {
     made_in?: string;
     warranty_period?: string;
     guarantee_period?: string;
+    metadata?: { seo_title?: string; seo_description?: string; seo_keywords?: string } | null;
+    is_indexable?: boolean;
+    seo_title?: string | null;
+    seo_description?: string | null;
+    seo_keywords?: string | null;
   };
   policies: {
     minimum_order_quantity: number;
@@ -1118,6 +1143,34 @@ export async function getSystemSettings(): Promise<ApiSystemSettings | null> {
     appName: appName || "Pethiyan",
     logo: normalizeMediaUrl(logoRaw),
     favicon: normalizeMediaUrl(faviconRaw),
+  };
+}
+
+export async function getWebSettings(): Promise<ApiWebSettings | null> {
+  const res = await fetch(`${API_BASE}/api/settings/web`, {
+    headers: { Accept: "application/json" },
+    next: { revalidate: 3600, tags: ["web-settings"] },
+  } as RequestInit).then((r) => r.json()).catch(() => null) as {
+    success?: boolean;
+    data?: { value?: Record<string, unknown> } | Record<string, unknown>;
+  } | null;
+
+  if (!res || !res.success || !res.data) return null;
+
+  const s = ("value" in res.data ? res.data.value : res.data) as Record<string, unknown> | undefined;
+  if (!s) return null;
+
+  const str = (key: string) => (typeof s[key] === "string" ? (s[key] as string).trim() : "");
+
+  return {
+    googleAnalyticsId:   str("googleAnalyticsId"),
+    googleTagManagerId:  str("googleTagManagerId"),
+    facebookPixelId:     str("facebookPixelId"),
+    metaTitle:           str("metaTitle"),
+    metaDescription:     str("metaDescription"),
+    metaKeywords:        str("metaKeywords"),
+    googleSiteVerification: str("googleSiteVerification"),
+    bingSiteVerification:   str("bingSiteVerification"),
   };
 }
 

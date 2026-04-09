@@ -44,23 +44,29 @@ export async function generateMetadata({
   const firstStorePricing = firstVariant?.store_pricing?.[0];
   const price = toNum(firstStorePricing?.special_price ?? firstStorePricing?.price ?? 0);
   const image = product.images?.main_image ?? product.images?.all?.[0];
-  const title = product.title ?? "Product";
+  const rawTitle = product.title ?? "Product";
+  const title = product.features?.seo_title || rawTitle;
   const description =
-    product.short_description ??
-    `Buy ${title} online at Pethiyan. Premium packaging with GST invoice and fast shipping across India.`;
+    product.features?.seo_description ||
+    product.short_description ||
+    `Buy ${rawTitle} online at Pethiyan. Premium packaging with GST invoice and fast shipping across India.`;
+  const keywords = product.features?.seo_keywords || undefined;
+  const indexable = product.features?.is_indexable !== false;
 
   return {
     title,
     description,
+    ...(keywords ? { keywords } : {}),
+    robots: indexable
+      ? { index: true,  follow: true,  googleBot: { index: true,  follow: true  } }
+      : { index: false, follow: false, googleBot: { index: false, follow: false } },
     alternates: { canonical: `/products/${slug}` },
     openGraph: {
       title: `${title} | Pethiyan`,
       description,
       url: `/products/${slug}`,
       type: "website",
-      ...(image
-        ? { images: [{ url: image, alt: title }] }
-        : {}),
+      ...(image ? { images: [{ url: image, alt: rawTitle }] } : {}),
     },
     other: {
       "product:price:amount": String(price),

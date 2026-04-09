@@ -5,7 +5,10 @@ import { CartProvider } from "@/context/CartContext";
 import { AuthProvider } from "@/context/AuthContext";
 import { WishlistProvider } from "@/context/WishlistContext";
 import { SiteSettingsProvider } from "@/context/SiteSettingsContext";
-import { getSystemSettings } from "@/lib/api";
+import { getSystemSettings, getWebSettings } from "@/lib/api";
+import GoogleAnalytics from "@/components/analytics/GoogleAnalytics";
+import { GTMScript, GTMNoScript } from "@/components/analytics/GoogleTagManager";
+import FacebookPixel from "@/components/analytics/FacebookPixel";
 import CartDrawer from "@/components/ui/CartDrawer";
 import TopAnnouncementBar from "@/components/headers/TopAnnouncementBar";
 import OfferTicker from "@/components/headers/OfferTicker";
@@ -98,15 +101,22 @@ export default async function RootLayout({
 }>) {
   const orgSchema = organizationSchema();
   const siteSchema = websiteSchema();
-  const siteSettings = (await getSystemSettings()) ?? { appName: "Pethiyan", logo: null, favicon: null };
+  const [siteSettings, webSettings] = await Promise.all([
+    getSystemSettings().then(s => s ?? { appName: "Pethiyan", logo: null, favicon: null }),
+    getWebSettings(),
+  ]);
 
   return (
     <html lang="en" className={inter.variable} suppressHydrationWarning>
       <head>
         <script {...jsonLd(orgSchema)} key="org-schema" />
         <script {...jsonLd(siteSchema)} key="site-schema" />
+        {webSettings?.googleAnalyticsId  && <GoogleAnalytics id={webSettings.googleAnalyticsId} />}
+        {webSettings?.googleTagManagerId && <GTMScript      id={webSettings.googleTagManagerId} />}
       </head>
       <body className="antialiased bg-background text-foreground font-sans">
+        {webSettings?.googleTagManagerId && <GTMNoScript   id={webSettings.googleTagManagerId} />}
+        {webSettings?.facebookPixelId    && <FacebookPixel id={webSettings.facebookPixelId} />}
         {/* Portal root — sits above app-root in z-order, outside its stacking context */}
         <div id="portal-root" />
 
