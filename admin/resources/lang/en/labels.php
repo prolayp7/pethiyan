@@ -850,6 +850,7 @@ return [
     // Delivery Zone labels
     'delivery_zones' => 'Delivery Zones',
     'state_shipping_rates' => 'State Shipping Rates',
+    'pin_service'=>'Pin Service',
     'add_delivery_zone' => 'Add Delivery Zone',
     'edit_delivery_zone' => 'Edit Delivery Zone',
     'delete_delivery_zone' => 'Delete Delivery Zone',
