@@ -349,6 +349,120 @@ img {
 }
 
 /* =============================================
+   CATEGORY GRID — Glassmorphism Hover Reveal
+   ============================================= */
+
+/* ── Section ── */
+.cat-section { background: #ffffff; }
+
+/* ── Heading ── */
+.cat-eyebrow-text { color: #4caf50; }
+.cat-heading-gradient {
+  background-image: linear-gradient(135deg, #1a4f83 0%, #2b6e92 48%, #2d8b6a 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.cat-subheading { color: #4f6281; }
+
+/* ── Card shell ── */
+/* border-radius + overflow-hidden clips the glass panel during slide animation */
+.cat-hv-card {
+  border-radius: 20px;
+  overflow: hidden;
+  cursor: pointer;
+  box-shadow: 0 4px 28px rgba(0,0,0,0.09), 0 1px 4px rgba(0,0,0,0.05);
+  transition: box-shadow 400ms ease;
+}
+.cat-hv-card:hover {
+  box-shadow: 0 24px 56px rgba(0,0,0,0.17), 0 6px 16px rgba(0,0,0,0.09);
+}
+
+/* ── Card image/content area ── */
+.cat-hv-body {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+}
+
+/* ── Icon fallback background ── */
+.cat-hv-icon-bg {
+  background: linear-gradient(155deg, #07203d 0%, #0d3560 48%, #0c4a44 100%);
+}
+
+/* ── Base gradient overlay (always present) ── */
+.cat-hv-overlay {
+  background: linear-gradient(
+    to bottom,
+    transparent 28%,
+    rgba(4, 14, 32, 0.50) 65%,
+    rgba(4, 14, 32, 0.82) 100%
+  );
+}
+
+/* ── Shine sweep (triggered by Framer Motion on hover start) ── */
+.cat-hv-shine {
+  background: linear-gradient(
+    105deg,
+    transparent 25%,
+    rgba(255,255,255,0.11) 50%,
+    transparent 75%
+  );
+  will-change: transform;
+}
+
+/* ── Glass reveal panel ── */
+/* Framer Motion animates translateY from 100% → 0 on hover */
+.cat-hv-glass {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  -webkit-backdrop-filter: blur(18px) saturate(1.6);
+  backdrop-filter: blur(18px) saturate(1.6);
+  background: linear-gradient(135deg, rgba(26, 56, 112, 0.92) 0%, rgba(43, 110, 150, 0.90) 52%, rgba(39, 160, 122, 0.88) 100%);
+  border-top: 1px solid rgba(255, 255, 255, 0.13);
+  padding: 20px 22px 24px;
+}
+
+/* ── Shop Now pill button inside glass panel — matches .btn-brand ── */
+.cat-hv-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 22px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  background: linear-gradient(135deg, #17396f 0%, #2f6f9f 52%, #49ad57 100%);
+  border: 1px solid transparent;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  border-radius: 9999px;
+  box-shadow: 0 8px 22px rgba(23, 57, 111, 0.22);
+  transition: box-shadow 280ms ease, transform 280ms ease;
+  pointer-events: none;
+}
+.cat-hv-card:hover .cat-hv-btn {
+  background: linear-gradient(135deg, #12315f 0%, #275f8e 52%, #3f9e4d 100%);
+  box-shadow: 0 10px 24px rgba(23, 57, 111, 0.28);
+  transform: translateY(-1px);
+}
+
+/* ── "View All" bottom CTA ── */
+.cat-cta-btn {
+  background: linear-gradient(135deg, #0f2f5f 0%, #1f4f8a 50%, #2563a8 100%);
+  box-shadow: 0 4px 20px rgba(31,79,138,0.40), inset 0 1px 0 rgba(255,255,255,0.12);
+  color: #ffffff;
+  transition: background 320ms ease, box-shadow 320ms ease;
+}
+.cat-cta-btn:hover {
+  background: linear-gradient(135deg, #15803d 0%, #22c55e 60%, #4ade80 100%);
+  box-shadow: 0 6px 28px rgba(34,197,94,0.36), 0 0 0 1px rgba(34,197,94,0.30), inset 0 1px 0 rgba(255,255,255,0.14);
+}
+
+/* =============================================
    PERFORMANCE — Content visibility
    ============================================= */
 
