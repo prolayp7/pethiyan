@@ -293,13 +293,11 @@ class CategoryController extends Controller
         foreach ($this->mediaCollections as $requestField => $collectionName) {
             $collectionValue = is_callable($collectionName) ? $collectionName() : $collectionName;
 
-            if ($request->hasFile($requestField)) {
-                // File exists in request, handle upload
+            if ($request->hasFile($requestField) && $request->file($requestField)->getSize() > 0) {
+                // New file uploaded — replace existing media
                 $this->handleSingleFileUpload($request, $category, $requestField, $collectionValue);
-            } else {
-                // File doesn't exist in request, remove from media library
-                $this->removeMediaFromCollection($category, $collectionValue);
             }
+            // No file uploaded — keep existing media untouched
         }
     }
 

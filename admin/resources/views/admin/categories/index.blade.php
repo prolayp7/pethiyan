@@ -148,40 +148,6 @@
                                         </select>
                                     </div>
 
-                                    <div class="mb-3">
-                                        <label class="form-label">{{ __('labels.background_type') }}</label>
-                                        <select class="form-select" name="background_type" id="background-type-select">
-                                            <option value="">{{ __('labels.select_background_type') }}</option>
-                                            <option value="color">{{ __('labels.color') }}</option>
-                                            <option value="image">{{ __('labels.image') }}</option>
-                                        </select>
-                                        <small class="form-text text-muted">{{ __('labels.background_home_page_note') }}</small>
-                                    </div>
-
-                                    <div class="mb-3" id="background-color-field" style="display: none;">
-                                        <label class="form-label">{{ __('labels.background_color') }}</label>
-                                        <input type="text" class="form-control" name="background_color"
-                                               id="background-color-input" placeholder="#ffffff"
-                                               pattern="^#[0-9A-Fa-f]{6}$"/>
-                                        <small class="form-text text-muted">Hex color code e.g. #ffffff</small>
-                                    </div>
-
-                                    <div class="mb-3">
-                                        <label class="form-label">{{ __('labels.font_color') }}</label>
-                                        <input type="text" class="form-control" name="font_color"
-                                               id="font-color-input" placeholder="#000000"
-                                               pattern="^#[0-9A-Fa-f]{6}$"/>
-                                        <small class="form-text text-muted">Hex color code e.g. #000000 (optional)</small>
-                                    </div>
-
-                                    <div class="mb-3">
-                                        <label class="form-label">{{ __('labels.commission') }}</label>
-                                        <input type="number" class="form-control" name="commission" id="commission"
-                                               placeholder="{{ __('labels.commission_placeholder') }}" step="0.01" min="0"
-                                               max="100"/>
-                                        <small class="form-text text-muted">Enter commission percentage (0-100)</small>
-                                    </div>
-
                                     <div class="row">
                                         <div class="col-6">
                                             <div class="mb-3 form-check form-switch">

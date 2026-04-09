@@ -41,24 +41,26 @@
                                href="#pills-cart">{{ __('labels.cart_inventory_settings') }}</a>
                             <a class="nav-link"
                                href="#pills-order-settings">Order Settings</a>
+                            <a class="nav-link" href="#pills-product-grid">Product Grid Display</a>
+                            
                             {{-- <a class="nav-link" href="#pills-wallet">{{ __('labels.wallet_settings') }}</a> --}}
                             {{-- <a class="nav-link"
                                href="#pills-maintenance">{{ __('labels.maintenance_mode') }}</a> --}}
-                            <a class="nav-link"
-                               href="#pills-demomode">{{ __('labels.demo_mode') }}</a>
+                            {{-- <a class="nav-link"
+                               href="#pills-demomode">{{ __('labels.demo_mode') }}</a> --}}
                             <a class="nav-link" href="#pills-social">Social Media</a>
-                            <a class="nav-link" href="#pills-product-grid">Product Grid Display</a>
+                            
                             @can('viewSetting', [\App\Models\Setting::class, 'web'])
                                 <a class="nav-link" href="#pills-web-settings-anchor">{{ __('labels.web_settings') }}</a>
                                 <a class="nav-link" href="#pills-web-default-location">{{ __('labels.default_location') }}</a>
-                                <a class="nav-link" href="#pills-web-country-validation">{{ __('labels.country_validation') }}</a>
+                                {{--<a class="nav-link" href="#pills-web-country-validation">{{ __('labels.country_validation') }}</a>--}}
                                 <a class="nav-link" href="#pills-web-support">{{ __('labels.support_information') }}</a>
                                 <a class="nav-link" href="#pills-web-seo">{{ __('labels.seo_settings') }}</a>
-                                <a class="nav-link" href="#pills-web-app">{{ __('labels.app_download_section') }}</a>
-                                <a class="nav-link" href="#pills-web-features">{{ __('labels.feature_sections') }}</a>
+                                {{--<a class="nav-link" href="#pills-web-app">{{ __('labels.app_download_section') }}</a>--}}
+                                {{--<a class="nav-link" href="#pills-web-features">{{ __('labels.feature_sections') }}</a>--}}
                                 <a class="nav-link" href="#pills-web-policies">{{ __('labels.policy_settings') }}</a>
-                                <a class="nav-link" href="#pills-web-pwa-manifest">{{ __('labels.pwa_manifest_settings') }}</a>
-                                <a class="nav-link" href="#pills-web-scripts">{{ __('labels.scripts') }}</a>
+                                {{--<a class="nav-link" href="#pills-web-pwa-manifest">{{ __('labels.pwa_manifest_settings') }}</a>
+                                <a class="nav-link" href="#pills-web-scripts">{{ __('labels.scripts') }}</a>--}}
                             @endcan
                             {{--                            <a class="nav-link"--}}
                             {{--                               href="#pills-referral">{{ __('labels.referral_earn_program') }}</a>--}}
@@ -387,8 +389,8 @@
                                 </div>
                                 --}}
 
-                            {{-- ── DEMO MODE ────────────────────────────────────────── --}}
-                            <form action="{{route('admin.settings.store')}}" class="form-submit" method="post">
+                            {{-- ── DEMO MODE (temporarily hidden) ──────────────────── --}}
+                            {{-- <form action="{{route('admin.settings.store')}}" class="form-submit" method="post">
                                 @csrf
                                 <input type="hidden" name="type" value="system">
                                 <input type="hidden" name="_section" value="demomode">
@@ -449,7 +451,7 @@
                                         @endcan
                                     </div>
                                 </div>
-                            </form>
+                            </form> --}}
 
                                 {{--                                <div class="card mb-4" id="pills-referral">--}}
                                 {{--                                    <div class="card-header">--}}

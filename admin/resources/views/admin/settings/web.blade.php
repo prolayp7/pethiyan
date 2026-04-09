@@ -37,17 +37,17 @@
                         <nav class="nav nav-vertical nav-pills" id="pills">
                             <a class="nav-link" href="#pills-general">{{ __('labels.general') }}</a>
                             <a class="nav-link" href="#pills-default-location">{{ __('labels.default_location') }}</a>
-                            <a class="nav-link"
-                               href="#pills-country-validation">{{ __('labels.country_validation') }}</a>
+                            {{-- <a class="nav-link"
+                               href="#pills-country-validation">{{ __('labels.country_validation') }}</a> --}}
                             <a class="nav-link"
                                href="#pills-support">{{ __('labels.support_information') }}</a>
                             <a class="nav-link" href="#pills-seo">{{ __('labels.seo_settings') }}</a>
                             <a class="nav-link" href="#pills-social">{{ __('labels.social_media') }}</a>
-                            <a class="nav-link" href="#pills-app">{{ __('labels.app_download_section') }}</a>
+                            {{-- <a class="nav-link" href="#pills-app">{{ __('labels.app_download_section') }}</a> --}}
                             <a class="nav-link" href="#pills-features">{{ __('labels.feature_sections') }}</a>
                             <a class="nav-link" href="#pills-policies">{{ __('labels.policy_settings') }}</a>
-                            <a class="nav-link" href="#pills-pwa-manifest">{{ __('labels.pwa_manifest_settings') }}</a>
-                            <a class="nav-link" href="#pills-scripts">{{ __('labels.scripts') }}</a>
+                            {{-- <a class="nav-link" href="#pills-pwa-manifest">{{ __('labels.pwa_manifest_settings') }}</a> --}}
+                            {{-- <a class="nav-link" href="#pills-scripts">{{ __('labels.scripts') }}</a> --}}
                         </nav>
                     </div>
                 </div>
@@ -176,8 +176,8 @@
                                     </div>
                                 </div>
 
-                                <!-- Country Validation Section -->
-                                <div class="card mb-4" id="pills-country-validation">
+                                {{-- Country Validation Section (temporarily hidden) --}}
+                                {{-- <div class="card mb-4" id="pills-country-validation">
                                     <div class="card-header">
                                         <h4 class="card-title">{{ __('labels.country_validation') }}</h4>
                                     </div>
@@ -204,7 +204,7 @@
                                                    value='@json($settings['allowedCountries'] ?? "")'>
                                         </div>
                                     </div>
-                                </div>
+                                </div> --}}
 
                                 <div class="card mb-4" id="pills-support">
                                     <div class="card-header">
@@ -293,7 +293,8 @@
                                         </div>
                                     </div>
                                 </div>
-                                <div class="card mb-4" id="pills-app">
+                                {{-- App Download Section (temporarily hidden) --}}
+                                {{-- <div class="card mb-4" id="pills-app">
                                     <div class="card-header">
                                         <h4 class="card-title">{{ __('labels.app_download_section') }}</h4>
                                     </div>
@@ -350,7 +351,7 @@
                                                       maxlength="500">{{ $settings['appSectionShortDescription'] ?? '' }}</textarea>
                                         </div>
                                     </div>
-                                </div>
+                                </div> --}}
                                 <div class="card mb-4" id="pills-features">
                                     <div class="card-header">
                                         <h4 class="card-title">{{ __('labels.feature_sections') }}</h4>
@@ -539,8 +540,8 @@
                                     </div>
                                 </div>
 
-                                <!-- PWA Manifest Settings Section -->
-                                <div class="card mb-4" id="pills-pwa-manifest">
+                                {{-- PWA Manifest Settings Section (temporarily hidden) --}}
+                                {{-- <div class="card mb-4" id="pills-pwa-manifest">
                                     <div class="card-header">
                                         <h4 class="card-title">{{ __('labels.pwa_manifest_settings') }}</h4>
                                     </div>
@@ -601,9 +602,10 @@
                                             </div>
                                         </div>
                                     </div>
-                                </div>
+                                </div> --}}
 
-                                <div class="card mb-4" id="pills-scripts">
+                                {{-- Scripts Section (temporarily hidden) --}}
+                                {{-- <div class="card mb-4" id="pills-scripts">
                                     <div class="card-header">
                                         <h4 class="card-title">{{ __('labels.scripts') }}</h4>
                                     </div>
@@ -619,7 +621,7 @@
                                                       placeholder="{{ __('labels.footer_script_placeholder') }}">{{ $settings['footerScript'] ?? '' }}</textarea>
                                         </div>
                                     </div>
-                                </div>
+                                </div> --}}
                                 <div class="card-footer text-end">
                                     <div class="d-flex">
                                         @can('updateSetting', [\App\Models\Setting::class, 'web'])

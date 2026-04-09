@@ -27,18 +27,10 @@ class UpdateCategoryRequest extends FormRequest
      */
     public function rules(): array
     {
-        return [
+        $rules = [
             'parent_id' => 'nullable|integer|exists:categories,id',
             'title' => 'required|string|max:255|unique:categories,title,' . $this->route('id'),
             'description' => 'nullable|string',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:10240',
-            'banner' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:10240',
-            'icon' => 'nullable|mimes:jpeg,png,jpg,webp,svg',
-            'active_icon' => 'nullable|mimes:jpeg,png,jpg,webp,svg',
-            'background_type' => ['nullable', new Enum(CategoryBackgroundTypeEnum::class)],
-            'background_color' => 'nullable|string|regex:/^#[0-9A-Fa-f]{6}$/',
-            'font_color' => 'nullable|string|regex:/^#[0-9A-Fa-f]{6}$/',
-            'background_image' => 'nullable|sometimes|image|mimes:jpeg,png,jpg,webp|max:5120',
             'status' => ['nullable', new Enum(CategoryStatusEnum::class)],
             'requires_approval' => 'boolean',
             'commission' => 'nullable|numeric|min:0|max:100',
@@ -48,6 +40,24 @@ class UpdateCategoryRequest extends FormRequest
             'metadata.seo_keywords' => 'nullable|string|max:255',
             'is_indexable' => 'nullable|boolean',
         ];
+
+        // Conditionally validate file fields only if a real file is uploaded
+        $hasImage = $this->hasFile('image') && $this->file('image')->getSize() > 0;
+        $rules['image'] = $hasImage ? 'image|mimes:jpeg,png,jpg,webp|max:10240' : 'nullable';
+
+        $hasBanner = $this->hasFile('banner') && $this->file('banner')->getSize() > 0;
+        $rules['banner'] = $hasBanner ? 'image|mimes:jpeg,png,jpg,webp|max:10240' : 'nullable';
+
+        $hasIcon = $this->hasFile('icon') && $this->file('icon')->getSize() > 0;
+        $rules['icon'] = $hasIcon ? 'mimes:jpeg,png,jpg,webp,svg' : 'nullable';
+
+        $hasActiveIcon = $this->hasFile('active_icon') && $this->file('active_icon')->getSize() > 0;
+        $rules['active_icon'] = $hasActiveIcon ? 'mimes:jpeg,png,jpg,webp,svg' : 'nullable';
+
+        $hasBackgroundImage = $this->hasFile('background_image') && $this->file('background_image')->getSize() > 0;
+        $rules['background_image'] = $hasBackgroundImage ? 'image|mimes:jpeg,png,jpg,webp|max:5120' : 'nullable';
+
+        return $rules;
     }
 
     /**
@@ -58,9 +68,6 @@ class UpdateCategoryRequest extends FormRequest
         $this->merge([
             'status'            => $this->status ?? CategoryStatusEnum::INACTIVE->value,
             'requires_approval' => false, // always auto-approved
-            'commission'        => $this->commission !== '' ? $this->commission : null,
-            'background_color'  => $this->background_color ?: null,
-            'font_color'        => $this->font_color ?: null,
             'metadata'          => array_merge($this->metadata ?? [], [
                 'seo_title'       => $this->input('seo_title') ?: null,
                 'seo_description' => $this->input('seo_description') ?: null,

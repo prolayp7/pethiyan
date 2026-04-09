@@ -1,8 +1,8 @@
 document.addEventListener('show.bs.modal', function (event) {
     if (event.target.id === 'category-modal') {
         const triggerButton = event.relatedTarget;
-        const categoryId = triggerButton.getAttribute('data-id');
-        let url = base_url + '/admin/categories/' + categoryId + '/edit';
+        const categoryId = triggerButton?.getAttribute('data-id') || null;
+        const url = categoryId ? base_url + '/admin/categories/' + categoryId + '/edit' : null;
 
         const form = document.querySelector('.form-submit');
         const imageUpload = document.querySelector('#image-upload');
@@ -15,6 +15,19 @@ document.addEventListener('show.bs.modal', function (event) {
         const submitButton = document.querySelector('#category-modal button[type="submit"]');
         const parentSelect = document.getElementById("select-parent-category");
         const tomSelectInstance = parentSelect && parentSelect.tomselect; // TomSelect instance
+
+        const setFormFieldValue = (selector, value) => {
+            const element = form?.querySelector(selector);
+            if (!element) return;
+            element.value = value;
+        };
+
+        const setFormCheckboxValue = (selector, checked) => {
+            const element = form?.querySelector(selector);
+            if (!element) return;
+            element.checked = checked;
+        };
+
 // Remove files from FilePond if available
         if (typeof FilePond !== 'undefined') {
             const pond = FilePond.find(imageUpload);
@@ -35,19 +48,20 @@ document.addEventListener('show.bs.modal', function (event) {
                 .then(async responseData => {
                     const data = responseData.data;
                     // Fill form fields
-                    form.querySelector('input[name="title"]').value = data.title || '';
-                    form.querySelector('input[id="category-id"]').value = categoryId;
-                    form.querySelector('textarea[name="description"]').value = data.description || '';
-                    form.querySelector('input[name="status"]').checked = data.status === 'active';
-                    form.querySelector('input[name="commission"]').value = (data.commission !== null && data.commission !== undefined && parseFloat(data.commission) !== 0) ? data.commission : '';
+                    setFormFieldValue('input[name="title"]', data.title || '');
+                    setFormFieldValue('input[id="category-id"]', categoryId);
+                    setFormFieldValue('textarea[name="description"]', data.description || '');
+                    setFormCheckboxValue('input[name="status"]', data.status === 'active');
 
-                    // Set background fields
+                    // Set background fields only if the controls still exist
                     if (backgroundTypeSelect) {
                         backgroundTypeSelect.value = data.background_type || '';
-                        toggleBackgroundFields(data.background_type);
+                        if (typeof toggleBackgroundFields === 'function') {
+                            toggleBackgroundFields(data.background_type);
+                        }
                     }
-                    form.querySelector('input[name="background_color"]').value = data.background_color || '';
-                    form.querySelector('input[name="font_color"]').value = data.font_color || '';
+                    setFormFieldValue('input[name="background_color"]', data.background_color || '');
+                    setFormFieldValue('input[name="font_color"]', data.font_color || '');
 
                     // is_indexable toggle
                     const isIndexableSwitch = form.querySelector('input[name="is_indexable"]');
@@ -133,18 +147,20 @@ document.addEventListener('show.bs.modal', function (event) {
             // Reset TomSelect
             if (tomSelectInstance) tomSelectInstance.clear();
 
-            // Reset background fields
+            // Reset background fields if present
             if (backgroundTypeSelect) {
                 backgroundTypeSelect.value = '';
-                toggleBackgroundFields('');
+                if (typeof toggleBackgroundFields === 'function') {
+                    toggleBackgroundFields('');
+                }
             }
-            form.querySelector('input[name="background_color"]').value = '';
-            form.querySelector('input[name="font_color"]').value = '';
+            setFormFieldValue('input[name="background_color"]', '');
+            setFormFieldValue('input[name="font_color"]', '');
             const isIndexableSwitchNew = form.querySelector('input[name="is_indexable"]');
             if (isIndexableSwitchNew) isIndexableSwitchNew.checked = true;
-            form.querySelector('input[name="seo_title"]').value = '';
-            form.querySelector('textarea[name="seo_description"]').value = '';
-            form.querySelector('input[name="seo_keywords"]').value = '';
+            setFormFieldValue('input[name="seo_title"]', '');
+            setFormFieldValue('textarea[name="seo_description"]', '');
+            setFormFieldValue('input[name="seo_keywords"]', '');
 
             // Set action for create
             form.querySelector('input[id="category-id"]').value = "";

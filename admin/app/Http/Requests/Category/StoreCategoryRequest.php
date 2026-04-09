@@ -26,18 +26,10 @@ class StoreCategoryRequest extends FormRequest
      */
     public function rules(): array
     {
-        return [
+        $rules = [
             'parent_id' => 'nullable|integer|exists:categories,id',
             'title' => 'required|string|max:255|unique:categories,title',
             'description' => 'nullable|string',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
-            'banner' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
-            'icon' => 'nullable|image|mimes:jpeg,png,jpg,webp,svg',
-            'active_icon' => 'nullable|image|mimes:jpeg,png,jpg,webp,svg',
-            'background_type' => ['nullable', new Enum(CategoryBackgroundTypeEnum::class)],
-            'background_color' => 'nullable|string|regex:/^#[0-9A-Fa-f]{6}$/',
-            'background_image' => 'nullable|sometimes|image|mimes:jpeg,png,jpg,webp|max:5120',
-            'font_color' => 'nullable|string|regex:/^#[0-9A-Fa-f]{6}$/',
             'status' => ['nullable', new Enum(CategoryStatusEnum::class)],
             'requires_approval' => 'boolean',
             'commission' => 'nullable|numeric|min:0|max:100',
@@ -47,6 +39,39 @@ class StoreCategoryRequest extends FormRequest
             'metadata.seo_keywords' => 'nullable|string|max:255',
             'is_indexable' => 'nullable|boolean',
         ];
+
+        // Conditionally validate file fields only if files are uploaded
+        if ($this->hasFile('image')) {
+            $rules['image'] = 'image|mimes:jpeg,png,jpg,webp|max:5120';
+        } else {
+            $rules['image'] = 'nullable';
+        }
+
+        if ($this->hasFile('banner')) {
+            $rules['banner'] = 'image|mimes:jpeg,png,jpg,webp|max:5120';
+        } else {
+            $rules['banner'] = 'nullable';
+        }
+
+        if ($this->hasFile('icon')) {
+            $rules['icon'] = 'image|mimes:jpeg,png,jpg,webp,svg';
+        } else {
+            $rules['icon'] = 'nullable';
+        }
+
+        if ($this->hasFile('active_icon')) {
+            $rules['active_icon'] = 'image|mimes:jpeg,png,jpg,webp,svg';
+        } else {
+            $rules['active_icon'] = 'nullable';
+        }
+
+        if ($this->hasFile('background_image')) {
+            $rules['background_image'] = 'image|mimes:jpeg,png,jpg,webp|max:5120';
+        } else {
+            $rules['background_image'] = 'nullable';
+        }
+
+        return $rules;
     }
 
     /**
@@ -57,9 +82,6 @@ class StoreCategoryRequest extends FormRequest
         $this->merge([
             'status'             => $this->status ?? CategoryStatusEnum::INACTIVE->value,
             'requires_approval'  => false, // always auto-approved
-            'commission'         => $this->commission !== '' ? $this->commission : null,
-            'background_color'   => $this->background_color ?: null,
-            'font_color'         => $this->font_color ?: null,
             'metadata'           => array_merge($this->metadata ?? [], [
                 'seo_title'       => $this->input('seo_title') ?: null,
                 'seo_description' => $this->input('seo_description') ?: null,
