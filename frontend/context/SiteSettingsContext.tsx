@@ -7,6 +7,10 @@ const DEFAULTS: ApiSystemSettings = {
   appName: "Pethiyan",
   logo: null,
   favicon: null,
+  showVariantColorsInGrid: true,
+  showGstInGrid:           false,
+  showCategoryNameInGrid:  true,
+  showMinQtyInGrid:        false,
 };
 
 const SiteSettingsContext = createContext<ApiSystemSettings>(DEFAULTS);
