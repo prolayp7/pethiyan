@@ -244,6 +244,7 @@
                             <label class="form-label">{{ __('labels.banner_image') }}</label>
                             <input type="file" class="filepond" name="banner_image" accept="image/*"
                                    data-max-files="1" data-image-url="{{ $banner->banner_image ?? "" }}">
+                            <small class="form-hint">Recommended: 1600 x 600 px. Max upload size: 2 MB.</small>
                         </div>
                     </div>
                     <div class="card-footer text-end">

@@ -20,7 +20,7 @@ class HeroSectionController extends Controller
     // Index
     // ──────────────────────────────────────────────────────────────────────────
 
-    public function index(): View
+    public function show(): View
     {
         $slides   = HeroSlide::orderBy('sort_order')->orderBy('id')->get();
         $badges   = HeroTrustBadge::orderBy('sort_order')->orderBy('id')->get();

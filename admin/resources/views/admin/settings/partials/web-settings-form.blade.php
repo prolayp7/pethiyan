@@ -290,7 +290,8 @@
     </div>
     {{-- Social Media card removed here to avoid duplicate with the unified
             "Social Media Links" section in system settings page --}}
-    <div class="card mb-4" id="pills-web-app">
+    {{-- App Download Section (temporarily hidden) --}}
+    {{--<div class="card mb-4" id="pills-web-app">
         <div class="card-header">
             <h4 class="card-title">{{ __('labels.app_download_section') }}</h4>
         </div>
@@ -347,7 +348,7 @@
                             maxlength="500">{{ $settings['appSectionShortDescription'] ?? '' }}</textarea>
             </div>
         </div>
-    </div>
+    </div>--}}
     {{--<div class="card mb-4" id="pills-web-features">
         <div class="card-header">
             <h4 class="card-title">{{ __('labels.feature_sections') }}</h4>

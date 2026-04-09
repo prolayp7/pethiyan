@@ -12,11 +12,11 @@
             <div class="col-auto ms-auto d-print-none">
                 <div class="btn-list">
                     <!-- Theme switcher -->
-                    <div class="nav-item dropdown d-none d-md-flex me-3">
+                    {{--<div class="nav-item dropdown d-none d-md-flex me-3">
                         <a href="#" onclick="toggleTheme()" class="nav-link px-0" tabindex="-1" aria-label="Switch theme">
                             <i id="theme-icon" class="ti ti-moon fs-2"></i>
                         </a>
-                    </div>
+                    </div>--}}
 
                     <!-- Seller store status toggle -->
 {{--                    @php--}}
@@ -49,7 +49,7 @@
 {{--                    @endif--}}
 
                     <!-- Language dropdown -->
-                    <div class="nav-item dropdown d-none d-md-flex me-3">
+                    {{--<div class="nav-item dropdown d-none d-md-flex me-3">
                         <a href="#" class="nav-link px-0" data-bs-toggle="dropdown" tabindex="-1"
                            aria-label="Select language">
                             <i class="ti ti-language fs-2"></i>
@@ -71,7 +71,7 @@
                                class="dropdown-item {{ app()->getLocale() == 'zh' ? 'active' : '' }}">
                                 {{ __('labels.languages.chinese') }}</a>
                         </div>
-                    </div>
+                    </div>--}}
 
                     <!-- Notification dropdown -->
                     @php
@@ -179,7 +179,7 @@
                            aria-label="Open user menu">
                             @if($user->profile_image)
                                 <span class="avatar avatar-sm" id="profile"
-                                      style="background-image: url({{ $user->profile_image }});"></span>
+                                      style="background-image: url('{{ $user->profile_image }}');"></span>
                             @else
                                 <span class="avatar avatar-sm bg-primary text-white"
                                       id="profile">{{ strtoupper(substr($user->name, 0, 2)) }}</span>

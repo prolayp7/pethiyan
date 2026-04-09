@@ -11,41 +11,35 @@ return [
             'title'  => 'labels.dashboard',
             'active' => 'dashboard',
         ],
-        'reports' => [
-            'icon'   => 'ti-chart-bar',
-            'title'  => 'Reports',
-            'active' => 'reports',
-            'route'  => [
-                'sales_report' => [
-                    'sub_active' => 'reports',
-                    'sub_route'  => 'admin.reports.sales',
-                    'sub_title'  => 'Sales Report',
-                ],
-                'orders_report' => [
-                    'sub_active' => 'reports',
-                    'sub_route'  => 'admin.reports.orders',
-                    'sub_title'  => 'Orders Report',
-                ],
-                'products_report' => [
-                    'sub_active' => 'reports',
-                    'sub_route'  => 'admin.reports.products',
-                    'sub_title'  => 'Products Report',
-                ],
-                'customers_report' => [
-                    'sub_active' => 'reports',
-                    'sub_route'  => 'admin.reports.customers',
-                    'sub_title'  => 'Customers Report',
-                ],
-            ],
-        ],
+        
 
         // ─── Catalog ─────────────────────────────────────────────────────
-        'inventory' => [
-            'icon'   => 'ti-packages',
-            'route'  => 'admin.inventory.index',
-            'title'  => 'Inventory',
-            'active' => 'inventory',
-        ],
+        'products' => [
+            'icon'   => 'ti-cube-spark',
+            'title'  => 'labels.products',
+            'active' => 'products',
+            'route'  => [
+                'products' => [
+                    'sub_active' => 'products',
+                    'sub_route'  => 'admin.products.index',
+                    'sub_title'  => 'labels.products',
+                    'permission' => 'product.view',
+                ],
+                // 'pending_approval_products' => [
+                //     'sub_active'  => 'pending_approval_products',
+                //     'sub_route'   => 'admin.products.index',
+                //     'route_param' => ['verification_status' => 'pending_verification'],
+                //     'sub_title'   => 'labels.pending_approval_products',
+                //     'permission'  => 'product.view',
+                // ],
+                'product_faqs' => [
+                    'sub_active' => 'product_faqs',
+                    'sub_route'  => 'admin.product_faqs.index',
+                    'sub_title'  => 'labels.product_faqs',
+                    'permission' => 'product_faqs.view',
+                ],
+            ],
+        ],        
         'categories' => [
             'icon'       => 'ti-category-2',
             'route'      => 'admin.categories.index',
@@ -60,39 +54,19 @@ return [
             'active'     => 'brands',
             'permission' => 'brand.view',
         ],
-        'products' => [
-            'icon'   => 'ti-cube-spark',
-            'title'  => 'labels.products',
-            'active' => 'products',
-            'route'  => [
-                'products' => [
-                    'sub_active' => 'products',
-                    'sub_route'  => 'admin.products.index',
-                    'sub_title'  => 'labels.products',
-                    'permission' => 'product.view',
-                ],
-                'pending_approval_products' => [
-                    'sub_active'  => 'pending_approval_products',
-                    'sub_route'   => 'admin.products.index',
-                    'route_param' => ['verification_status' => 'pending_verification'],
-                    'sub_title'   => 'labels.pending_approval_products',
-                    'permission'  => 'product.view',
-                ],
-                'product_faqs' => [
-                    'sub_active' => 'product_faqs',
-                    'sub_route'  => 'admin.product_faqs.index',
-                    'sub_title'  => 'labels.product_faqs',
-                    'permission' => 'product_faqs.view',
-                ],
-            ],
+        'inventory' => [
+            'icon'   => 'ti-packages',
+            'route'  => 'admin.inventory.index',
+            'title'  => 'Inventory',
+            'active' => 'inventory',
         ],
-        'tax_rates' => [
-            'icon'       => 'ti-square-rounded-percentage',
-            'route'      => 'admin.tax-rates.index',
-            'title'      => 'labels.tax_rates',
-            'active'     => 'tax_rates',
-            'permission' => 'tax_class.view',
-        ],
+        // 'tax_rates' => [
+        //     'icon'       => 'ti-square-rounded-percentage',
+        //     'route'      => 'admin.tax-rates.index',
+        //     'title'      => 'labels.tax_rates',
+        //     'active'     => 'tax_rates',
+        //     'permission' => 'tax_class.view',
+        // ],
 
         // ─── Sales ───────────────────────────────────────────────────────
         'orders' => [
@@ -102,13 +76,7 @@ return [
             'active'     => 'orders',
             'permission' => 'orders.view',
         ],
-        'promos' => [
-            'icon'       => 'ti-ticket',
-            'route'      => 'admin.promos.index',
-            'title'      => 'labels.promos',
-            'active'     => 'promos',
-            'permission' => 'promo.view',
-        ],
+        
 
         // ─── Customers ───────────────────────────────────────────────────
         'customers' => [
@@ -129,12 +97,45 @@ return [
         ],
 
         // ─── Content & Marketing ─────────────────────────────────────────
-        'hero_section' => [
-            'icon'   => 'ti-layout-navbar',
-            'route'  => 'admin.hero-section.index',
-            'title'  => 'Hero Section',
-            'active' => 'hero_section',
+        'promos' => [
+            'icon'       => 'ti-ticket',
+            'route'      => 'admin.promos.index',
+            'title'      => 'labels.promos',
+            'active'     => 'promos',
+            'permission' => 'promo.view',
         ],
+        'gift_cards' => [
+            'icon'   => 'ti-gift',
+            'title'  => 'Gift Cards',
+            'active' => 'gift_cards',
+            'route'  => [
+                'all_gift_cards' => [
+                    'sub_active' => 'gift_cards',
+                    'sub_route'  => 'admin.gift-cards.index',
+                    'sub_title'  => 'All Gift Cards',
+                ],
+            ],
+        ],
+        'home_section' => [
+            'icon'   => 'ti-layout-grid',            
+            'title'  => 'Home Page',
+            'active' => 'home_section',
+            'route'  => [
+                'system' => [
+                    'sub_active'  => 'system',
+                    'sub_route'   => 'admin.settings.show',
+                    'route_param' => ['setting' => 'system'],
+                    'sub_title'   => 'labels.menu_system',
+                    'permission'  => 'setting.system.view',
+                ],
+                'hero_section' => [
+                    'sub_active'  => 'hero_section',
+                    'sub_route'   => 'admin.hero-section.show',
+                    'sub_title'   => 'labels.hero_section',
+                ],
+            ]
+        ],
+        
         'featured_section' => [
             'icon'   => 'ti-star',
             'title'  => 'labels.featured_section',
@@ -166,18 +167,33 @@ return [
                 ],
             ],
         ],
-        'gift_cards' => [
-            'icon'   => 'ti-gift',
-            'title'  => 'Gift Cards',
-            'active' => 'gift_cards',
+        'reports' => [
+            'icon'   => 'ti-chart-bar',
+            'title'  => 'Reports',
+            'active' => 'reports',
             'route'  => [
-                'all_gift_cards' => [
-                    'sub_active' => 'gift_cards',
-                    'sub_route'  => 'admin.gift-cards.index',
-                    'sub_title'  => 'All Gift Cards',
+                'sales_report' => [
+                    'sub_active' => 'reports',
+                    'sub_route'  => 'admin.reports.sales',
+                    'sub_title'  => 'Sales Report',
+                ],
+                'orders_report' => [
+                    'sub_active' => 'reports',
+                    'sub_route'  => 'admin.reports.orders',
+                    'sub_title'  => 'Orders Report',
+                ],
+                'products_report' => [
+                    'sub_active' => 'reports',
+                    'sub_route'  => 'admin.reports.products',
+                    'sub_title'  => 'Products Report',
+                ],
+                'customers_report' => [
+                    'sub_active' => 'reports',
+                    'sub_route'  => 'admin.reports.customers',
+                    'sub_title'  => 'Customers Report',
                 ],
             ],
-        ],
+        ],        
         'support_tickets' => [
             'icon'   => 'ti-message-circle',
             'title'  => 'Support Tickets',
@@ -314,22 +330,24 @@ return [
                     'sub_title'   => 'labels.seo_advanced_settings',
                     'permission'  => 'setting.system.view',
                 ],
+                'state_shipping_rates' => [
+                    'sub_active'  => 'state_shipping_rates',
+                    'sub_route'   => 'admin.state-shipping-rates.index',
+                    'route_param' => ['setting' => 'state_shipping_rates'],
+                    'sub_title'   => 'labels.state_shipping_rates',
+                    'permission' => 'setting.system.view',
+                ],
+                'pin_service' => [
+                    'sub_active'  => 'pin_service',
+                    'sub_route'   => 'admin.pin-service.index',
+                    'route_param' => ['setting' => 'pin_service'],
+                    'sub_title'   => 'labels.pin_service',
+                    'permission' => 'setting.system.view',
+                ],
             ],
         ],
-        'state_shipping_rates' => [
-            'icon'       => 'ti-truck-delivery',
-            'route'      => 'admin.state-shipping-rates.index',
-            'title'      => 'labels.state_shipping_rates',
-            'active'     => 'state_shipping_rates',
-            'permission' => 'setting.system.view',
-        ],
-        'pin_service' => [
-            'icon'       => 'ti-map-pin',
-            'route'      => 'admin.pin-service.index',
-            'title'      => 'Pin Service',
-            'active'     => 'pin_service',
-            'permission' => 'setting.system.view',
-        ],
+        
+        
         // 'system_updates' => [
         //     'icon' => 'ti-package',
         //     'route' => 'admin.system-updates.index',

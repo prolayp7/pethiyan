@@ -381,12 +381,6 @@ function initializeVariantAttributes() {
                                     <option disabled>Select attribute first</option>
                                 </select>
                             </div>
-                            <div class="col-md-1">
-                                <label class="form-label">&nbsp;</label>
-                                <button type="button" class="btn btn-outline-danger me-2 p-1 delete-attribute">
-                                    <i class="ti ti-trash fs-2"></i>
-                                </button>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -477,6 +471,7 @@ function toggleProductVariantSection() {
         if (!window.productData || productPricing) {
             // Initialize the appropriate pricing container
             if (isVariant) {
+                ensureAttributeRowExists();
                 initializeVariantPricing();
             } else {
                 initializeSimplePricing();
@@ -493,6 +488,15 @@ document.getElementById('addAttributeBtn')?.addEventListener('click', () => addA
 document.getElementById('generateVariantsBtn')?.addEventListener('click', () => generateVariants());
 document.getElementById('addRemovedVariantBtn')?.addEventListener('click', () => showRemovedVariantsModal());
 document.getElementById('removeAllVariantsBtn')?.addEventListener('click', () => removeAllVariants());
+
+function ensureAttributeRowExists() {
+    const container = document.getElementById('attributesContainer');
+    if (!container || container.querySelector('[data-id]')) {
+        return;
+    }
+
+    addAttribute();
+}
 
 function addAttribute() {
     const id = `attr_${++attributeCounter}`;
@@ -513,34 +517,11 @@ function addAttribute() {
                                     <option disabled>Select attribute first</option>
                                 </select>
                             </div>
-                            <div class="col-md-1">
-                                <label class="form-label">&nbsp;</label>
-                                <button type="button" class="btn btn-outline-danger me-2 p-1 delete-attribute">
-                                    <i class="ti ti-trash fs-2"></i>
-                                </button>
-                            </div>
                         </div>
                     </div>
                 </div>
             `;
     document.getElementById('attributesContainer').insertAdjacentHTML('beforeend', html);
-    updateGenerateButton();
-    updateAttributeOptions();
-}
-
-// });
-document.getElementById('attributesContainer')?.addEventListener('click', function (e) {
-    if (e.target.closest('.delete-attribute')) {
-        const card = e.target.closest('[data-id]');
-        if (card) {
-            removeAttribute(card.getAttribute('data-id'));
-        }
-    }
-});
-
-function removeAttribute(id) {
-    document.querySelector(`[data-id="${id}"]`).remove();
-    generateVariants()
     updateGenerateButton();
     updateAttributeOptions();
 }
@@ -621,11 +602,12 @@ function renderVariants() {
                 <div class="row g-3">
                     <div class="col-12">
                         <label class="form-label">Title</label>
-                        <input type="text" class="form-control" min="0" value="${v.title}" onchange="updateVariant('${v.id}', 'title', this.value)">
+                        <input type="text" class="form-control variant-title-input" min="0" data-variant-id="${v.id}" value="${v.title}" oninput="handleVariantTitleInput('${v.id}', this.value)">
                     </div>
                     <div class="col-12">
                             <label class="form-label">Variant Image</label>
                             <input type="file" name="variant_image${v.id}" class="form-control variant-image-input" data-image-url="${v.image || ''}" accept="image/*" onchange="updateVariant('${v.id}', 'variant_image', this.value)">
+                            <small class="form-hint">Recommended: 1200 x 1200 px. Max upload size: 2 MB.</small>
                         </div>
                     <div class="col-6">
                         <label class="form-label">Capacity</label>
@@ -686,23 +668,25 @@ function renderVariants() {
                             <div class="row g-2 mt-1">
                                 <div class="col-12">
                                     <label class="form-label form-label-sm mb-1">SEO Title <span class="text-muted">(max 60)</span></label>
-                                    <input type="text" class="form-control form-control-sm" maxlength="60"
+                                    <input type="text" class="form-control variant-seo-title-input" maxlength="60"
+                                           data-variant-id="${v.id}"
                                            placeholder="Variant SEO title"
                                            value="${v.seo_title || ''}"
-                                           onchange="updateVariant('${v.id}', 'seo_title', this.value)">
+                                           oninput="handleVariantSeoTitleInput('${v.id}', this.value)">
                                 </div>
                                 <div class="col-12">
                                     <label class="form-label form-label-sm mb-1">SEO Description <span class="text-muted">(max 160)</span></label>
-                                    <textarea class="form-control form-control-sm" maxlength="160" rows="2"
+                                    <textarea class="form-control variant-seo-description-input" maxlength="160" rows="3"
+                                              data-variant-id="${v.id}"
                                               placeholder="Variant SEO description"
-                                              onchange="updateVariant('${v.id}', 'seo_description', this.value)">${v.seo_description || ''}</textarea>
+                                              oninput="handleVariantSeoDescriptionInput('${v.id}', this.value)">${v.seo_description || ''}</textarea>
                                 </div>
                                 <div class="col-12">
                                     <label class="form-label form-label-sm mb-1">SEO Keywords</label>
-                                    <input type="text" class="form-control form-control-sm" maxlength="255"
+                                    <input type="text" class="form-control form-control-sm variant-seo-keywords-input" maxlength="255"
+                                           data-variant-id="${v.id}"
                                            placeholder="keyword1, keyword2"
-                                           value="${v.seo_keywords || ''}"
-                                           onchange="updateVariant('${v.id}', 'seo_keywords', this.value)">
+                                           value="${v.seo_keywords || ''}">
                                 </div>
                             </div>
                         </details>
@@ -718,6 +702,8 @@ function renderVariants() {
         const inputName = input.getAttribute('name');
         initializeFilePond(inputName, ['image/*'], '2MB');
     });
+    hydrateVariantSeoFields();
+    initializeVariantSeoKeywordInputs();
 }
 
 function initializeFilePond(inputName, allowFileTypes = ['image/*'], maxFileSize = null) {
@@ -768,6 +754,307 @@ function normalizeLocalhostOrigin(url) {
 function getMainProductTitle() {
     const titleInput = document.querySelector('input[name="title"]');
     return (titleInput?.value || '').trim();
+}
+
+function normalizeSeoText(value) {
+    return String(value || '').replace(/\s+/g, ' ').trim();
+}
+
+function getMainProductSourceDescription() {
+    const shortDescriptionInput = document.querySelector('textarea[name="short_description"]');
+    const descriptionInput = document.querySelector('textarea[name="description"]');
+
+    return normalizeSeoText(shortDescriptionInput?.value || descriptionInput?.value || '');
+}
+
+function generatedMainSeoTitle(title) {
+    return normalizeSeoText(title);
+}
+
+function generatedMainSeoDescription() {
+    return getMainProductSourceDescription();
+}
+
+function getSeoFieldState(input) {
+    return {
+        manual: input?.dataset.seoManual === '1',
+        lastAutoValue: normalizeSeoText(input?.dataset.lastAutoValue || ''),
+    };
+}
+
+function setSeoFieldAutoValue(input, value) {
+    if (!input) return;
+
+    const normalizedValue = normalizeSeoText(value);
+    input.value = normalizedValue;
+    input.dataset.lastAutoValue = normalizedValue;
+    input.dataset.seoManual = '0';
+    input.dispatchEvent(new Event('input', {bubbles: true}));
+}
+
+function syncMainSeoFields(options = {}) {
+    const seoTitleInput = document.getElementById('seoTitle');
+    const seoDescriptionInput = document.getElementById('seoDescription');
+    if (!seoTitleInput || !seoDescriptionInput) return;
+
+    const syncTitle = options.title !== false;
+    const syncDescription = options.description !== false;
+
+    if (syncTitle) {
+        const nextSeoTitle = generatedMainSeoTitle(getMainProductTitle());
+        const currentSeoTitle = normalizeSeoText(seoTitleInput.value);
+        const titleState = getSeoFieldState(seoTitleInput);
+
+        if (!titleState.manual || currentSeoTitle === '' || currentSeoTitle === titleState.lastAutoValue) {
+            setSeoFieldAutoValue(seoTitleInput, nextSeoTitle);
+        }
+    }
+
+    if (syncDescription) {
+        const nextSeoDescription = generatedMainSeoDescription();
+        const currentSeoDescription = normalizeSeoText(seoDescriptionInput.value);
+        const descriptionState = getSeoFieldState(seoDescriptionInput);
+
+        if (!descriptionState.manual || currentSeoDescription === '' || currentSeoDescription === descriptionState.lastAutoValue) {
+            setSeoFieldAutoValue(seoDescriptionInput, nextSeoDescription);
+        }
+    }
+}
+
+function initializeMainSeoAutofill() {
+    const titleInput = document.querySelector('input[name="title"]');
+    const shortDescriptionInput = document.querySelector('textarea[name="short_description"]');
+    const descriptionInput = document.querySelector('textarea[name="description"]');
+    const seoTitleInput = document.getElementById('seoTitle');
+    const seoDescriptionInput = document.getElementById('seoDescription');
+
+    titleInput?.addEventListener('input', function () {
+        syncMainSeoFields({title: true, description: false});
+    });
+
+    const handleDescriptionSync = function () {
+        syncMainSeoFields({title: false, description: true});
+        hydrateVariantSeoFields();
+    };
+
+    seoTitleInput?.addEventListener('input', function () {
+        const state = getSeoFieldState(this);
+        const currentValue = normalizeSeoText(this.value);
+        this.dataset.seoManual = currentValue !== '' && currentValue !== state.lastAutoValue ? '1' : '0';
+    });
+
+    seoDescriptionInput?.addEventListener('input', function () {
+        const state = getSeoFieldState(this);
+        const currentValue = normalizeSeoText(this.value);
+        this.dataset.seoManual = currentValue !== '' && currentValue !== state.lastAutoValue ? '1' : '0';
+    });
+
+    shortDescriptionInput?.addEventListener('input', handleDescriptionSync);
+    descriptionInput?.addEventListener('input', handleDescriptionSync);
+
+    syncMainSeoFields();
+}
+
+function getVariantSourceDescription() {
+    const shortDescriptionInput = document.querySelector('textarea[name="short_description"]');
+    const descriptionInput = document.querySelector('textarea[name="description"]');
+
+    return normalizeSeoText(shortDescriptionInput?.value || descriptionInput?.value || '');
+}
+
+function generatedVariantSeoTitle(title) {
+    return normalizeSeoText(title);
+}
+
+function generatedVariantSeoDescription() {
+    return getVariantSourceDescription();
+}
+
+function isVariantSeoTitleManual(variant) {
+    const currentValue = normalizeSeoText(variant?.seo_title || '');
+    return currentValue !== '' && currentValue !== generatedVariantSeoTitle(variant?.title || '');
+}
+
+function isVariantSeoDescriptionManual(variant) {
+    const currentValue = normalizeSeoText(variant?.seo_description || '');
+    return currentValue !== '' && currentValue !== generatedVariantSeoDescription();
+}
+
+function setVariantSeoFieldInputValue(selector, variantId, value) {
+    const input = document.querySelector(`${selector}[data-variant-id="${variantId}"]`);
+    if (!input) return;
+    input.value = value;
+}
+
+function syncVariantSeoFields(variantId, options = {}) {
+    const variant = variants.find(v => v.id === variantId);
+    if (!variant) return;
+
+    const syncTitle = options.title !== false;
+    const syncDescription = options.description !== false;
+
+    if (syncTitle && !isVariantSeoTitleManual(variant)) {
+        const nextSeoTitle = generatedVariantSeoTitle(variant.title);
+        variant.seo_title = nextSeoTitle;
+        setVariantSeoFieldInputValue('.variant-seo-title-input', variantId, nextSeoTitle);
+    }
+
+    if (syncDescription && !isVariantSeoDescriptionManual(variant)) {
+        const nextSeoDescription = generatedVariantSeoDescription();
+        variant.seo_description = nextSeoDescription;
+        setVariantSeoFieldInputValue('.variant-seo-description-input', variantId, nextSeoDescription);
+    }
+}
+
+function hydrateVariantSeoFields() {
+    variants.forEach(variant => {
+        syncVariantSeoFields(variant.id);
+    });
+}
+
+function handleVariantTitleInput(id, value) {
+    const variant = variants.find(v => v.id === id);
+    if (!variant) return;
+
+    const previousGeneratedSeoTitle = generatedVariantSeoTitle(variant.title || '');
+    const currentSeoTitle = normalizeSeoText(variant.seo_title || '');
+
+    updateVariant(id, 'title', value);
+
+    if (currentSeoTitle === '' || currentSeoTitle === previousGeneratedSeoTitle) {
+        const nextSeoTitle = generatedVariantSeoTitle(value);
+        variant.seo_title = nextSeoTitle;
+        setVariantSeoFieldInputValue('.variant-seo-title-input', id, nextSeoTitle);
+    }
+}
+
+function handleVariantSeoTitleInput(id, value) {
+    updateVariant(id, 'seo_title', value);
+}
+
+function handleVariantSeoDescriptionInput(id, value) {
+    updateVariant(id, 'seo_description', value);
+}
+
+function normalizeSeoKeywordList(value) {
+    const seen = new Set();
+
+    return String(value || '')
+        .split(',')
+        .map(keyword => keyword.replace(/\s+/g, ' ').trim())
+        .filter(keyword => {
+            if (!keyword) {
+                return false;
+            }
+
+            const normalizedKeyword = keyword.toLowerCase();
+            if (seen.has(normalizedKeyword)) {
+                return false;
+            }
+
+            seen.add(normalizedKeyword);
+            return true;
+        });
+}
+
+function setTomSelectKeywordValues(input, value) {
+    if (!input) return;
+
+    const keywords = normalizeSeoKeywordList(value);
+    const control = input.tomselect;
+
+    if (!control) {
+        input.value = keywords.join(', ');
+        return;
+    }
+
+    control.clear(true);
+    control.clearOptions();
+    keywords.forEach(keyword => {
+        control.addOption({value: keyword, text: keyword});
+    });
+    control.setValue(keywords, true);
+    input.value = keywords.join(', ');
+}
+
+function buildKeywordTomSelect(input, onSync) {
+    if (!input || !window.TomSelect || input.tomselect) {
+        return;
+    }
+
+    new TomSelect(input, {
+        create: (raw) => {
+            const keyword = String(raw || '').replace(/\s+/g, ' ').trim();
+            return keyword ? {value: keyword, text: keyword} : false;
+        },
+        createOnBlur: true,
+        persist: false,
+        delimiter: ',',
+        hideSelected: true,
+        duplicates: false,
+        maxOptions: 100,
+        onChange: onSync,
+        onBlur: onSync,
+    });
+}
+
+function syncMainSeoKeywordsValue() {
+    const input = document.getElementById('main-seo-keywords-input');
+    const valueInput = document.getElementById('main-seo-keywords-value');
+    if (!input || !valueInput) return;
+
+    const control = input.tomselect;
+    const keywords = normalizeSeoKeywordList(control ? control.items.join(',') : input.value);
+    valueInput.value = keywords.join(', ');
+}
+
+function initializeMainSeoKeywordsInput() {
+    const input = document.getElementById('main-seo-keywords-input');
+    const valueInput = document.getElementById('main-seo-keywords-value');
+    if (!input || !valueInput) return;
+
+    buildKeywordTomSelect(input, syncMainSeoKeywordsValue);
+    setTomSelectKeywordValues(input, valueInput.value || input.value);
+    syncMainSeoKeywordsValue();
+}
+
+function syncVariantSeoKeywordsValue(variantId, input) {
+    if (!input) return;
+
+    const control = input.tomselect;
+    const keywords = normalizeSeoKeywordList(control ? control.items.join(',') : input.value);
+    const value = keywords.join(', ');
+    input.value = value;
+    updateVariant(variantId, 'seo_keywords', value);
+}
+
+function initializeVariantSeoKeywordInputs() {
+    document.querySelectorAll('.variant-seo-keywords-input').forEach(input => {
+        const variantId = input.getAttribute('data-variant-id');
+        if (!variantId) return;
+
+        buildKeywordTomSelect(input, () => syncVariantSeoKeywordsValue(variantId, input));
+        setTomSelectKeywordValues(input, input.value);
+        syncVariantSeoKeywordsValue(variantId, input);
+    });
+}
+
+function flushTomSelectPendingKeyword(input, onSync) {
+    if (!input) return;
+
+    const control = input.tomselect;
+    if (!control) {
+        onSync?.();
+        return;
+    }
+
+    const pendingKeyword = String(control.control_input?.value || '').replace(/\s+/g, ' ').trim();
+    if (pendingKeyword) {
+        control.addItem(pendingKeyword);
+        control.control_input.value = '';
+    }
+
+    onSync?.();
 }
 
 function isDefaultVariant(value) {
@@ -2060,6 +2347,15 @@ function toSafeSameOriginUrl(url) {
 let productForm = document.getElementById('product-form-submit');
 productForm?.addEventListener('submit', function (e) {
     e.preventDefault();
+    flushTomSelectPendingKeyword(
+        document.getElementById('main-seo-keywords-input'),
+        syncMainSeoKeywordsValue
+    );
+    document.querySelectorAll('.variant-seo-keywords-input').forEach(input => {
+        const variantId = input.getAttribute('data-variant-id');
+        if (!variantId) return;
+        flushTomSelectPendingKeyword(input, () => syncVariantSeoKeywordsValue(variantId, input));
+    });
     addVariantInputsToForm();
     hideErrorSummary(productForm);
     clearValidationErrors(productForm);
@@ -2159,6 +2455,9 @@ try {
 } catch (e) {
     // console.error(e);
 }
+
+initializeMainSeoAutofill();
+initializeMainSeoKeywordsInput();
 
 
 const videoTypeSelect = document.getElementById('videoType');

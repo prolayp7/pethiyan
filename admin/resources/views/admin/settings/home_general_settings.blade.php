@@ -117,6 +117,7 @@
                                             <label class="form-label">{{ __('labels.icon') }}</label>
                                             <input type="file" class="form-control" id="icon-upload" name="icon"
                                                    data-image-url="{{$settings['icon'] ?? ''}}"/>
+                                            <small class="form-hint">Recommended: 256 x 256 px. Preferred file size: up to 2 MB.</small>
                                         </div>
 
                                         <div class="mb-3">
@@ -124,6 +125,7 @@
                                             <input type="file" class="form-control" id="active-icon-upload"
                                                    name="activeIcon"
                                                    data-image-url="{{$settings['activeIcon'] ?? ''}}"/>
+                                            <small class="form-hint">Recommended: 256 x 256 px. Preferred file size: up to 2 MB.</small>
                                         </div>
                                         <div class="mb-3" id="background-color-field"
                                              style="{{ isset($settings['backgroundType']) && $settings['backgroundType'] === 'color' ? 'display: block;' : 'display: none;' }}">
@@ -140,6 +142,7 @@
                                             <input type="file" class="form-control" id="background-image-upload"
                                                    name="backgroundImage"
                                                    data-image-url="{{$settings['backgroundImage'] ?? ''}}"/>
+                                            <small class="form-hint">Recommended: 1920 x 1080 px. Max upload size: 2 MB.</small>
                                         </div>
 
                                         <div class="mb-3">

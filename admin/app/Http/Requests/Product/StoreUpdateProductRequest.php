@@ -69,7 +69,7 @@ class StoreUpdateProductRequest extends FormRequest
             'breadth_unit' => 'nullable|in:mm,cm,inch,m',
             'length_unit' => 'nullable|in:mm,cm,inch,m',
             'color_value_id' => 'nullable|integer|exists:global_product_attribute_values,id',
-            'barcode' => 'required_if:type,simple|nullable|string',
+            'barcode' => 'nullable|string',
             'metadata' => 'nullable|array',
             'metadata.seo_title' => 'nullable|string|max:255',
             'metadata.seo_description' => 'nullable|string|max:500',
@@ -84,10 +84,23 @@ class StoreUpdateProductRequest extends FormRequest
             'metadata' => array_merge($this->metadata ?? [], [
                 'seo_title'       => $this->input('seo_title') ?: null,
                 'seo_description' => $this->input('seo_description') ?: null,
-                'seo_keywords'    => $this->input('seo_keywords') ?: null,
+                'seo_keywords'    => $this->normalizeSeoKeywords(),
             ]),
             'is_indexable' => $this->has('is_indexable') ? (bool)$this->input('is_indexable') : true,
         ]);
+    }
+
+    private function normalizeSeoKeywords(): ?string
+    {
+        $keywords = collect(explode(',', (string) $this->input('seo_keywords', '')))
+            ->map(function (string $keyword): string {
+                return trim((string) preg_replace('/\s+/', ' ', $keyword));
+            })
+            ->filter()
+            ->unique(fn (string $keyword): string => mb_strtolower($keyword))
+            ->values();
+
+        return $keywords->isEmpty() ? null : $keywords->implode(', ');
     }
 
     public function attributes(): array
@@ -316,10 +329,6 @@ class StoreUpdateProductRequest extends FormRequest
             return true;
         }
 
-        if (empty($variant['barcode'])) {
-            $validator->errors()->add('variants_json', $variant['title'] . ' ' . __('labels.variant_barcode_required'));
-            return true;
-        }
 //        if (empty($variant['weight'])) {
 //            $validator->errors()->add('variants_json', $variant['title'] . ' Variant weight is required.');
 //            return true;

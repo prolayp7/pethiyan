@@ -391,7 +391,7 @@
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="mb-3">
-                                        <label class="form-label required">{{ __('labels.barcode') }}</label>
+                                        <label class="form-label">{{ __('labels.barcode') }}</label>
                                         <input type="text" class="form-control" name="barcode"
                                                value="{{ $singleProductVariant->barcode ?? "" }}">
                                     </div>

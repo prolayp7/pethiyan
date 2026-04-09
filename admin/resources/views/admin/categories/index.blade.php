@@ -130,14 +130,14 @@
 
                                     <div class="mb-3">
                                         <label class="form-label required">{{ __('labels.category_name') }}</label>
-                                        <input type="text" class="form-control" name="title"
+                                        <input type="text" class="form-control" name="title" id="category-title-input"
                                                placeholder="{{ __('labels.enter_category_name') }}"
                                         />
                                     </div>
 
                                     <div class="mb-3">
                                         <label class="form-label">{{ __('labels.description') }}</label>
-                                        <textarea class="form-control" name="description" rows="3"
+                                        <textarea class="form-control" name="description" id="category-description-input" rows="3"
                                                   placeholder="{{ __('labels.enter_description') }}"></textarea>
                                     </div>
 
@@ -169,24 +169,28 @@
                                             <label class="form-label">{{ __('labels.image') }}</label>
                                             <input type="file" class="form-control" id="image-upload" name="image"
                                                    data-image-url=""/>
+                                            <small class="form-hint">Recommended: 1024 x 1024 px. Max upload size: 5 MB.</small>
                                         </div>
 
                                         <div class="mb-3">
                                             <label class="form-label">{{ __('labels.banner') }}</label>
                                             <input type="file" class="form-control" id="banner-upload" name="banner"
                                                    data-image-url=""/>
+                                            <small class="form-hint">Recommended: 1600 x 600 px. Max upload size: 5 MB.</small>
                                         </div>
 
                                         <div class="mb-3">
                                             <label class="form-label">{{ __('labels.icon') }}</label>
                                             <input type="file" class="form-control" id="icon-upload" name="icon"
                                                    data-image-url=""/>
+                                            <small class="form-hint">Recommended: 256 x 256 px. Preferred file size: up to 2 MB.</small>
                                         </div>
 
                                         <div class="mb-3">
                                             <label class="form-label">{{ __('labels.active_icon') }}</label>
                                             <input type="file" class="form-control" id="active-icon-upload" name="active_icon"
                                                    data-image-url=""/>
+                                            <small class="form-hint">Recommended: 256 x 256 px. Preferred file size: up to 2 MB.</small>
                                         </div>
 
                                         <div class="mb-0" id="background-image-field" style="display: none;">
@@ -194,6 +198,7 @@
                                             <input type="file" class="form-control" id="background-image-upload"
                                                    name="background_image"
                                                    data-image-url=""/>
+                                            <small class="form-hint">Recommended: 1920 x 1080 px. Max upload size: 5 MB.</small>
                                         </div>
                                     </div>
                                 </div>
@@ -219,7 +224,7 @@
                                 <div class="row g-3">
                                     <div class="col-md-6">
                                         <label class="form-label">SEO Title</label>
-                                        <input type="text" class="form-control" name="seo_title" maxlength="60"
+                                        <input type="text" class="form-control" name="seo_title" id="category-seo-title-input" maxlength="60"
                                                placeholder="e.g. Buy Standup Pouches | Pethiyan"/>
                                         <div class="d-flex justify-content-between mt-1">
                                             <small class="form-hint">Recommended: 50–60 characters.</small>
@@ -228,13 +233,14 @@
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label">SEO Keywords</label>
-                                        <input type="text" class="form-control" name="seo_keywords" maxlength="255"
+                                        <input type="hidden" name="seo_keywords" id="category-seo-keywords-value"/>
+                                        <input type="text" class="form-control" id="category-seo-keywords-input"
                                                placeholder="e.g. standup pouch, kraft bag"/>
                                         <small class="form-hint">Comma-separated keywords.</small>
                                     </div>
                                     <div class="col-12">
                                         <label class="form-label">SEO Description</label>
-                                        <textarea class="form-control" name="seo_description" rows="2" maxlength="160"
+                                        <textarea class="form-control" name="seo_description" id="category-seo-description-input" rows="2" maxlength="160"
                                                   placeholder="e.g. Shop premium standup pouches at Pethiyan. GST invoice, bulk pricing."></textarea>
                                         <div class="d-flex justify-content-between mt-1">
                                             <small class="form-hint">Recommended: 120–160 characters.</small>
@@ -340,24 +346,211 @@
 @push('scripts')
 <script>
     (function () {
-        function initCatSeoCounters() {
-            function counter(inputSel, countId, max) {
-                const el = document.querySelector(inputSel);
-                const cnt = document.getElementById(countId);
-                if (!el || !cnt) return;
-                function update() {
-                    const len = el.value.length;
-                    cnt.textContent = len + ' / ' + max;
-                    cnt.style.color = len > max ? '#d63939' : (len >= max * 0.9 ? '#f59f00' : '');
-                }
-                el.addEventListener('input', update);
-                update();
-            }
-            counter('input[name="seo_title"]',          'catSeoTitleCount', 60);
-            counter('textarea[name="seo_description"]', 'catSeoDescCount',  160);
+        const modal = document.getElementById('category-modal');
+        if (!modal) {
+            return;
         }
-        document.getElementById('category-modal')
-            ?.addEventListener('shown.bs.modal', initCatSeoCounters);
+
+        const form = modal.querySelector('form');
+        const titleInput = modal.querySelector('#category-title-input');
+        const descriptionInput = modal.querySelector('#category-description-input');
+        const seoTitleInput = modal.querySelector('#category-seo-title-input');
+        const seoDescriptionInput = modal.querySelector('#category-seo-description-input');
+        const seoKeywordsInput = modal.querySelector('#category-seo-keywords-input');
+        const seoKeywordsValueInput = modal.querySelector('#category-seo-keywords-value');
+        const seoTitleCount = document.getElementById('catSeoTitleCount');
+        const seoDescriptionCount = document.getElementById('catSeoDescCount');
+
+        let seoTitleManuallyEdited = false;
+        let seoDescriptionManuallyEdited = false;
+        let programmaticSeoUpdate = false;
+
+        function normalizeText(value) {
+            return (value || '').replace(/\s+/g, ' ').trim();
+        }
+
+        function normalizeKeywords(value) {
+            const seen = new Set();
+
+            return (value || '')
+                .split(',')
+                .map((keyword) => normalizeText(keyword))
+                .filter((keyword) => {
+                    if (!keyword) {
+                        return false;
+                    }
+
+                    const normalizedKeyword = keyword.toLowerCase();
+                    if (seen.has(normalizedKeyword)) {
+                        return false;
+                    }
+
+                    seen.add(normalizedKeyword);
+                    return true;
+                });
+        }
+
+        function generatedSeoTitle() {
+            return normalizeText(titleInput?.value || '');
+        }
+
+        function generatedSeoDescription() {
+            return normalizeText(descriptionInput?.value || '');
+        }
+
+        function updateCounter(el, counterEl, max) {
+            if (!el || !counterEl) {
+                return;
+            }
+
+            const len = el.value.length;
+            counterEl.textContent = len + ' / ' + max;
+            counterEl.style.color = len > max ? '#d63939' : (len >= max * 0.9 ? '#f59f00' : '');
+        }
+
+        function refreshCounters() {
+            updateCounter(seoTitleInput, seoTitleCount, 60);
+            updateCounter(seoDescriptionInput, seoDescriptionCount, 160);
+        }
+
+        function setSeoFieldValue(field, value) {
+            if (!field) {
+                return;
+            }
+
+            programmaticSeoUpdate = true;
+            field.value = value;
+            field.dispatchEvent(new Event('input', { bubbles: true }));
+            programmaticSeoUpdate = false;
+        }
+
+        function syncSeoTitleFromCategory() {
+            if (!seoTitleInput || seoTitleManuallyEdited) {
+                return;
+            }
+
+            setSeoFieldValue(seoTitleInput, generatedSeoTitle());
+        }
+
+        function syncSeoDescriptionFromCategory() {
+            if (!seoDescriptionInput || seoDescriptionManuallyEdited) {
+                return;
+            }
+
+            setSeoFieldValue(seoDescriptionInput, generatedSeoDescription());
+        }
+
+        function syncKeywordInputValue() {
+            if (!seoKeywordsInput || !seoKeywordsValueInput) {
+                return;
+            }
+
+            const control = seoKeywordsInput.tomselect;
+            if (!control) {
+                seoKeywordsValueInput.value = '';
+                return;
+            }
+
+            seoKeywordsValueInput.value = normalizeKeywords(control.items.join(',')).join(', ');
+        }
+
+        function setKeywordTags(value) {
+            if (!seoKeywordsInput || !seoKeywordsValueInput) {
+                return;
+            }
+
+            const keywords = normalizeKeywords(value);
+            const control = seoKeywordsInput.tomselect;
+
+            if (!control) {
+                seoKeywordsValueInput.value = keywords.join(', ');
+                return;
+            }
+
+            control.clear(true);
+            control.clearOptions();
+            keywords.forEach((keyword) => {
+                control.addOption({ value: keyword, text: keyword });
+            });
+            control.setValue(keywords, true);
+            seoKeywordsValueInput.value = keywords.join(', ');
+        }
+
+        function ensureKeywordTagsInput() {
+            if (!seoKeywordsInput || !window.TomSelect || seoKeywordsInput.tomselect) {
+                return;
+            }
+
+            new TomSelect(seoKeywordsInput, {
+                create: (input) => {
+                    const keyword = normalizeText(input);
+                    return keyword ? { value: keyword, text: keyword } : false;
+                },
+                createOnBlur: true,
+                persist: false,
+                delimiter: ',',
+                hideSelected: true,
+                duplicates: false,
+                maxOptions: 100,
+                onChange: syncKeywordInputValue,
+                onBlur: syncKeywordInputValue,
+            });
+
+            setKeywordTags(seoKeywordsValueInput?.value || '');
+        }
+
+        function hydrateSeoState(mode) {
+            const currentSeoTitle = normalizeText(seoTitleInput?.value || '');
+            const currentSeoDescription = normalizeText(seoDescriptionInput?.value || '');
+
+            seoTitleManuallyEdited = mode === 'edit'
+                && currentSeoTitle !== ''
+                && currentSeoTitle !== generatedSeoTitle();
+            seoDescriptionManuallyEdited = mode === 'edit'
+                && currentSeoDescription !== ''
+                && currentSeoDescription !== generatedSeoDescription();
+
+            if (mode !== 'edit') {
+                seoTitleManuallyEdited = false;
+                seoDescriptionManuallyEdited = false;
+            }
+
+            syncSeoTitleFromCategory();
+            syncSeoDescriptionFromCategory();
+            setKeywordTags(seoKeywordsValueInput?.value || '');
+            refreshCounters();
+        }
+
+        titleInput?.addEventListener('input', syncSeoTitleFromCategory);
+        descriptionInput?.addEventListener('input', syncSeoDescriptionFromCategory);
+
+        seoTitleInput?.addEventListener('input', function () {
+            if (!programmaticSeoUpdate) {
+                seoTitleManuallyEdited = normalizeText(seoTitleInput.value) !== generatedSeoTitle();
+            }
+            refreshCounters();
+        });
+
+        seoDescriptionInput?.addEventListener('input', function () {
+            if (!programmaticSeoUpdate) {
+                seoDescriptionManuallyEdited = normalizeText(seoDescriptionInput.value) !== generatedSeoDescription();
+            }
+            refreshCounters();
+        });
+
+        modal.addEventListener('shown.bs.modal', function () {
+            ensureKeywordTagsInput();
+            refreshCounters();
+        });
+
+        document.addEventListener('category-modal:state-applied', function (event) {
+            ensureKeywordTagsInput();
+            hydrateSeoState(event.detail?.mode || 'create');
+        });
+
+        form?.addEventListener('submit', function () {
+            syncKeywordInputValue();
+        });
     })();
 </script>
 @endpush

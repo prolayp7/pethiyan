@@ -79,7 +79,7 @@ class SettingController extends Controller
                 'type' => ['required', new Enum(SettingTypeEnum::class)],
             ]);
 
-            $type = $request->input('type');
+            $type = (string) $request->input('type');
 
             if ($type === SettingTypeEnum::PAYMENT() && !$this->isPaymentSettingsUnlocked($request)) {
                 return ApiResponseType::sendJsonResponse(

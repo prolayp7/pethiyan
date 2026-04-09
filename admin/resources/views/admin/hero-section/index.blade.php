@@ -302,7 +302,7 @@
                         <div class="col-12">
                             <label class="form-label">Slide Image</label>
                             <input type="file" class="form-control" name="image" id="s_image" accept="image/jpg,image/jpeg,image/png,image/webp">
-                            <div class="form-hint">JPG / PNG / WebP — max 5 MB. Leave empty to keep existing image.</div>
+                            <div class="form-hint">Recommended: 1920 x 800 px. JPG / PNG / WebP — max 5 MB. Leave empty to keep existing image.</div>
                             <div id="slideImagePreview" class="mt-2" style="display:none">
                                 <img id="slideImagePreviewImg" src="" alt="" class="rounded" style="height:80px;object-fit:cover;">
                             </div>

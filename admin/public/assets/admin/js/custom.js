@@ -2,7 +2,8 @@ document.addEventListener('show.bs.modal', function (event) {
     if (event.target.id === 'category-modal') {
         const triggerButton = event.relatedTarget;
         const categoryId = triggerButton?.getAttribute('data-id') || null;
-        const url = categoryId ? base_url + '/admin/categories/' + categoryId + '/edit' : null;
+        const categoryBaseUrl = `${base_url}/${panel}/categories`;
+        const url = categoryId ? `${categoryBaseUrl}/${categoryId}/edit` : null;
 
         const form = document.querySelector('.form-submit');
         const imageUpload = document.querySelector('#image-upload');
@@ -79,7 +80,7 @@ document.addEventListener('show.bs.modal', function (event) {
                             let parentOption = tomSelectInstance.options[data.parent.id];
                             if (!parentOption) {
                                 // Fetch the parent (if not already loaded)
-                                await fetch(base_url + '/admin/categories/search' + `?q=${data.parent.title}`)
+                                await fetch(`${categoryBaseUrl}/search?q=${encodeURIComponent(data.parent.title)}`)
                                     .then(res => res.json())
                                     .then(json => {
                                         if (json && json.length) {
@@ -128,11 +129,19 @@ document.addEventListener('show.bs.modal', function (event) {
                     }
 
                     // Change form action to update route
-                    form.setAttribute('action', base_url + `/admin/categories/${categoryId}`);
+                    form.setAttribute('action', `${categoryBaseUrl}/${categoryId}`);
 
                     // Update modal title and button
                     modalTitle.textContent = 'Edit Category';
                     submitButton.textContent = 'Update Category';
+
+                    document.dispatchEvent(new CustomEvent('category-modal:state-applied', {
+                        detail: {
+                            mode: 'edit',
+                            form: form,
+                            data: data,
+                        }
+                    }));
                 })
                 .catch(error => {
                     console.error('AJAX Error:', error);
@@ -164,9 +173,16 @@ document.addEventListener('show.bs.modal', function (event) {
 
             // Set action for create
             form.querySelector('input[id="category-id"]').value = "";
-            form.setAttribute('action', base_url + '/admin/categories');
+            form.setAttribute('action', categoryBaseUrl);
             modalTitle.textContent = 'Create Category';
             submitButton.textContent = 'Create new Category';
+
+            document.dispatchEvent(new CustomEvent('category-modal:state-applied', {
+                detail: {
+                    mode: 'create',
+                    form: form,
+                }
+            }));
         }
     }
     if (event.target.id === 'faq-modal') {

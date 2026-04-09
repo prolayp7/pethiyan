@@ -321,7 +321,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         // Hero Section
         Route::prefix('hero-section')->name('hero-section.')->group(function () {
-            Route::get('/',                                    [HeroSectionController::class, 'index'])->name('index');
+            Route::get('/',                                    [HeroSectionController::class, 'show'])->name('show');
             Route::post('/settings',                           [HeroSectionController::class, 'updateSettings'])->name('settings.update');
             // Slides — specific routes before wildcards
             Route::post('/slides/reorder',                     [HeroSectionController::class, 'reorderSlides'])->name('slides.reorder');
