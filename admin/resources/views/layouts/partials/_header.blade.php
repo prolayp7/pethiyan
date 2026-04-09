@@ -179,7 +179,7 @@
                            aria-label="Open user menu">
                             @if($user->profile_image)
                                 <span class="avatar avatar-sm" id="profile"
-                                      style="background-image: url({{ $user->profile_image }});"></span>
+                                      style="background-image: url('{{ $user->profile_image }}');"></span>
                             @else
                                 <span class="avatar avatar-sm bg-primary text-white"
                                       id="profile">{{ strtoupper(substr($user->name, 0, 2)) }}</span>

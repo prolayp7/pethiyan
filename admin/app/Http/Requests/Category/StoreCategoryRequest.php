@@ -85,9 +85,22 @@ class StoreCategoryRequest extends FormRequest
             'metadata'           => array_merge($this->metadata ?? [], [
                 'seo_title'       => $this->input('seo_title') ?: null,
                 'seo_description' => $this->input('seo_description') ?: null,
-                'seo_keywords'    => $this->input('seo_keywords') ?: null,
+                'seo_keywords'    => $this->normalizeSeoKeywords(),
             ]),
             'is_indexable' => $this->has('is_indexable') ? (bool)$this->input('is_indexable') : true,
         ]);
+    }
+
+    private function normalizeSeoKeywords(): ?string
+    {
+        $keywords = collect(explode(',', (string) $this->input('seo_keywords', '')))
+            ->map(function (string $keyword): string {
+                return trim((string) preg_replace('/\s+/', ' ', $keyword));
+            })
+            ->filter()
+            ->unique(fn (string $keyword): string => mb_strtolower($keyword))
+            ->values();
+
+        return $keywords->isEmpty() ? null : $keywords->implode(', ');
     }
 }

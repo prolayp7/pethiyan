@@ -25,13 +25,13 @@ return [
                     'sub_title'  => 'labels.products',
                     'permission' => 'product.view',
                 ],
-                'pending_approval_products' => [
-                    'sub_active'  => 'pending_approval_products',
-                    'sub_route'   => 'admin.products.index',
-                    'route_param' => ['verification_status' => 'pending_verification'],
-                    'sub_title'   => 'labels.pending_approval_products',
-                    'permission'  => 'product.view',
-                ],
+                // 'pending_approval_products' => [
+                //     'sub_active'  => 'pending_approval_products',
+                //     'sub_route'   => 'admin.products.index',
+                //     'route_param' => ['verification_status' => 'pending_verification'],
+                //     'sub_title'   => 'labels.pending_approval_products',
+                //     'permission'  => 'product.view',
+                // ],
                 'product_faqs' => [
                     'sub_active' => 'product_faqs',
                     'sub_route'  => 'admin.product_faqs.index',
@@ -60,13 +60,13 @@ return [
             'title'  => 'Inventory',
             'active' => 'inventory',
         ],
-        'tax_rates' => [
-            'icon'       => 'ti-square-rounded-percentage',
-            'route'      => 'admin.tax-rates.index',
-            'title'      => 'labels.tax_rates',
-            'active'     => 'tax_rates',
-            'permission' => 'tax_class.view',
-        ],
+        // 'tax_rates' => [
+        //     'icon'       => 'ti-square-rounded-percentage',
+        //     'route'      => 'admin.tax-rates.index',
+        //     'title'      => 'labels.tax_rates',
+        //     'active'     => 'tax_rates',
+        //     'permission' => 'tax_class.view',
+        // ],
 
         // ─── Sales ───────────────────────────────────────────────────────
         'orders' => [
@@ -116,12 +116,26 @@ return [
                 ],
             ],
         ],
-        'hero_section' => [
-            'icon'   => 'ti-layout-navbar',
-            'route'  => 'admin.hero-section.index',
-            'title'  => 'Hero Section',
-            'active' => 'hero_section',
+        'home_section' => [
+            'icon'   => 'ti-layout-grid',            
+            'title'  => 'Home Page',
+            'active' => 'home_section',
+            'route'  => [
+                'system' => [
+                    'sub_active'  => 'system',
+                    'sub_route'   => 'admin.settings.show',
+                    'route_param' => ['setting' => 'system'],
+                    'sub_title'   => 'labels.menu_system',
+                    'permission'  => 'setting.system.view',
+                ],
+                'hero_section' => [
+                    'sub_active'  => 'hero_section',
+                    'sub_route'   => 'admin.hero-section.show',
+                    'sub_title'   => 'labels.hero_section',
+                ],
+            ]
         ],
+        
         'featured_section' => [
             'icon'   => 'ti-star',
             'title'  => 'labels.featured_section',

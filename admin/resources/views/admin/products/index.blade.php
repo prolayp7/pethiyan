@@ -1,8 +1,12 @@
 @php
     use App\Enums\Product\ProductVarificationStatusEnum;
     $isApprovalView = request()->query('verification_status') === ProductVarificationStatusEnum::PENDING();
+    $productSubPage = $menuAdmin['products']['route']['products']['sub_active'] ?? 'products';
+    if ($isApprovalView && isset($menuAdmin['products']['route']['pending_approval_products']['sub_active'])) {
+        $productSubPage = $menuAdmin['products']['route']['pending_approval_products']['sub_active'];
+    }
 @endphp
-@extends('layouts.admin.app', ['page' => $menuAdmin['products']['active'] ?? "", 'sub_page' => $menuAdmin['products']['route'][$isApprovalView ? 'pending_approval_products' : 'products']['sub_active']])
+@extends('layouts.admin.app', ['page' => $menuAdmin['products']['active'] ?? "", 'sub_page' => $productSubPage])
 
 
 @section('title', __('labels.products'))

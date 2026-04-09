@@ -836,6 +836,9 @@ return [
     // Common action labels
     'updated_at' => 'Updated At',
 
+    //Home Page Labels
+    'hero_section' => 'Hero Section',
+
     // Alert/confirmation labels
     'are_you_sure' => 'Are you sure?',
     'you_wont_be_able_to_revert_this' => 'You won\'t be able to revert this!',

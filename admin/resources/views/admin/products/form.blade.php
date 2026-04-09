@@ -369,7 +369,7 @@
                                 </div>
                                 <div class="col-md-6">
                                     <div class="mb-3">
-                                        <label class="form-label required">{{ __('labels.barcode') }}</label>
+                                        <label class="form-label">{{ __('labels.barcode') }}</label>
                                         <input type="text" class="form-control" name="barcode" value="{{ $singleProductVariant->barcode ?? '' }}">
                                     </div>
                                 </div>
@@ -462,7 +462,7 @@
                                     <div class="mb-4">
                                         <div class="d-flex justify-content-between align-items-center mb-3">
                                             <h5 class="mb-0">Attributes</h5>
-                                            <button type="button" class="btn btn-primary" id="addAttributeBtn">
+                                            <button type="button" class="btn btn-primary d-none" id="addAttributeBtn">
                                                 <i class="ti ti-plus"></i> Add Attribute
                                             </button>
                                         </div>
@@ -504,12 +504,13 @@
                         <div class="mb-3">
                             <label class="form-label required">{{ __('labels.main_image') }}</label>
                             <x-filepond_image name="main_image" imageUrl="{{ $product->main_image ?? '' }}"/>
+                            <small class="form-hint">Recommended: 1200 x 1200 px. Max upload size: 2 MB.</small>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">{{ __('labels.additional_images') }}</label>
                             <input type="file" name="additional_images[]" class="form-control"
                                    data-images='@json($product->additional_images ?? [])' multiple>
-                            <small class="form-hint">You can select multiple images at once</small>
+                            <small class="form-hint">Recommended: 1200 x 1200 px each. Max upload size: 2 MB per image. You can select multiple images at once.</small>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">{{ __('labels.image_fit') }}</label>
@@ -683,16 +684,17 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label">SEO Keywords</label>
-                            <input type="text" class="form-control" name="seo_keywords" maxlength="255"
-                                   placeholder="e.g. standup pouch, kraft pouch, packaging bags"
+                            <input type="hidden" name="seo_keywords" id="main-seo-keywords-value"
                                    value="{{ old('seo_keywords', !empty($product) ? ($product->metadata['seo_keywords'] ?? '') : '') }}"/>
+                            <input type="text" class="form-control" id="main-seo-keywords-input" maxlength="255"
+                                   placeholder="e.g. standup pouch, kraft pouch, packaging bags"/>
                             <small class="form-hint">Comma-separated keywords. Most search engines ignore this, but useful for internal search.</small>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="card-footer d-flex justify-content-between">
+            <div class="card-footer d-flex justify-content-between pt-4">
                 <button type="button" class="btn btn-secondary" id="prevStep">Previous</button>
                 <button class="btn btn-primary" id="nextStep">Next</button>
             </div>

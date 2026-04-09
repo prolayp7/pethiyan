@@ -34,12 +34,10 @@ export default function ScrollToTop() {
           : "opacity-0 translate-y-4 pointer-events-none",
       ].join(" ")}
       style={{
-        background: "rgba(5,8,16,0.85)",
-        backdropFilter: "blur(12px)",
-        WebkitBackdropFilter: "blur(12px)",
-        borderColor: "rgba(76,175,80,0.35)",
-        color: "rgba(76,175,80,0.9)",
-        boxShadow: "0 0 20px rgba(76,175,80,0.12), 0 4px 24px rgba(0,0,0,0.5)",
+        background: "linear-gradient(135deg,#17396f 0%,#2f6f9f 52%,#49ad57 100%)",
+        borderColor: "transparent",
+        color: "#ffffff",
+        boxShadow: "0 4px 24px rgba(0,0,0,0.3)",
       }}
     >
       <ArrowUp className="h-4 w-4" aria-hidden="true" />
