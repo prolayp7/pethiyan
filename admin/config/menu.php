@@ -307,6 +307,13 @@ return [
                     'sub_title'   => 'labels.gst_settings',
                     'permission'  => 'setting.gst.view',
                 ],
+                'seo_advanced' => [
+                    'sub_active'  => 'seo_advanced',
+                    'sub_route'   => 'admin.settings.show',
+                    'route_param' => ['setting' => 'seo_advanced'],
+                    'sub_title'   => 'labels.seo_advanced_settings',
+                    'permission'  => 'setting.system.view',
+                ],
             ],
         ],
         'state_shipping_rates' => [

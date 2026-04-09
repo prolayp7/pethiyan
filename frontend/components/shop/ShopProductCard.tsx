@@ -17,6 +17,7 @@ import {
   API_BASE, getProduct, addToWishlist, getWishlistItems, removeWishlistItem,
   type RealApiProduct, type RealApiVariant,
 } from "@/lib/api";
+import { useSiteSettings } from "@/context/SiteSettingsContext";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -59,6 +60,12 @@ export default function ShopProductCard({ product }: { product: RealApiProduct }
   const { addItem, openCart } = useCart();
   const { isWishlisted, toggle } = useWishlist();
   const { isLoggedIn } = useAuth();
+  const {
+    showVariantColorsInGrid,
+    showGstInGrid,
+    showCategoryNameInGrid,
+    showMinQtyInGrid,
+  } = useSiteSettings();
 
   const [wishlistBusy, setWishlistBusy]           = useState(false);
   const [quickViewOpen, setQuickViewOpen]         = useState(false);
@@ -307,7 +314,7 @@ export default function ShopProductCard({ product }: { product: RealApiProduct }
 
           {/* Body */}
           <div className="flex flex-col flex-1 p-3 gap-1.5">
-            {product.category && (
+            {showCategoryNameInGrid && product.category && (
               <p className="text-[10px] text-[#1f4f8a] font-semibold uppercase tracking-wider">
                 {product.category.title}
               </p>
@@ -317,7 +324,7 @@ export default function ShopProductCard({ product }: { product: RealApiProduct }
             </p>
 
             {/* Color swatches + variant count */}
-            {(() => {
+            {showVariantColorsInGrid && (() => {
               const colorMap = new Map<string, string>();
               for (const v of product.variants ?? []) {
                 const c = v.attributes?.color;
@@ -341,13 +348,19 @@ export default function ShopProductCard({ product }: { product: RealApiProduct }
             {/* Bottom row: meta left, price+cart right */}
             <div className="flex items-end justify-between gap-2 mt-auto pt-2 border-t border-gray-100">
               {/* Left: GST + min qty */}
-              <div className="flex flex-col gap-0.5 min-w-0">
-                <span className="text-[10px] text-gray-400">+{product.tax?.gst_rate ?? ""}% GST</span>
-                <span className="flex items-center gap-1 text-[10px] text-gray-400">
-                  <Tag className="h-2.5 w-2.5 shrink-0" />
-                  Min: {minQty} pcs
-                </span>
-              </div>
+              {(showGstInGrid || showMinQtyInGrid) && (
+                <div className="flex flex-col gap-0.5 min-w-0">
+                  {showGstInGrid && (
+                    <span className="text-[10px] text-gray-400">+{product.tax?.gst_rate ?? ""}% GST</span>
+                  )}
+                  {showMinQtyInGrid && (
+                    <span className="flex items-center gap-1 text-[10px] text-gray-400">
+                      <Tag className="h-2.5 w-2.5 shrink-0" />
+                      Min: {minQty} pcs
+                    </span>
+                  )}
+                </div>
+              )}
 
               {/* Right: price + add to cart */}
               <div className="flex flex-col items-end gap-1.5 shrink-0">

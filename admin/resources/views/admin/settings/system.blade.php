@@ -47,6 +47,7 @@
                             <a class="nav-link"
                                href="#pills-demomode">{{ __('labels.demo_mode') }}</a>
                             <a class="nav-link" href="#pills-social">Social Media</a>
+                            <a class="nav-link" href="#pills-product-grid">Product Grid Display</a>
                             @can('viewSetting', [\App\Models\Setting::class, 'web'])
                                 <a class="nav-link" href="#pills-web-settings-anchor">{{ __('labels.web_settings') }}</a>
                                 <a class="nav-link" href="#pills-web-default-location">{{ __('labels.default_location') }}</a>
@@ -604,6 +605,78 @@
                                                 </div>
                                             </div>
                                         @endforeach
+                                    </div>
+                                    <div class="card-footer text-end">
+                                        @can('updateSetting', [\App\Models\Setting::class, 'system'])
+                                            <button type="submit" class="btn btn-primary">{{ __('labels.submit') }}</button>
+                                        @endcan
+                                    </div>
+                                </div>
+                            </form>
+
+                            {{-- ── PRODUCT GRID DISPLAY ─────────────────────────── --}}
+                            <form action="{{route('admin.settings.store')}}" class="form-submit" method="post">
+                                @csrf
+                                <input type="hidden" name="type" value="system">
+                                <input type="hidden" name="_section" value="product_grid">
+                                <div class="card mb-4" id="pills-product-grid">
+                                    <div class="card-header">
+                                        <h4 class="card-title">Product Grid Display</h4>
+                                    </div>
+                                    <div class="card-body">
+                                        <p class="text-muted small mb-3">Control which elements are shown on product cards across all grids (Shop, Category, Related Products, etc.).</p>
+
+                                        <label class="row mb-3">
+                                            <span class="col">
+                                                <span class="fw-medium">Show variant colour swatches</span>
+                                                <small class="d-block text-muted">Displays colour dots and variant count below the product title.</small>
+                                            </span>
+                                            <span class="col-auto">
+                                                <label class="form-check form-check-single form-switch">
+                                                    <input class="form-check-input" type="checkbox" name="showVariantColorsInGrid" role="switch"
+                                                           value="1" {{ !empty($settings['showVariantColorsInGrid']) ? 'checked' : '' }}/>
+                                                </label>
+                                            </span>
+                                        </label>
+
+                                        <label class="row mb-3">
+                                            <span class="col">
+                                                <span class="fw-medium">Show GST rate</span>
+                                                <small class="d-block text-muted">Shows "+X% GST" below the price row.</small>
+                                            </span>
+                                            <span class="col-auto">
+                                                <label class="form-check form-check-single form-switch">
+                                                    <input class="form-check-input" type="checkbox" name="showGstInGrid" role="switch"
+                                                           value="1" {{ !empty($settings['showGstInGrid']) ? 'checked' : '' }}/>
+                                                </label>
+                                            </span>
+                                        </label>
+
+                                        <label class="row mb-3">
+                                            <span class="col">
+                                                <span class="fw-medium">Show category name</span>
+                                                <small class="d-block text-muted">Displays the product's category above the title.</small>
+                                            </span>
+                                            <span class="col-auto">
+                                                <label class="form-check form-check-single form-switch">
+                                                    <input class="form-check-input" type="checkbox" name="showCategoryNameInGrid" role="switch"
+                                                           value="1" {{ !empty($settings['showCategoryNameInGrid']) ? 'checked' : '' }}/>
+                                                </label>
+                                            </span>
+                                        </label>
+
+                                        <label class="row mb-3">
+                                            <span class="col">
+                                                <span class="fw-medium">Show minimum order quantity</span>
+                                                <small class="d-block text-muted">Shows "Min: X pcs" below the price row.</small>
+                                            </span>
+                                            <span class="col-auto">
+                                                <label class="form-check form-check-single form-switch">
+                                                    <input class="form-check-input" type="checkbox" name="showMinQtyInGrid" role="switch"
+                                                           value="1" {{ !empty($settings['showMinQtyInGrid']) ? 'checked' : '' }}/>
+                                                </label>
+                                            </span>
+                                        </label>
                                     </div>
                                     <div class="card-footer text-end">
                                         @can('updateSetting', [\App\Models\Setting::class, 'system'])

@@ -1870,6 +1870,9 @@ return [
     // GST Settings
     'gst_settings'  => 'GST Settings',
 
+    // SEO Advanced Settings
+    'seo_advanced_settings' => 'SEO Advanced',
+
     // User Lookup
     'user_found'     => 'User found.',
     'user_not_found' => 'User not found.',

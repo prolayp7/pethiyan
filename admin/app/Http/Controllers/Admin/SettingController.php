@@ -46,8 +46,9 @@ class SettingController extends Controller
         'support'  => ['sellerSupportEmail', 'sellerSupportNumber'],
         'cart'     => ['checkoutType', 'minimumCartAmount', 'maximumItemsAllowedInCart', 'lowStockLimit'],
         'order'    => ['customerInvoiceDownloadEnabled', 'customerInvoiceDownloadMinStatus'],
-        'demomode' => ['demoMode', 'adminDemoModeMessage', 'sellerDemoModeMessage', 'customerDemoModeMessage', 'customerLocationDemoModeMessage', 'deliveryBoyDemoModeMessage'],
-        'social'   => ['socialLinks'],
+        'demomode'     => ['demoMode', 'adminDemoModeMessage', 'sellerDemoModeMessage', 'customerDemoModeMessage', 'customerLocationDemoModeMessage', 'deliveryBoyDemoModeMessage'],
+        'social'       => ['socialLinks'],
+        'product_grid' => ['showVariantColorsInGrid', 'showGstInGrid', 'showCategoryNameInGrid', 'showMinQtyInGrid'],
     ];
 
     protected SettingService $settingService;

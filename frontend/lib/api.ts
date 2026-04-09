@@ -229,6 +229,11 @@ export interface ApiSystemSettings {
   appName: string;
   logo: string | null;
   favicon: string | null;
+  // Product grid display toggles
+  showVariantColorsInGrid: boolean;
+  showGstInGrid:           boolean;
+  showCategoryNameInGrid:  boolean;
+  showMinQtyInGrid:        boolean;
 }
 
 export interface ApiWebSettings {
@@ -1144,6 +1149,10 @@ export async function getSystemSettings(): Promise<ApiSystemSettings | null> {
     appName: appName || "Pethiyan",
     logo: normalizeMediaUrl(logoRaw),
     favicon: normalizeMediaUrl(faviconRaw),
+    showVariantColorsInGrid: setting.showVariantColorsInGrid !== false,
+    showGstInGrid:           setting.showGstInGrid           === true,
+    showCategoryNameInGrid:  setting.showCategoryNameInGrid  !== false,
+    showMinQtyInGrid:        setting.showMinQtyInGrid        === true,
   };
 }
 

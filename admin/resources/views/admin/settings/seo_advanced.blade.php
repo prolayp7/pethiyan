@@ -1,4 +1,4 @@
-@extends('layouts.admin.app', ['page' => $menuAdmin['settings']['active'] ?? ""])
+@extends('layouts.admin.app', ['page' => $menuAdmin['settings']['active'] ?? "", 'sub_page' => $menuAdmin['settings']['route']['seo_advanced']['sub_active'] ?? ""])
 
 @section('title', 'SEO Advanced Settings')
 

@@ -59,6 +59,11 @@ class SystemSettingType implements SettingInterface
     public string $customerInvoiceDownloadMinStatus = 'out_for_delivery'; // Dispatched
     // Social media links: keyed by platform slug, each with 'url' and 'active'
     public array $socialLinks = [];
+    // Product grid display toggles
+    public bool $showVariantColorsInGrid  = true;
+    public bool $showGstInGrid            = false;
+    public bool $showCategoryNameInGrid   = true;
+    public bool $showMinQtyInGrid         = false;
 
     /**
      * Get Laravel validation rules for the properties
@@ -110,10 +115,14 @@ class SystemSettingType implements SettingInterface
             'currencySymbol' => ['required', 'string', 'max:3', 'exists:countries,currency_symbol'],
             'customerInvoiceDownloadEnabled' => ['nullable', 'boolean'],
             'customerInvoiceDownloadMinStatus' => ['required', 'in:pending,accepted_by_seller,preparing,collected,out_for_delivery,delivered'],
-            'socialLinks'          => ['nullable', 'array'],
-            'socialLinks.*'        => ['nullable', 'array'],
-            'socialLinks.*.url'    => ['nullable', 'url', 'max:500'],
-            'socialLinks.*.active' => ['nullable', 'boolean'],
+            'socialLinks'              => ['nullable', 'array'],
+            'socialLinks.*'            => ['nullable', 'array'],
+            'socialLinks.*.url'        => ['nullable', 'url', 'max:500'],
+            'socialLinks.*.active'     => ['nullable', 'boolean'],
+            'showVariantColorsInGrid'  => ['nullable', 'boolean'],
+            'showGstInGrid'            => ['nullable', 'boolean'],
+            'showCategoryNameInGrid'   => ['nullable', 'boolean'],
+            'showMinQtyInGrid'         => ['nullable', 'boolean'],
         ];
     }
 }
