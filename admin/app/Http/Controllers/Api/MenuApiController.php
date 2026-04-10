@@ -2,10 +2,15 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\Product\ProductVarificationStatusEnum;
 use App\Http\Controllers\Controller;
+use App\Models\Category;
 use App\Models\Menu;
+use App\Models\Product;
+use App\Services\CurrencyService;
 use App\Types\Api\ApiResponseType;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Str;
 
 class MenuApiController extends Controller
 {
@@ -132,6 +137,7 @@ class MenuApiController extends Controller
     private function formatItem($item): array
     {
         $type = $item->type->value ?? $item->type;
+        $currency = app(CurrencyService::class);
 
         $node = [
             'id'           => $item->id,
@@ -163,28 +169,185 @@ class MenuApiController extends Controller
 
         // Mega menu: attach panels → columns → links
         if ($type === 'mega_menu') {
-            $node['mega_menu_panels'] = $item->megaMenuPanels
-                ->map(fn ($panel) => [
-                    'id'           => $panel->id,
-                    'label'        => $panel->label,
-                    'href'         => $panel->href,
-                    'accent_color' => $panel->accent_color,
-                    'image_path'   => $panel->image_path,
-                    'tagline'      => $panel->tagline,
-                    'sort_order'   => $panel->sort_order,
-                    'columns'      => $panel->columns->map(fn ($col) => [
-                        'id'      => $col->id,
-                        'heading' => $col->heading,
-                        'links'   => $col->links->map(fn ($link) => [
-                            'id'     => $link->id,
-                            'label'  => $link->label,
-                            'href'   => $link->href,
-                            'target' => $link->target ?? '_self',
+            $panels = $item->megaMenuPanels
+                ->map(function ($panel) use ($currency) {
+                    $categorySlug = $this->extractCategorySlug($panel->href);
+                    $featuredProducts = $categorySlug
+                        ? $this->getPanelProductsByFlag($categorySlug, 'featured', '1')
+                        : collect();
+                    $topProducts = $categorySlug
+                        ? $this->getPanelTopProducts($categorySlug, 2)
+                        : collect();
+
+                    return [
+                        'id'               => $panel->id,
+                        'label'            => $panel->label,
+                        'href'             => $panel->href,
+                        'accent_color'     => $panel->accent_color,
+                        'image_path'       => $panel->image_path,
+                        'tagline'          => $panel->tagline,
+                        'sort_order'       => $panel->sort_order,
+                        'featured_products' => $featuredProducts
+                            ->map(fn (Product $product) => $this->formatMenuProduct($product, $currency))
+                            ->filter()
+                            ->values(),
+                        'top_products'     => $topProducts
+                            ->map(fn (Product $product) => $this->formatMenuProduct($product, $currency))
+                            ->filter()
+                            ->values(),
+                        'columns'          => $panel->columns->map(fn ($col) => [
+                            'id'      => $col->id,
+                            'heading' => $col->heading,
+                            'links'   => $col->links->map(fn ($link) => [
+                                'id'     => $link->id,
+                                'label'  => $link->label,
+                                'href'   => $link->href,
+                                'target' => $link->target ?? '_self',
+                            ])->values(),
                         ])->values(),
-                    ])->values(),
-                ])->values();
+                    ];
+                })->values();
+
+            $node['mega_menu_panels'] = $panels;
+            $node['featured_products'] = $this->getFeaturedProducts()
+                ->map(fn (Product $product) => $this->formatMenuProduct($product, $currency))
+                ->filter()
+                ->values();
+            $node['top_products'] = $this->getTopProducts(2)
+                ->map(fn (Product $product) => $this->formatMenuProduct($product, $currency))
+                ->filter()
+                ->values();
         }
 
         return $node;
+    }
+
+    private function extractCategorySlug(?string $href): ?string
+    {
+        if (empty($href)) {
+            return null;
+        }
+
+        $path = parse_url($href, PHP_URL_PATH) ?: $href;
+        $trimmed = trim($path, '/');
+
+        if (Str::startsWith($trimmed, 'category/')) {
+            return Str::after($trimmed, 'category/');
+        }
+
+        if (Str::startsWith($trimmed, 'categories/')) {
+            return Str::after($trimmed, 'categories/');
+        }
+
+        return null;
+    }
+
+    private function basePanelProductsQuery(string $categorySlug)
+    {
+        $category = Category::query()
+            ->select(['id', 'slug'])
+            ->where('slug', $categorySlug)
+            ->first();
+
+        if (!$category) {
+            return null;
+        }
+
+        return Product::query()
+            ->with([
+                'media',
+                'variants' => fn ($query) => $query
+                    ->select(['id', 'product_id', 'is_default'])
+                    ->orderByDesc('is_default'),
+                'variants.storeProductVariants' => fn ($query) => $query
+                    ->select(['id', 'product_variant_id', 'price', 'special_price', 'stock'])
+                    ->orderByDesc('stock'),
+            ])
+            ->select(['id', 'category_id', 'title', 'slug', 'featured', 'is_top_product'])
+            ->where('category_id', $category->id)
+            ->where('status', 'active')
+            ->where('verification_status', ProductVarificationStatusEnum::APPROVED->value);
+    }
+
+    private function basePublicProductsQuery()
+    {
+        return Product::query()
+            ->with([
+                'media',
+                'variants' => fn ($query) => $query
+                    ->select(['id', 'product_id', 'is_default'])
+                    ->orderByDesc('is_default'),
+                'variants.storeProductVariants' => fn ($query) => $query
+                    ->select(['id', 'product_variant_id', 'price', 'special_price', 'stock'])
+                    ->orderByDesc('stock'),
+            ])
+            ->select(['id', 'category_id', 'title', 'slug', 'featured', 'is_top_product'])
+            ->where('status', 'active')
+            ->where('verification_status', ProductVarificationStatusEnum::APPROVED->value);
+    }
+
+    private function getPanelProductsByFlag(string $categorySlug, string $column, mixed $value)
+    {
+        $query = $this->basePanelProductsQuery($categorySlug);
+
+        if (!$query) {
+            return collect();
+        }
+
+        return $query
+            ->where($column, $value)
+            ->latest('id')
+            ->get();
+    }
+
+    private function getPanelTopProducts(string $categorySlug, int $limit = 2)
+    {
+        $query = $this->basePanelProductsQuery($categorySlug);
+
+        if (!$query) {
+            return collect();
+        }
+
+        return $query
+            ->where('is_top_product', true)
+            ->latest('id')
+            ->limit($limit)
+            ->get();
+    }
+
+    private function getFeaturedProducts()
+    {
+        return $this->basePublicProductsQuery()
+            ->where('featured', '1')
+            ->latest('id')
+            ->get();
+    }
+
+    private function getTopProducts(int $limit = 2)
+    {
+        return $this->basePublicProductsQuery()
+            ->where('is_top_product', true)
+            ->latest('id')
+            ->limit($limit)
+            ->get();
+    }
+
+    private function formatMenuProduct(?Product $product, CurrencyService $currency): ?array
+    {
+        if (!$product) {
+            return null;
+        }
+
+        $variant = $product->variants->first();
+        $storeVariant = $variant?->storeProductVariants->first();
+        $price = $storeVariant?->special_price ?? $storeVariant?->price ?? 0;
+
+        return [
+            'image' => $product->main_image,
+            'name' => $product->title,
+            'price' => (float) $price,
+            'currency_symbol' => $currency->getSymbol(),
+            'currency_code' => $currency->getCode(),
+        ];
     }
 }

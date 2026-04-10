@@ -1707,6 +1707,85 @@ export async function getVideoStorySection(): Promise<ApiVideoStorySection | nul
   }
 }
 
+// ─── Header Menu ─────────────────────────────────────────────────────────────
+
+export interface ApiMenuNavLink {
+  id: number;
+  label: string;
+  href: string;
+  target: string;
+}
+
+export interface ApiMenuShopDropdownItem {
+  id: number;
+  label: string;
+  href: string;
+  target: string;
+  icon: string | null;
+  description: string | null;
+  accent_color: string | null;
+  badge: string | null;
+}
+
+export interface ApiMenuMegaProduct {
+  image: string;
+  name: string;
+  price: number;
+  currency_symbol: string;
+  currency_code: string;
+}
+
+export interface ApiMenuMegaMenuPanel {
+  id: number;
+  label: string;
+  href: string;
+  accent_color: string;
+  image_path: string;
+  tagline: string;
+  sort_order: number;
+  columns: { id: number; heading: string; links: ApiMenuNavLink[] }[];
+  featured_products: ApiMenuMegaProduct[];
+  top_products: ApiMenuMegaProduct[];
+}
+
+export interface ApiMenuItem {
+  id: number;
+  label: string;
+  href: string;
+  type: "link" | "shop_dropdown" | "mega_menu";
+  target: string;
+  icon: string | null;
+  description: string | null;
+  accent_color: string | null;
+  badge: string | null;
+  sort_order: number;
+  shop_dropdown_items?: ApiMenuShopDropdownItem[];
+  mega_menu_panels?: ApiMenuMegaMenuPanel[];
+  featured_products?: ApiMenuMegaProduct[];
+  top_products?: ApiMenuMegaProduct[];
+}
+
+export interface ApiHeaderMenu {
+  id: number;
+  name: string;
+  slug: string;
+  nav_items: ApiMenuItem[];
+}
+
+export async function getHeaderMenu(): Promise<ApiHeaderMenu | null> {
+  try {
+    const res = await fetch(`${API_BASE}/api/menus/header_main`, {
+      headers: { Accept: "application/json" },
+      next: { tags: ["header-menu"], revalidate: 3600 },
+    });
+    if (!res.ok) return null;
+    const json = await res.json();
+    return (json?.data as ApiHeaderMenu) ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export interface ApiNewsletterSection {
   is_active: boolean;
   badge_text: string;

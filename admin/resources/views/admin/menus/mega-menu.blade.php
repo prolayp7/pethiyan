@@ -36,6 +36,10 @@
                     <a href="{{ route('admin.menus.items.index', $menu->id) }}" class="btn btn-outline-secondary me-2">
                         ← Back to Items
                     </a>
+                    <button type="button" class="d-none" id="panel-modal-trigger" data-bs-toggle="modal" data-bs-target="#panel-modal"></button>
+                    <button type="button" class="d-none" id="column-modal-trigger" data-bs-toggle="modal" data-bs-target="#column-modal"></button>
+                    <button type="button" class="d-none" id="link-modal-trigger" data-bs-toggle="modal" data-bs-target="#link-modal"></button>
+                    <button type="button" class="d-none" id="delete-confirm-trigger" data-bs-toggle="modal" data-bs-target="#delete-confirm-modal"></button>
                     <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#panel-modal">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
                              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -103,17 +107,17 @@
                         </div>
 
                         {{-- Actions --}}
-                        <button class="btn btn-sm btn-outline-secondary panel-edit-btn ms-1"
+                        <button type="button" class="btn btn-sm btn-outline-secondary panel-edit-btn ms-1"
                                 data-panel-id="{{ $panel->id }}"
                                 data-url="{{ route('admin.menus.items.mega-menu.panels.show', [$menu->id, $menuItem->id, $panel->id]) }}">
                             Edit
                         </button>
-                        <button class="btn btn-sm btn-outline-primary ms-1"
+                        <button type="button" class="btn btn-sm btn-outline-primary ms-1"
                                 data-bs-toggle="modal" data-bs-target="#column-modal"
                                 data-panel-id="{{ $panel->id }}">
                             + Column
                         </button>
-                        <button class="btn btn-sm btn-outline-danger panel-delete-btn ms-1"
+                        <button type="button" class="btn btn-sm btn-outline-danger panel-delete-btn ms-1"
                                 data-panel-id="{{ $panel->id }}"
                                 data-url="{{ route('admin.menus.items.mega-menu.panels.destroy', [$menu->id, $menuItem->id, $panel->id]) }}">
                             Delete
@@ -132,19 +136,19 @@
                                         <div class="card card-sm h-100">
                                             <div class="card-header py-2 d-flex align-items-center">
                                                 <strong class="flex-fill small">{{ $column->heading }}</strong>
-                                                <button class="btn btn-xs btn-outline-secondary column-edit-btn ms-1"
+                                                <button type="button" class="btn btn-xs btn-outline-secondary column-edit-btn ms-1"
                                                         data-column-id="{{ $column->id }}"
                                                         data-panel-id="{{ $panel->id }}"
                                                         data-url="{{ route('admin.menus.items.mega-menu.columns.show', [$menu->id, $menuItem->id, $panel->id, $column->id]) }}">
                                                     Edit
                                                 </button>
-                                                <button class="btn btn-xs btn-outline-primary link-add-btn ms-1"
+                                                <button type="button" class="btn btn-xs btn-outline-primary link-add-btn ms-1"
                                                         data-column-id="{{ $column->id }}"
                                                         data-panel-id="{{ $panel->id }}"
                                                         data-bs-toggle="modal" data-bs-target="#link-modal">
                                                     + Link
                                                 </button>
-                                                <button class="btn btn-xs btn-outline-danger column-delete-btn ms-1"
+                                                <button type="button" class="btn btn-xs btn-outline-danger column-delete-btn ms-1"
                                                         data-column-id="{{ $column->id }}"
                                                         data-panel-id="{{ $panel->id }}"
                                                         data-url="{{ route('admin.menus.items.mega-menu.columns.destroy', [$menu->id, $menuItem->id, $panel->id, $column->id]) }}">
@@ -159,14 +163,14 @@
                                                         {{ $link->label }}
                                                     </span>
                                                     <div class="d-flex gap-1 ms-2">
-                                                        <button class="btn btn-xs btn-ghost-secondary link-edit-btn"
+                                                        <button type="button" class="btn btn-xs btn-ghost-secondary link-edit-btn"
                                                                 data-link-id="{{ $link->id }}"
                                                                 data-column-id="{{ $column->id }}"
                                                                 data-panel-id="{{ $panel->id }}"
                                                                 data-url="{{ route('admin.menus.items.mega-menu.links.show', [$menu->id, $menuItem->id, $panel->id, $column->id, $link->id]) }}">
                                                             ✎
                                                         </button>
-                                                        <button class="btn btn-xs btn-ghost-danger link-delete-btn"
+                                                        <button type="button" class="btn btn-xs btn-ghost-danger link-delete-btn"
                                                                 data-link-id="{{ $link->id }}"
                                                                 data-column-id="{{ $column->id }}"
                                                                 data-panel-id="{{ $panel->id }}"
@@ -227,9 +231,11 @@
                                placeholder="Retail-ready resealable pouches"/>
                     </div>
                     <div class="col-md-12">
-                        <label class="form-label">Banner Image Path</label>
-                        <input type="text" class="form-control" id="panel-image-path"
-                               placeholder="/images/banners/1.jpg"/>
+                        <label class="form-label">Banner Image</label>
+                        <input type="hidden" id="panel-image-path" value=""/>
+                        <input type="file" class="form-control" id="panel-image-upload" name="panel_image"
+                               accept="image/jpg,image/jpeg,image/png,image/webp">
+                        <div class="form-hint">Recommended: 1200 x 720 px. JPG / PNG / WebP — max 5 MB. Leave empty to keep existing image.</div>
                     </div>
                     <div class="col-12">
                         <div class="form-check form-switch">
@@ -354,6 +360,7 @@
     // Replace __PANEL__ / __COL__ at runtime
     const colBaseTPL  = '{{ $columnBaseUrl }}';
     const linkBaseTPL = '{{ $linkBaseUrl }}';
+    const panelImageInput = document.getElementById('panel-image-upload');
 
     let deleteCallback = null;
 
@@ -363,12 +370,123 @@
 
     /* ── CSRF helper ─────────────────────────────────────────────────── */
     function ajax(url, method, data, done) {
-        $.ajax({ url, method, data: Object.assign({ _token: CSRF }, data) })
+        const isFormData = typeof FormData !== 'undefined' && data instanceof FormData;
+        const payload = isFormData ? data : Object.assign({ _token: CSRF }, data);
+        if (isFormData && !payload.has('_token')) {
+            payload.append('_token', CSRF);
+        }
+
+        return $.ajax({
+            url,
+            method,
+            data: payload,
+            processData: !isFormData,
+            contentType: isFormData ? false : 'application/x-www-form-urlencoded; charset=UTF-8'
+        })
             .done(res => {
                 if (!res.success) { toastError(res.message); return; }
                 done(res);
             })
-            .fail(() => toastError('Request failed.'));
+            .fail((xhr) => toastError(xhr?.responseJSON?.message || 'Request failed.'));
+    }
+
+    const normalizeLocalhostOrigin = (url) => {
+        if (!url || typeof url !== 'string') return url;
+
+        try {
+            const parsed = new URL(url, window.location.origin);
+            const isLoopback = ['localhost', '127.0.0.1'].includes(parsed.hostname);
+            const currentIsLoopback = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+
+            if (isLoopback && currentIsLoopback) {
+                return `${window.location.origin}${parsed.pathname}${parsed.search}${parsed.hash}`;
+            }
+
+            return parsed.toString();
+        } catch (_e) {
+            return url;
+        }
+    };
+
+    let panelImagePond = null;
+
+    function ensurePanelImagePond() {
+        if (!panelImageInput || typeof FilePond === 'undefined') {
+            return null;
+        }
+
+        if (panelImagePond) {
+            return panelImagePond;
+        }
+
+        panelImagePond = FilePond.create(panelImageInput, {
+            allowImagePreview: true,
+            credits: false,
+            storeAsFile: true,
+            acceptedFileTypes: ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'],
+            maxFileSize: '5MB',
+            server: {
+                load: (source, load, error) => {
+                    fetch(normalizeLocalhostOrigin(source))
+                        .then(response => {
+                            const contentType = (response.headers.get('content-type') || 'image/jpeg').split(';')[0].trim();
+                            return response.blob().then(blob => new Blob([blob], { type: contentType }));
+                        })
+                        .then(blob => load(blob))
+                        .catch(err => error(err));
+                    return { abort: () => {} };
+                }
+            }
+        });
+
+        return panelImagePond;
+    }
+
+    function resetPanelImageField() {
+        const pond = ensurePanelImagePond();
+        $('#panel-image-path').val('');
+        if (pond) {
+            pond.removeFiles();
+        } else if (panelImageInput) {
+            panelImageInput.value = '';
+        }
+    }
+
+    function preloadPanelImage(source) {
+        const normalizedSource = normalizeLocalhostOrigin(source);
+        const pond = ensurePanelImagePond();
+
+        $('#panel-image-path').val(source || '');
+
+        if (!pond) {
+            return;
+        }
+
+        pond.removeFiles();
+
+        if (!normalizedSource) {
+            return;
+        }
+
+        pond.addFile(normalizedSource).catch(() => {
+            $('#panel-image-path').val(source || '');
+        });
+    }
+
+    function setButtonLoadingState($button, loadingLabel) {
+        const originalHtml = $button.data('original-html') || $button.html();
+        $button.data('original-html', originalHtml);
+        $button.prop('disabled', true).html(
+            `<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>${loadingLabel}`
+        );
+    }
+
+    function resetButtonLoadingState($button) {
+        const originalHtml = $button.data('original-html');
+        if (originalHtml) {
+            $button.html(originalHtml);
+        }
+        $button.prop('disabled', false);
     }
 
     /* ═══════════════════════════════════════════════════════════════
@@ -382,15 +500,17 @@
             $('#panel-label').val('');
             $('#panel-href').val('');
             $('#panel-tagline').val('');
-            $('#panel-image-path').val('');
             $('#panel-accent-color').val('#2563eb');
             $('#panel-sort-order').val(0);
             $('#panel-is-active').prop('checked', true);
             $('#panel-editing-id').val('');
+            resetPanelImageField();
         }
     }).on('hidden.bs.modal', () => { editPanelId = null; });
 
-    $(document).on('click', '.panel-edit-btn', function () {
+    $(document).on('click', '.panel-edit-btn', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
         editPanelId = $(this).data('panel-id');
         $.get($(this).data('url'), function (res) {
             if (!res.success) { toastError(res.message); return; }
@@ -400,31 +520,52 @@
             $('#panel-label').val(p.label);
             $('#panel-href').val(p.href);
             $('#panel-tagline').val(p.tagline ?? '');
-            $('#panel-image-path').val(p.image_path ?? '');
             $('#panel-accent-color').val(p.accent_color ?? '#2563eb');
             $('#panel-sort-order').val(p.sort_order);
             $('#panel-is-active').prop('checked', !!p.is_active);
-            new bootstrap.Modal(document.getElementById('panel-modal')).show();
+            preloadPanelImage(p.image_path ?? '');
+            document.getElementById('panel-modal-trigger').click();
         });
     });
 
     $('#panel-save-btn').on('click', function () {
+        const $button = $(this);
         const pid  = $('#panel-editing-id').val();
-        const data = {
-            label:        $('#panel-label').val().trim(),
-            href:         $('#panel-href').val().trim(),
-            tagline:      $('#panel-tagline').val().trim(),
-            image_path:   $('#panel-image-path').val().trim(),
-            accent_color: $('#panel-accent-color').val(),
-            sort_order:   $('#panel-sort-order').val(),
-            is_active:    $('#panel-is-active').is(':checked') ? 1 : 0,
-        };
-        if (!data.label || !data.href) { toastError('Label and URL are required.'); return; }
+        const label = $('#panel-label').val().trim();
+        const href = $('#panel-href').val().trim();
+        if (!label || !href) { toastError('Label and URL are required.'); return; }
+
+        const data = new FormData();
+        data.append('label', label);
+        data.append('href', href);
+        data.append('tagline', $('#panel-tagline').val().trim());
+        data.append('image_path', $('#panel-image-path').val().trim());
+        data.append('accent_color', $('#panel-accent-color').val());
+        data.append('sort_order', $('#panel-sort-order').val());
+        data.append('is_active', $('#panel-is-active').is(':checked') ? '1' : '0');
+
+        const pond = ensurePanelImagePond();
+        const pondFile = pond?.getFiles?.()[0] ?? null;
+        const isLocalPreview =
+            typeof FilePond !== 'undefined'
+            && FilePond.FileOrigin
+            && pondFile
+            && pondFile.origin === FilePond.FileOrigin.LOCAL;
+
+        if (pondFile?.file && !isLocalPreview) {
+            data.append('panel_image', pondFile.file, pondFile.file.name || 'panel-image');
+        } else if (panelImageInput?.files?.[0]) {
+            data.append('panel_image', panelImageInput.files[0]);
+        }
+
         const url = pid ? panelBase.replace('/panels', '/panels/' + pid) : panelBase;
+        setButtonLoadingState($button, pid ? 'Saving...' : 'Creating...');
         ajax(url, 'POST', data, () => {
             toastSuccess('Panel saved.');
-            bootstrap.Modal.getInstance(document.getElementById('panel-modal')).hide();
+            document.querySelector('#panel-modal [data-bs-dismiss="modal"]').click();
             setTimeout(() => location.reload(), 800);
+        }).always(() => {
+            resetButtonLoadingState($button);
         });
     });
 
@@ -470,7 +611,7 @@
             $('#column-panel-id').val(editColumnPanelId);
             $('#column-heading').val(c.heading);
             $('#column-sort-order').val(c.sort_order);
-            new bootstrap.Modal(document.getElementById('column-modal')).show();
+            document.getElementById('column-modal-trigger').click();
         });
     });
 
@@ -486,7 +627,7 @@
         const url  = cid ? base + '/' + cid : base;
         ajax(url, 'POST', data, () => {
             toastSuccess('Column saved.');
-            bootstrap.Modal.getInstance(document.getElementById('column-modal')).hide();
+            document.querySelector('#column-modal [data-bs-dismiss="modal"]').click();
             setTimeout(() => location.reload(), 800);
         });
     });
@@ -537,7 +678,7 @@
             $('#link-sort-order').val(l.sort_order);
             $('#link-target').val(l.target ?? '_self');
             $('#link-is-active').prop('checked', !!l.is_active);
-            new bootstrap.Modal(document.getElementById('link-modal')).show();
+            document.getElementById('link-modal-trigger').click();
         });
     });
 
@@ -557,7 +698,7 @@
         const url  = lid ? base + '/' + lid : base;
         ajax(url, 'POST', data, () => {
             toastSuccess('Link saved.');
-            bootstrap.Modal.getInstance(document.getElementById('link-modal')).hide();
+            document.querySelector('#link-modal [data-bs-dismiss="modal"]').click();
             setTimeout(() => location.reload(), 600);
         });
     });
@@ -577,11 +718,11 @@
     function showDeleteConfirm(title, body) {
         $('#delete-confirm-title').text(title);
         $('#delete-confirm-body').text(body);
-        new bootstrap.Modal(document.getElementById('delete-confirm-modal')).show();
+        document.getElementById('delete-confirm-trigger').click();
     }
 
     $('#confirm-delete-btn').on('click', function () {
-        bootstrap.Modal.getInstance(document.getElementById('delete-confirm-modal')).hide();
+        document.querySelector('#delete-confirm-modal [data-bs-dismiss="modal"]').click();
         if (deleteCallback) { deleteCallback(); deleteCallback = null; }
     });
 

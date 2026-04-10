@@ -13,7 +13,7 @@ import CartDrawer from "@/components/ui/CartDrawer";
 import TopAnnouncementBar from "@/components/headers/TopAnnouncementBar";
 import OfferTicker from "@/components/headers/OfferTicker";
 import MainHeader from "@/components/headers/MainHeader1";
-import NavigationMenu from "@/components/headers/NavigationMenu6";
+import NavigationMenu from "@/components/headers/NavigationMenuServer";
 import MobileBottomNav from "@/components/ui/MobileBottomNav";
 import ScrollToTop from "@/components/ui/ScrollToTop";
 import Footer from "@/components/layout/Footercopy7";
@@ -117,7 +117,11 @@ export default async function RootLayout({
   const orgSchema = organizationSchema();
   const siteSchema = websiteSchema();
   const [siteSettings, webSettings] = await Promise.all([
-    getSystemSettings().then(s => s ?? { appName: "Pethiyan", logo: null, favicon: null }),
+    getSystemSettings().then(s => s ?? {
+      appName: "Pethiyan", logo: null, favicon: null,
+      showVariantColorsInGrid: false, showGstInGrid: false,
+      showCategoryNameInGrid: false, showMinQtyInGrid: false,
+    }),
     getWebSettings(),
   ]);
 

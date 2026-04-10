@@ -61,6 +61,7 @@ class Product extends Model implements HasMedia
         'verification_status',
         'rejection_reason',
         'featured',
+        'is_top_product',
         'requires_otp',
         'video_type',
         'video_link',
@@ -83,6 +84,7 @@ class Product extends Model implements HasMedia
         'custom_fields' => 'array',
         'base_prep_time' => 'integer',
         'is_indexable' => 'boolean',
+        'is_top_product' => 'boolean',
     ];
 
     public function getSeoTitleAttribute(): ?string

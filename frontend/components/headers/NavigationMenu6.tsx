@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import {
   ChevronDown,
   X,
@@ -18,472 +17,78 @@ import {
   Tag,
   Truck,
   Layers,
+  type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+/* ─── Icon map (string → component) ─────────────────────────── */
+
+const ICON_MAP: Record<string, LucideIcon> = {
+  Layers,
+  Sparkles,
+  Star,
+  TrendingUp,
+  Truck,
+  Tag,
+  Package,
+};
+
 /* ─── Types ──────────────────────────────────────────────────── */
 
-interface SubLink {
+export interface NavItem {
   label: string;
+  href: string;
+  type: "link" | "shop_dropdown" | "mega_menu";
+  badge?: string | null;
+  target?: string;
+}
+
+export interface ShopDropdownItem {
+  label: string;
+  href: string;
+  description: string;
+  iconName: string;
+  accent: string;
+}
+
+export interface CategoryColumn {
+  heading: string;
+  links: { label: string; href: string }[];
+}
+
+export interface MegaProduct {
+  image: string;
+  name: string;
+  price: string;
+  badge?: string | null;
   href: string;
 }
 
-interface CategoryColumn {
-  heading: string;
-  links: SubLink[];
-}
-
-interface SidebarCategory {
+export interface SidebarCategory {
   label: string;
   href: string;
   accent: string;
   image: string;
   tagline: string;
   columns: CategoryColumn[];
+  topProducts: MegaProduct[];
 }
 
-interface FeaturedProduct {
-  id: number;
-  image: string;
-  name: string;
-  subtitle: string;
-  price: string;
-  badge?: string | null;
-  href: string;
+export interface NavMenuProps {
+  navItems?: NavItem[];
+  shopDropdownItems?: ShopDropdownItem[];
+  sidebarCategories?: SidebarCategory[];
+  megaFeaturedProducts?: MegaProduct[];
 }
 
-interface ShopDropdownItem {
-  label: string;
-  href: string;
-  description: string;
-  icon: React.ElementType;
-  accent: string;
-}
+/* ─── Mobile Accordion ───────────────────────────────────────── */
 
-/* ─── Data ───────────────────────────────────────────────────── */
-
-const navItems = [
-  { label: "Home", href: "/" },
-  { label: "Shop", href: "/shop", hasShopDropdown: true },
-  { label: "Categories", href: "/categories", hasMegaMenu: true },
-  { label: "Custom Packaging", href: "/categories/custom-packaging" },
-  { label: "Eco Packaging", href: "/categories/eco-packaging" },
-  { label: "New Arrivals", href: "/new-arrivals" },
-  { label: "Bulk Orders", href: "/bulk" },
-  { label: "Blog", href: "/blog" },
-  { label: "FAQ", href: "/faq" },
-  { label: "Certificates", href: "/certificates" },
-  { label: "Download Brochure", href: "/brochure" },
-  // { label: "About", href: "/about" },
-  // { label: "Contact", href: "/contact" },
-];
-
-const shopDropdownItems: ShopDropdownItem[] = [
-  {
-    label: "All Products",
-    href: "/shop",
-    description: "Browse our full catalogue",
-    icon: Layers,
-    accent: "#1f4f8a",
-  },
-  {
-    label: "New Arrivals",
-    href: "/new-arrivals",
-    description: "Freshly added packaging",
-    icon: Sparkles,
-    accent: "#8b5cf6",
-  },
-  {
-    label: "Best Sellers",
-    href: "/best-sellers",
-    description: "Most popular products",
-    icon: Star,
-    accent: "#f59e0b",
-  },
-  {
-    label: "Trending Now",
-    href: "/shop?sort=trending",
-    description: "What brands are buying",
-    icon: TrendingUp,
-    accent: "#ef4444",
-  },
-  {
-    label: "Bulk Orders",
-    href: "/bulk",
-    description: "Volume discounts up to 30%",
-    icon: Truck,
-    accent: "#4caf50",
-  },
-  {
-    label: "Sale & Deals",
-    href: "/shop?sort=sale",
-    description: "Clearance & limited offers",
-    icon: Tag,
-    accent: "#e67e22",
-  },
-];
-
-const sidebarCategories: SidebarCategory[] = [
-  {
-    label: "Stand-Up Pouches",
-    href: "/categories/standup-pouches",
-    accent: "#1f4f8a",
-    image: "/images/banners/1.jpg",
-    tagline: "Retail-ready resealable pouches",
-    columns: [
-      {
-        heading: "By Closure",
-        links: [
-          { label: "Ziplock Stand-Up", href: "/categories/ziplock-pouches" },
-          { label: "Press-Seal Pouches", href: "/categories/press-seal" },
-          { label: "Velcro Closure Bags", href: "/categories/velcro-bags" },
-          { label: "Open Top Pouches", href: "/categories/open-top" },
-          { label: "Heat-Seal Bags", href: "/categories/heat-seal" },
-        ],
-      },
-      {
-        heading: "By Material",
-        links: [
-          { label: "Kraft Paper Pouches", href: "/categories/kraft" },
-          { label: "Foil Lined Pouches", href: "/categories/foil" },
-          { label: "Clear PET Pouches", href: "/categories/clear-pet" },
-          { label: "Matte OPP Bags", href: "/categories/matte-opp" },
-          { label: "Biodegradable Pouches", href: "/categories/bio" },
-        ],
-      },
-      {
-        heading: "By Use",
-        links: [
-          { label: "Food Grade Pouches", href: "/categories/food-grade" },
-          { label: "Pet Food Packaging", href: "/categories/pet-food" },
-          { label: "Snack Pouches", href: "/categories/snack-pouches" },
-          { label: "Coffee Bags", href: "/categories/coffee-bags" },
-          { label: "Spice Packaging", href: "/categories/spice-packaging" },
-        ],
-      },
-    ],
-  },
-  {
-    label: "Ziplock Bags",
-    href: "/categories/ziplock-pouches",
-    accent: "#4caf50",
-    image: "/images/banners/2.jpg",
-    tagline: "Airtight seals for every product",
-    columns: [
-      {
-        heading: "Standard Ziplock",
-        links: [
-          { label: "Small Ziplock Bags", href: "/categories/small-ziplock" },
-          { label: "Medium Ziplock Bags", href: "/categories/medium-ziplock" },
-          { label: "Large Ziplock Bags", href: "/categories/large-ziplock" },
-          { label: "Jumbo Ziplock Bags", href: "/categories/jumbo-ziplock" },
-          { label: "Mini Grip Bags", href: "/categories/mini-grip" },
-        ],
-      },
-      {
-        heading: "Premium Ziplock",
-        links: [
-          { label: "Stand-Up Ziplock", href: "/categories/standup-ziplock" },
-          { label: "Ziplock Mylar Bags", href: "/categories/mylar-ziplock" },
-          { label: "Frosted Ziplock", href: "/categories/frosted-ziplock" },
-          { label: "Clear Window Ziplock", href: "/categories/window-ziplock" },
-          { label: "Custom Print Ziplock", href: "/categories/custom-ziplock" },
-        ],
-      },
-      {
-        heading: "Industrial",
-        links: [
-          { label: "Heavy Duty Ziplock", href: "/categories/heavy-duty-zip" },
-          { label: "Anti-Static Bags", href: "/categories/anti-static" },
-          { label: "Moisture Proof Bags", href: "/categories/moisture-proof" },
-          { label: "Vacuum Ziplock", href: "/categories/vacuum-ziplock" },
-          { label: "Bulk Ziplock Packs", href: "/categories/bulk-ziplock" },
-        ],
-      },
-    ],
-  },
-  {
-    label: "Flat Bottom Bags",
-    href: "/categories/flat-bottom-bags",
-    accent: "#e67e22",
-    image: "/images/banners/3.jpg",
-    tagline: "Premium shelf-stable packaging",
-    columns: [
-      {
-        heading: "Coffee & Tea",
-        links: [
-          { label: "Coffee Flat Bottom", href: "/categories/coffee-flat" },
-          { label: "Tea Packaging Bags", href: "/categories/tea-bags" },
-          { label: "Valve Flat Bottom", href: "/categories/valve-flat" },
-          { label: "Window Flat Bottom", href: "/categories/window-flat" },
-          { label: "Aroma Seal Bags", href: "/categories/aroma-seal" },
-        ],
-      },
-      {
-        heading: "Food & Snacks",
-        links: [
-          { label: "Snack Flat Bags", href: "/categories/snack-flat" },
-          { label: "Dry Fruit Bags", href: "/categories/dry-fruit" },
-          { label: "Grain & Seed Bags", href: "/categories/grain-bags" },
-          { label: "Candy Packaging", href: "/categories/candy-bags" },
-          { label: "Nut & Trail Mix", href: "/categories/nut-bags" },
-        ],
-      },
-      {
-        heading: "Finishing",
-        links: [
-          { label: "Matte Finish Flat", href: "/categories/matte-flat" },
-          { label: "Glossy Flat Bottom", href: "/categories/glossy-flat" },
-          { label: "Metallic Finish", href: "/categories/metallic-flat" },
-          { label: "Custom Printed Flat", href: "/categories/custom-flat" },
-          { label: "Eco Flat Bags", href: "/categories/eco-flat" },
-        ],
-      },
-    ],
-  },
-  {
-    label: "Spout Pouches",
-    href: "/categories/spout-pouches",
-    accent: "#9b59b6",
-    image: "/images/banners/4.jpg",
-    tagline: "Liquid packaging made effortless",
-    columns: [
-      {
-        heading: "By Liquid Type",
-        links: [
-          { label: "Juice Pouches", href: "/categories/juice-pouches" },
-          { label: "Sauce Pouches", href: "/categories/sauce-pouches" },
-          { label: "Oil Pouches", href: "/categories/oil-pouches" },
-          { label: "Honey Pouches", href: "/categories/honey-pouches" },
-          { label: "Syrup Pouches", href: "/categories/syrup-pouches" },
-        ],
-      },
-      {
-        heading: "Special Use",
-        links: [
-          { label: "Baby Food Pouches", href: "/categories/baby-food" },
-          { label: "Detergent Pouches", href: "/categories/detergent" },
-          { label: "Cosmetic Pouches", href: "/categories/cosmetic-liquid" },
-          { label: "Chemical Pouches", href: "/categories/chemical" },
-          { label: "Sport Drink Pouches", href: "/categories/sport-drink" },
-        ],
-      },
-      {
-        heading: "Capacity",
-        links: [
-          { label: "50ml–200ml Pouches", href: "/categories/small-spout" },
-          { label: "250ml–500ml Pouches", href: "/categories/medium-spout" },
-          { label: "1L–2L Pouches", href: "/categories/large-spout" },
-          { label: "Bulk Spout Pouches", href: "/categories/bulk-spout" },
-          { label: "Custom Volume", href: "/contact" },
-        ],
-      },
-    ],
-  },
-  {
-    label: "Eco Packaging",
-    href: "/categories/eco-packaging",
-    accent: "#27ae60",
-    image: "/images/banners/5.jpg",
-    tagline: "Sustainable solutions for green brands",
-    columns: [
-      {
-        heading: "Compostable",
-        links: [
-          { label: "Compostable Pouches", href: "/categories/compostable" },
-          { label: "PLA Bags", href: "/categories/pla-bags" },
-          { label: "PBAT Pouches", href: "/categories/pbat" },
-          { label: "Corn-Starch Bags", href: "/categories/corn-starch" },
-          { label: "Certified Compostable", href: "/categories/certified-compost" },
-        ],
-      },
-      {
-        heading: "Recyclable",
-        links: [
-          { label: "Recyclable PE Bags", href: "/categories/recyclable-pe" },
-          { label: "Mono-Material Pouches", href: "/categories/mono-material" },
-          { label: "Paper Pouches", href: "/categories/paper-bags" },
-          { label: "Kraft Eco Bags", href: "/categories/kraft-eco" },
-          { label: "PCR Content Bags", href: "/categories/pcr-bags" },
-        ],
-      },
-      {
-        heading: "Sustainable",
-        links: [
-          { label: "FSC Certified Paper", href: "/categories/fsc-paper" },
-          { label: "Soy Ink Printed", href: "/categories/soy-ink" },
-          { label: "Carbon Neutral Bags", href: "/categories/carbon-neutral" },
-          { label: "Refillable Pouches", href: "/categories/refillable" },
-          { label: "Zero Waste Options", href: "/categories/zero-waste" },
-        ],
-      },
-    ],
-  },
-  {
-    label: "Custom Packaging",
-    href: "/categories/custom-packaging",
-    accent: "#e74c3c",
-    image: "/images/banners/6.jpg",
-    tagline: "Your brand, your way",
-    columns: [
-      {
-        heading: "Print Options",
-        links: [
-          { label: "Digital Print", href: "/categories/digital-print" },
-          { label: "Rotogravure Print", href: "/categories/rotogravure" },
-          { label: "Flexographic Print", href: "/categories/flexo-print" },
-          { label: "Spot UV Coating", href: "/categories/spot-uv" },
-          { label: "Embossed Finish", href: "/categories/embossed" },
-        ],
-      },
-      {
-        heading: "Brand Services",
-        links: [
-          { label: "Private Label", href: "/categories/private-label" },
-          { label: "Packaging Design", href: "/contact" },
-          { label: "Dieline Templates", href: "/contact" },
-          { label: "Sample Orders", href: "/contact" },
-          { label: "Branded Inserts", href: "/categories/inserts" },
-        ],
-      },
-      {
-        heading: "MOQ & Bulk",
-        links: [
-          { label: "Low MOQ Custom", href: "/categories/low-moq" },
-          { label: "Bulk Custom Orders", href: "/bulk" },
-          { label: "White Label Bags", href: "/categories/white-label" },
-          { label: "OEM Packaging", href: "/categories/oem" },
-          { label: "Request a Quote", href: "/contact" },
-        ],
-      },
-    ],
-  },
-  {
-    label: "Window Bags",
-    href: "/categories/window-bags",
-    accent: "#16a085",
-    image: "/images/banners/1.jpg",
-    tagline: "Let your product shine through",
-    columns: [
-      {
-        heading: "Window Styles",
-        links: [
-          { label: "Full-Front Window", href: "/categories/full-window" },
-          { label: "Die-Cut Window", href: "/categories/die-cut-window" },
-          { label: "Oval Window Bags", href: "/categories/oval-window" },
-          { label: "Strip Window Bags", href: "/categories/strip-window" },
-          { label: "Round Window Bags", href: "/categories/round-window" },
-        ],
-      },
-      {
-        heading: "Applications",
-        links: [
-          { label: "Bakery Window Bags", href: "/categories/bakery-window" },
-          { label: "Candy Window Bags", href: "/categories/candy-window" },
-          { label: "Cookie Packaging", href: "/categories/cookie-bags" },
-          { label: "Gift Packaging", href: "/categories/gift-bags" },
-          { label: "Retail Window Bags", href: "/categories/retail-window" },
-        ],
-      },
-      {
-        heading: "Material & Finish",
-        links: [
-          { label: "Kraft with Window", href: "/categories/kraft-window" },
-          { label: "Foil with Window", href: "/categories/foil-window" },
-          { label: "Clear PET Window", href: "/categories/clear-window" },
-          { label: "Matte Window Bags", href: "/categories/matte-window" },
-          { label: "Custom Print + Window", href: "/categories/custom-window" },
-        ],
-      },
-    ],
-  },
-  {
-    label: "Vacuum Pouches",
-    href: "/categories/vacuum-pouches",
-    accent: "#2980b9",
-    image: "/images/banners/2.jpg",
-    tagline: "Maximum freshness, minimum waste",
-    columns: [
-      {
-        heading: "Food Vacuum",
-        links: [
-          { label: "Meat Vacuum Bags", href: "/categories/meat-vacuum" },
-          { label: "Cheese Vacuum Bags", href: "/categories/cheese-vacuum" },
-          { label: "Seafood Bags", href: "/categories/seafood-vacuum" },
-          { label: "Poultry Packaging", href: "/categories/poultry" },
-          { label: "Deli Vacuum Bags", href: "/categories/deli-vacuum" },
-        ],
-      },
-      {
-        heading: "Industrial",
-        links: [
-          { label: "Heavy Duty Vacuum", href: "/categories/hd-vacuum" },
-          { label: "Multi-Layer Vacuum", href: "/categories/multi-layer" },
-          { label: "ESD Vacuum Bags", href: "/categories/esd-vacuum" },
-          { label: "Long-Term Storage", href: "/categories/long-term" },
-          { label: "Barrier Vacuum Bags", href: "/categories/barrier-vacuum" },
-        ],
-      },
-      {
-        heading: "Specialty",
-        links: [
-          { label: "Embossed Vacuum", href: "/categories/embossed-vacuum" },
-          { label: "Textured Vacuum", href: "/categories/textured-vacuum" },
-          { label: "Dual-Track Zip+Vac", href: "/categories/zip-vac" },
-          { label: "High-Barrier Vacuum", href: "/categories/hb-vacuum" },
-          { label: "Custom Vacuum Bags", href: "/categories/custom-vacuum" },
-        ],
-      },
-    ],
-  },
-];
-
-const featuredProducts: FeaturedProduct[] = [
-  {
-    id: 1,
-    image: "/images/products/1.jpg",
-    name: "Premium Stand-Up Pouch",
-    subtitle: "Resealable Ziplock",
-    price: "From $0.85",
-    badge: "Best Seller",
-    href: "/products/stand-up-pouch",
-  },
-  {
-    id: 2,
-    image: "/images/products/2.jpg",
-    name: "Kraft Paper Pouch",
-    subtitle: "Eco-Friendly",
-    price: "From $0.92",
-    badge: "Eco Pick",
-    href: "/products/kraft-pouch",
-  },
-  {
-    id: 3,
-    image: "/images/products/3.jpg",
-    name: "Flat Bottom Bag",
-    subtitle: "Custom Print Ready",
-    price: "From $1.10",
-    badge: null,
-    href: "/products/flat-bottom-bag",
-  },
-  {
-    id: 4,
-    image: "/images/products/4.jpg",
-    name: "Ziplock Stand Pouch",
-    subtitle: "Food Grade",
-    price: "From $0.78",
-    badge: "Popular",
-    href: "/products/ziplock-pouch",
-  },
-];
-
-/* ─── Mobile Accordion Item ──────────────────────────────────── */
-
-function MobileAccordion({ category }: { category: SidebarCategory; onClose: () => void }) {
+function MobileAccordion({ category, onClose }: { category: SidebarCategory; onClose: () => void }) {
   const [open, setOpen] = useState(false);
   return (
-    <div style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+    <div className="border-b border-white/[0.07]">
       <button
+        type="button"
         className="w-full flex items-center justify-between px-5 py-4 text-left"
         onClick={() => setOpen((v) => !v)}
       >
@@ -503,6 +108,7 @@ function MobileAccordion({ category }: { category: SidebarCategory; onClose: () 
                 key={link.href + link.label}
                 href={link.href}
                 className="text-[13px] text-white/50 hover:text-white py-1 block transition-colors"
+                onClick={onClose}
               >
                 {link.label}
               </Link>
@@ -516,7 +122,12 @@ function MobileAccordion({ category }: { category: SidebarCategory; onClose: () 
 
 /* ─── Component ──────────────────────────────────────────────── */
 
-export default function NavigationMenu6() {
+export default function NavigationMenu6({
+  navItems = [],
+  shopDropdownItems = [],
+  sidebarCategories = [],
+  megaFeaturedProducts = [],
+}: NavMenuProps) {
   const [megaOpen, setMegaOpen] = useState(false);
   const [shopOpen, setShopOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -525,7 +136,6 @@ export default function NavigationMenu6() {
   const megaTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const shopTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  /* ── mega menu hover helpers ── */
   const handleMegaEnter = () => {
     if (megaTimer.current) clearTimeout(megaTimer.current);
     setMegaOpen(true);
@@ -534,7 +144,6 @@ export default function NavigationMenu6() {
     megaTimer.current = setTimeout(() => setMegaOpen(false), 90);
   };
 
-  /* ── shop dropdown hover helpers ── */
   const handleShopEnter = () => {
     if (shopTimer.current) clearTimeout(shopTimer.current);
     setShopOpen(true);
@@ -543,13 +152,11 @@ export default function NavigationMenu6() {
     shopTimer.current = setTimeout(() => setShopOpen(false), 90);
   };
 
-  /* ── mobile body-lock ── */
   useEffect(() => {
     document.body.style.overflow = mobileOpen ? "hidden" : "";
     return () => { document.body.style.overflow = ""; };
   }, [mobileOpen]);
 
-  /* ── ESC to close ── */
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -580,13 +187,14 @@ export default function NavigationMenu6() {
               <li key={item.label} role="none">
 
                 {/* ── SHOP dropdown trigger ── */}
-                {item.hasShopDropdown ? (
+                {item.type === "shop_dropdown" ? (
                   <div
                     className="relative"
                     onMouseEnter={handleShopEnter}
                     onMouseLeave={handleShopLeave}
                   >
                     <button
+                      type="button"
                       role="menuitem"
                       aria-haspopup="true"
                       aria-expanded={shopOpen}
@@ -603,7 +211,6 @@ export default function NavigationMenu6() {
                         )}
                         aria-hidden="true"
                       />
-                      {/* Sliding underline */}
                       <span
                         className="absolute bottom-0 left-4 right-4 h-[2px] rounded-full transition-transform duration-200 origin-left"
                         style={{
@@ -624,10 +231,7 @@ export default function NavigationMenu6() {
                           zIndex: 50,
                           marginTop: "1px",
                         }}
-                        role="region"
-                        aria-label="Shop dropdown"
                       >
-                        {/* Header */}
                         <div
                           className="px-4 pt-4 pb-3"
                           style={{ borderBottom: "1px solid #f0f4f8" }}
@@ -640,35 +244,32 @@ export default function NavigationMenu6() {
                           </p>
                         </div>
 
-                        {/* Menu items */}
                         <div className="p-2">
-                          {shopDropdownItems.map((item) => {
-                            const Icon = item.icon;
+                          {shopDropdownItems.map((si) => {
+                            const Icon = ICON_MAP[si.iconName] ?? Package;
                             return (
                               <Link
-                                key={item.href}
-                                href={item.href}
+                                key={si.href}
+                                href={si.href}
                                 className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 transition-colors group"
                                 onClick={() => setShopOpen(false)}
                               >
-                                {/* Icon bubble */}
                                 <div
                                   className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-transform duration-150 group-hover:scale-110"
-                                  style={{ background: item.accent + "15" }}
+                                  style={{ background: si.accent + "15" }}
                                 >
                                   <Icon
                                     className="h-3.5 w-3.5"
-                                    style={{ color: item.accent }}
+                                    style={{ color: si.accent }}
                                     aria-hidden="true"
                                   />
                                 </div>
-                                {/* Text */}
                                 <div className="min-w-0 flex-1">
                                   <p className="text-[13px] font-semibold text-gray-800 group-hover:text-[#1f4f8a] transition-colors leading-tight">
-                                    {item.label}
+                                    {si.label}
                                   </p>
                                   <p className="text-[11px] text-gray-400 mt-0.5 leading-tight">
-                                    {item.description}
+                                    {si.description}
                                   </p>
                                 </div>
                                 <ChevronRight
@@ -680,7 +281,6 @@ export default function NavigationMenu6() {
                           })}
                         </div>
 
-                        {/* Footer CTA */}
                         <div
                           className="p-3"
                           style={{ borderTop: "1px solid #f0f4f8" }}
@@ -699,8 +299,9 @@ export default function NavigationMenu6() {
                   </div>
 
                 /* ── CATEGORIES mega menu trigger ── */
-                ) : item.hasMegaMenu ? (
+                ) : item.type === "mega_menu" ? (
                   <button
+                    type="button"
                     role="menuitem"
                     aria-haspopup="true"
                     aria-expanded={megaOpen}
@@ -719,7 +320,6 @@ export default function NavigationMenu6() {
                       )}
                       aria-hidden="true"
                     />
-                    {/* Sliding underline */}
                     <span
                       className="absolute bottom-0 left-4 right-4 h-[2px] rounded-full transition-transform duration-200 origin-left"
                       style={{
@@ -735,9 +335,16 @@ export default function NavigationMenu6() {
                   <Link
                     href={item.href}
                     role="menuitem"
+                    target={item.target === "_blank" ? "_blank" : undefined}
+                    rel={item.target === "_blank" ? "noopener noreferrer" : undefined}
                     className="relative block px-4 pt-2.5 pb-2 text-sm font-medium text-gray-700 hover:text-[#1f4f8a] transition-colors duration-150 group whitespace-nowrap"
                   >
                     {item.label}
+                    {item.badge && (
+                      <span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-red-500 text-white">
+                        {item.badge}
+                      </span>
+                    )}
                     <span
                       className="absolute bottom-0 left-4 right-4 h-[2px] rounded-full scale-x-0 group-hover:scale-x-100 transition-transform duration-200 origin-left"
                       style={{ background: "linear-gradient(to right, #1f4f8a, #4caf50)" }}
@@ -753,7 +360,7 @@ export default function NavigationMenu6() {
         {/* ═══════════════════════════════════════════════
             MEGA MENU PANEL (Categories)
         ═══════════════════════════════════════════════ */}
-        {megaOpen && (
+        {megaOpen && active && (
           <div
             className="absolute top-full left-0 right-0 bg-white shadow-2xl"
             style={{ borderTop: "2px solid #f0f4f8", zIndex: 50 }}
@@ -829,12 +436,11 @@ export default function NavigationMenu6() {
                   style={{ borderRight: "1px solid #f0f4f8" }}
                 >
                   <div className="relative w-full h-[160px] rounded-xl overflow-hidden mb-4">
-                    <Image
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
                       src={active.image}
                       alt={active.label}
-                      fill
-                      className="object-cover"
-                      sizes="220px"
+                      className="absolute inset-0 w-full h-full object-cover"
                     />
                     <div
                       className="absolute inset-0"
@@ -871,40 +477,43 @@ export default function NavigationMenu6() {
                     <ArrowRight className="h-3 w-3" aria-hidden="true" />
                   </Link>
 
-                  <p
-                    className="text-[9px] font-black tracking-[0.2em] uppercase mb-2"
-                    style={{ color: "#94a3b8" }}
-                  >
-                    Top Picks
-                  </p>
-                  <div className="space-y-2">
-                    {featuredProducts.slice(0, 2).map((p) => (
-                      <Link
-                        key={p.id}
-                        href={p.href}
-                        className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-gray-50 transition-colors group"
-                        onClick={() => setMegaOpen(false)}
+                  {active.topProducts.length > 0 && (
+                    <>
+                      <p
+                        className="text-[9px] font-black tracking-[0.2em] uppercase mb-2"
+                        style={{ color: "#94a3b8" }}
                       >
-                        <div className="relative w-10 h-10 rounded-md overflow-hidden shrink-0 bg-gray-100">
-                          <Image
-                            src={p.image}
-                            alt={p.name}
-                            fill
-                            className="object-cover"
-                            sizes="40px"
-                          />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-[12px] font-semibold text-gray-800 truncate group-hover:text-[#1f4f8a] transition-colors">
-                            {p.name}
-                          </p>
-                          <p className="text-[11px] font-bold" style={{ color: "#4caf50" }}>
-                            {p.price}
-                          </p>
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
+                        Top Picks
+                      </p>
+                      <div className="space-y-2">
+                        {active.topProducts.slice(0, 2).map((p, idx) => (
+                          <Link
+                            key={idx}
+                            href={p.href}
+                            className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-gray-50 transition-colors group"
+                            onClick={() => setMegaOpen(false)}
+                          >
+                            <div className="relative w-10 h-10 rounded-md overflow-hidden shrink-0 bg-gray-100">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={p.image}
+                                alt={p.name}
+                                className="absolute inset-0 w-full h-full object-cover"
+                              />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-[12px] font-semibold text-gray-800 truncate group-hover:text-[#1f4f8a] transition-colors">
+                                {p.name}
+                              </p>
+                              <p className="text-[11px] font-bold" style={{ color: "#4caf50" }}>
+                                {p.price}
+                              </p>
+                            </div>
+                          </Link>
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 {/* ── RIGHT: 3-Column Sub-links ── */}
@@ -956,67 +565,68 @@ export default function NavigationMenu6() {
                   </div>
 
                   {/* Bottom: Featured Products strip */}
-                  <div className="mt-6 pt-5" style={{ borderTop: "1px solid #f0f4f8" }}>
-                    <div className="flex items-center justify-between mb-3">
-                      <p
-                        className="text-[9px] font-black tracking-[0.22em] uppercase flex items-center gap-1.5"
-                        style={{ color: "#94a3b8" }}
-                      >
-                        <Star className="h-3 w-3" style={{ color: "#f59e0b" }} aria-hidden="true" />
-                        Best Sellers
-                      </p>
-                      <Link
-                        href="/best-sellers"
-                        className="text-xs font-semibold hover:underline underline-offset-4 flex items-center gap-1"
-                        style={{ color: "#4caf50" }}
-                        onClick={() => setMegaOpen(false)}
-                      >
-                        View all
-                        <ArrowRight className="h-3 w-3" aria-hidden="true" />
-                      </Link>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      {featuredProducts.map((p) => (
+                  {megaFeaturedProducts.length > 0 && (
+                    <div className="mt-6 pt-5" style={{ borderTop: "1px solid #f0f4f8" }}>
+                      <div className="flex items-center justify-between mb-3">
+                        <p
+                          className="text-[9px] font-black tracking-[0.22em] uppercase flex items-center gap-1.5"
+                          style={{ color: "#94a3b8" }}
+                        >
+                          <Star className="h-3 w-3" style={{ color: "#f59e0b" }} aria-hidden="true" />
+                          Best Sellers
+                        </p>
                         <Link
-                          key={p.id}
-                          href={p.href}
-                          className="group shrink-0 w-[110px]"
+                          href="/best-sellers"
+                          className="text-xs font-semibold hover:underline underline-offset-4 flex items-center gap-1"
+                          style={{ color: "#4caf50" }}
                           onClick={() => setMegaOpen(false)}
                         >
-                          <div className="relative w-full h-[85px] rounded-lg overflow-hidden bg-gray-50 mb-2">
-                            <Image
-                              src={p.image}
-                              alt={p.name}
-                              fill
-                              className="object-cover transition-transform duration-300 group-hover:scale-105"
-                              sizes="110px"
-                            />
-                            {p.badge && (
-                              <span
-                                className="absolute top-1 left-1 text-[8px] font-bold px-1.5 py-0.5 rounded-full text-white"
-                                style={{
-                                  background:
-                                    p.badge === "Eco Pick"
-                                      ? "#4caf50"
-                                      : p.badge === "Popular"
-                                      ? "#f59e0b"
-                                      : "#1f4f8a",
-                                }}
-                              >
-                                {p.badge}
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-[11px] font-semibold text-gray-800 truncate group-hover:text-[#1f4f8a] transition-colors leading-tight">
-                            {p.name}
-                          </p>
-                          <p className="text-[11px] font-bold mt-0.5" style={{ color: "#4caf50" }}>
-                            {p.price}
-                          </p>
+                          View all
+                          <ArrowRight className="h-3 w-3" aria-hidden="true" />
                         </Link>
-                      ))}
+                      </div>
+                      <div className="flex items-start gap-3">
+                        {megaFeaturedProducts.map((p, idx) => (
+                          <Link
+                            key={idx}
+                            href={p.href}
+                            className="group shrink-0 w-[110px]"
+                            onClick={() => setMegaOpen(false)}
+                          >
+                            <div className="relative w-full h-[85px] rounded-lg overflow-hidden bg-gray-50 mb-2">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={p.image}
+                                alt={p.name}
+                                className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                              />
+                              {p.badge && (
+                                <span
+                                  className="absolute top-1 left-1 text-[8px] font-bold px-1.5 py-0.5 rounded-full text-white"
+                                  style={{
+                                    background:
+                                      p.badge === "Eco Pick"
+                                        ? "#4caf50"
+                                        : p.badge === "Popular"
+                                        ? "#f59e0b"
+                                        : "#1f4f8a",
+                                  }}
+                                >
+                                  {p.badge}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[11px] font-semibold text-gray-800 truncate group-hover:text-[#1f4f8a] transition-colors leading-tight">
+                              {p.name}
+                            </p>
+                            <p className="text-[11px] font-bold mt-0.5" style={{ color: "#4caf50" }}>
+                              {p.price}
+                            </p>
+                          </Link>
+                        ))}
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
 
               </div>
@@ -1089,78 +699,77 @@ export default function NavigationMenu6() {
           {/* Scrollable body */}
           <div className="flex-1 overflow-y-auto">
 
-            {/* Quick nav links */}
+            {/* Quick nav links — plain links from navItems */}
             <div className="px-5 py-5" style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
               <p className="text-[9px] font-black tracking-[0.25em] uppercase mb-3 text-white/30">
                 Quick Links
               </p>
               <div className="grid grid-cols-2 gap-2">
-                {[
-                  { label: "Shop All", href: "/shop" },
-                  { label: "New Arrivals", href: "/new-arrivals" },
-                  { label: "Best Sellers", href: "/best-sellers" },
-                  { label: "Bulk Orders", href: "/bulk" },
-                  { label: "Custom Packaging", href: "/categories/custom-packaging" },
-                  { label: "Eco Packaging", href: "/categories/eco-packaging" },
-                ].map((link) => (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium text-white/70 hover:text-white hover:bg-white/8 transition-all"
-                    onClick={() => setMobileOpen(false)}
-                  >
-                    <ArrowRight className="h-3 w-3 text-white/30 shrink-0" aria-hidden="true" />
-                    {link.label}
-                  </Link>
-                ))}
+                {navItems
+                  .filter((it) => it.type === "link")
+                  .map((link) => (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium text-white/70 hover:text-white hover:bg-white/8 transition-all"
+                      onClick={() => setMobileOpen(false)}
+                    >
+                      <ArrowRight className="h-3 w-3 text-white/30 shrink-0" aria-hidden="true" />
+                      {link.label}
+                    </Link>
+                  ))}
               </div>
             </div>
 
             {/* Shop dropdown items (mobile) */}
-            <div
-              className="px-5 py-5"
-              style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}
-            >
-              <p className="text-[9px] font-black tracking-[0.25em] uppercase mb-3 text-white/30">
-                Shop
-              </p>
-              <div className="space-y-1">
-                {shopDropdownItems.map((item) => {
-                  const Icon = item.icon;
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      className="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors"
-                      style={{ color: "rgba(255,255,255,0.65)" }}
-                      onClick={() => setMobileOpen(false)}
-                    >
-                      <div
-                        className="w-7 h-7 rounded-md flex items-center justify-center shrink-0"
-                        style={{ background: item.accent + "20" }}
+            {shopDropdownItems.length > 0 && (
+              <div
+                className="px-5 py-5"
+                style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}
+              >
+                <p className="text-[9px] font-black tracking-[0.25em] uppercase mb-3 text-white/30">
+                  Shop
+                </p>
+                <div className="space-y-1">
+                  {shopDropdownItems.map((si) => {
+                    const Icon = ICON_MAP[si.iconName] ?? Package;
+                    return (
+                      <Link
+                        key={si.href}
+                        href={si.href}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors"
+                        style={{ color: "rgba(255,255,255,0.65)" }}
+                        onClick={() => setMobileOpen(false)}
                       >
-                        <Icon className="h-3.5 w-3.5" style={{ color: item.accent }} aria-hidden="true" />
-                      </div>
-                      <span className="text-sm font-medium">{item.label}</span>
-                    </Link>
-                  );
-                })}
+                        <div
+                          className="w-7 h-7 rounded-md flex items-center justify-center shrink-0"
+                          style={{ background: si.accent + "20" }}
+                        >
+                          <Icon className="h-3.5 w-3.5" style={{ color: si.accent }} aria-hidden="true" />
+                        </div>
+                        <span className="text-sm font-medium">{si.label}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Category Accordions */}
-            <div>
-              <p className="text-[9px] font-black tracking-[0.25em] uppercase px-5 pt-5 pb-3 text-white/30">
-                All Categories
-              </p>
-              {sidebarCategories.map((cat) => (
-                <MobileAccordion
-                  key={cat.label}
-                  category={cat}
-                  onClose={() => setMobileOpen(false)}
-                />
-              ))}
-            </div>
+            {sidebarCategories.length > 0 && (
+              <div>
+                <p className="text-[9px] font-black tracking-[0.25em] uppercase px-5 pt-5 pb-3 text-white/30">
+                  All Categories
+                </p>
+                {sidebarCategories.map((cat) => (
+                  <MobileAccordion
+                    key={cat.label}
+                    category={cat}
+                    onClose={() => setMobileOpen(false)}
+                  />
+                ))}
+              </div>
+            )}
 
             {/* Footer links */}
             <div className="px-5 py-6" style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }}>
