@@ -14,7 +14,6 @@ export default function CategoryBanner({ imageUrl, children }: CategoryBannerPro
         aria-hidden="true"
         className="absolute inset-0 w-full h-full object-cover"
       />
-      <div className="absolute inset-0 bg-white/75" />
       {children}
     </div>
   );

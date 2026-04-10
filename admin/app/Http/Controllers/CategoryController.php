@@ -63,9 +63,9 @@ class CategoryController extends Controller
             ['data' => 'title', 'name' => 'title', 'title' => __('labels.title')],
             ['data' => 'image', 'name' => 'image', 'title' => __('labels.image')],
             ['data' => 'parent', 'name' => 'parent', 'title' => __('labels.parent')],
-            ['data' => 'commission', 'name' => 'commission', 'title' => __('labels.commission')],
+
             ['data' => 'status', 'name' => 'status', 'title' => __('labels.status')],
-            ['data' => 'requires_approval', 'name' => 'requires_approval', 'title' => __('labels.requires_approval')],
+
             ['data' => 'created_at', 'name' => 'created_at', 'title' => __('labels.created_at')],
             ['data' => 'action', 'name' => 'action', 'title' => __('labels.action'), 'orderable' => false, 'searchable' => false],
         ];
@@ -495,10 +495,10 @@ class CategoryController extends Controller
                     'title' => $category->title,
                     'image' => view('partials.image', ['image' => $category->image ?? "", 'title' => $category->title])->render(),
                     'status' => view('partials.status', ['status' => $category->status ?? ""])->render(),
-                    'requires_approval' => '<span class="badge text-uppercase ' . ($category->requires_approval == 1 ? "bg-info-lt" : "bg-warning-lt") . '">' . ($category->requires_approval == 1 ? __('labels.required') : __('labels.not_required')) . '</span>',
+
                     'created_at' => $category->created_at->format('Y-m-d'),
                     'parent' => $category->parent ? $category->parent->title : 'N/A',
-                    'commission' => (max($category->commission, 0)) . '%',
+
                     'action' => view('partials.actions', [
                         'modelName' => 'category',
                         'id' => $category->id,

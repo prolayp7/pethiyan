@@ -131,10 +131,18 @@ export default function ContactForm() {
           </div>
         </div>
         <div>
-          <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5 block">
+          <label
+            htmlFor="contact-subject"
+            className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5 block"
+          >
             Subject
           </label>
-          <select value={form.subject} onChange={set("subject")} className={cls}>
+          <select
+            id="contact-subject"
+            value={form.subject}
+            onChange={set("subject")}
+            className={cls}
+          >
             <option value="">Select a subject</option>
             {SUBJECTS.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>

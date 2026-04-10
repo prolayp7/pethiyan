@@ -11,6 +11,7 @@ import {
 import Container from "@/components/layout/Container";
 import CategoryBanner from "./CategoryBanner";
 import CategoryProducts from "./CategoryProducts";
+import OtherCategories from "./OtherCategories";
 import {
   breadcrumbSchema,
   collectionPageSchema,
@@ -79,9 +80,10 @@ export default async function CategoryPage({
 }) {
   const { slug } = await params;
 
-  const [category, products] = await Promise.all([
+  const [category, products, categories] = await Promise.all([
     getCategory(slug),
     getProductsByCategory(slug),
+    getCategories(),
   ]);
 
   if (!category) notFound();
@@ -114,7 +116,7 @@ export default async function CategoryPage({
       {(() => {
         const headerContent = (
           <Container>
-            <div className="relative z-10 py-5 flex items-center justify-between gap-4">
+            <div className="relative z-10 flex items-center justify-between gap-4 pt-6 pb-14 sm:pt-7 sm:pb-18">
               {/* Left: title + subtitle */}
               <div>
                 <p className="text-xs font-semibold text-(--color-primary) uppercase tracking-widest mb-1">
@@ -152,6 +154,8 @@ export default async function CategoryPage({
           </div>
         );
       })()}
+
+      <OtherCategories currentCategory={category} categories={categories} />
 
       {/* Products with client-side sort/filter */}
       <CategoryProducts initialProducts={products as RealApiProduct[]} />

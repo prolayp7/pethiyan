@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { ChevronDown, Package } from "lucide-react";
+import { Package } from "lucide-react";
 import Container from "@/components/layout/Container";
 import ShopProductCard from "@/components/shop/ShopProductCard";
 import { type RealApiProduct } from "@/lib/api";
@@ -39,26 +39,6 @@ export default function CategoryProducts({ initialProducts }: { initialProducts:
   return (
     <Container>
       <div className="py-8">
-        {/* Toolbar */}
-        <div className="flex items-center justify-between gap-3 mb-6">
-          <p className="text-sm text-gray-500">
-            {sorted.length} product{sorted.length !== 1 ? "s" : ""} found
-          </p>
-          <div className="relative">
-            <select
-              value={sort}
-              onChange={(e) => setSort(e.target.value)}
-              className="appearance-none pl-4 pr-9 py-2 text-sm bg-white border border-(--color-border) rounded-xl focus:outline-none focus:ring-2 focus:ring-(--color-primary)/30 focus:border-(--color-primary) transition cursor-pointer"
-              aria-label="Sort products"
-            >
-              {SORT_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </select>
-            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" aria-hidden="true" />
-          </div>
-        </div>
-
         {/* Product grid */}
         {sorted.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 text-center">

@@ -544,6 +544,18 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('/settings', [\App\Http\Controllers\Admin\PromoBannerController::class, 'updateSettings'])->name('settings.update');
         });
 
+        // announcement bar (homepage)
+        Route::prefix('announcement-bar')->name('announcement-bar.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\AnnouncementBarController::class, 'show'])->name('show');
+            Route::post('/settings', [\App\Http\Controllers\Admin\AnnouncementBarController::class, 'updateSettings'])->name('settings.update');
+        });
+
+        // highlight ticker (homepage bottom marquee)
+        Route::prefix('highlight-ticker')->name('highlight-ticker.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\HighlightTickerController::class, 'show'])->name('show');
+            Route::post('/settings', [\App\Http\Controllers\Admin\HighlightTickerController::class, 'updateSettings'])->name('settings.update');
+        });
+
         // newsletter section (homepage)
         Route::prefix('newsletter-section')->name('newsletter-section.')->group(function () {
             Route::get('/', [\App\Http\Controllers\Admin\NewsletterSectionController::class, 'show'])->name('show');
