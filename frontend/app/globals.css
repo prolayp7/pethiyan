@@ -219,6 +219,47 @@ body {
   to { transform: scale(0.95); opacity: 0; }
 }
 
+/* =============================================
+   BLOG PROSE
+   ============================================= */
+.blog-prose {
+  color: #334155;
+}
+
+.blog-prose section + section {
+  margin-top: 2.5rem;
+}
+
+.blog-prose h2 {
+  color: #0f172a;
+  font-size: 1.65rem;
+  line-height: 1.25;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  margin-bottom: 1rem;
+}
+
+.blog-prose p {
+  font-size: 1rem;
+  line-height: 1.9;
+  color: #475569;
+}
+
+.blog-prose p + p {
+  margin-top: 1.15rem;
+}
+
+@media (max-width: 640px) {
+  .blog-prose h2 {
+    font-size: 1.35rem;
+  }
+
+  .blog-prose p {
+    font-size: 0.975rem;
+    line-height: 1.85;
+  }
+}
+
 /* Tailwind v4 animation utilities */
 @utility animate-in {
   animation-fill-mode: both;
