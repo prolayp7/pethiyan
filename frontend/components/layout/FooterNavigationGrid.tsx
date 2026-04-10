@@ -65,7 +65,7 @@ export default async function FooterNavigationGrid({
           </div>
 
           {/* Nav columns + Payment Partners */}
-          <div className="pt-8 md:pt-0 md:pl-10 ml-auto grid grid-cols-5 gap-10">
+          <div className="pt-8 md:pt-0 md:pl-10 ml-auto grid grid-cols-4 gap-10">
             {navColumns.slice(0, 4).map((col) => (
               <div key={col.title}>
                 <h3 className="font-bold text-[15px] mb-4 text-gray-900">
@@ -86,34 +86,6 @@ export default async function FooterNavigationGrid({
               </div>
             ))}
 
-            {/* Payment Partners column */}
-            <div>
-              <h3 className="font-bold text-[15px] mb-4 text-gray-900">
-                Payment Partners
-              </h3>
-              <div className="flex flex-col gap-3">
-                <div className="relative w-[120px] h-[38px] rounded-md overflow-hidden border border-gray-200 bg-white">
-                  <Image
-                    src="/images/logos/razorpay.png"
-                    alt="Razorpay"
-                    fill
-                    sizes="120px"
-                    className="object-contain p-1.5"
-                    unoptimized
-                  />
-                </div>
-                <div className="relative w-[120px] h-[38px] rounded-md overflow-hidden border border-gray-200 bg-white">
-                  <Image
-                    src="/images/logos/Easebuzz_Logo.jpg"
-                    alt="Easebuzz"
-                    fill
-                    sizes="120px"
-                    className="object-contain p-1.5"
-                    unoptimized
-                  />
-                </div>
-              </div>
-            </div>
           </div>
 
         </div>
