@@ -104,18 +104,18 @@ return [
             'active'     => 'promos',
             'permission' => 'promo.view',
         ],
-        'gift_cards' => [
-            'icon'   => 'ti-gift',
-            'title'  => 'Gift Cards',
-            'active' => 'gift_cards',
-            'route'  => [
-                'all_gift_cards' => [
-                    'sub_active' => 'gift_cards',
-                    'sub_route'  => 'admin.gift-cards.index',
-                    'sub_title'  => 'All Gift Cards',
-                ],
-            ],
-        ],
+        // 'gift_cards' => [
+        //     'icon'   => 'ti-gift',
+        //     'title'  => 'Gift Cards',
+        //     'active' => 'gift_cards',
+        //     'route'  => [
+        //         'all_gift_cards' => [
+        //             'sub_active' => 'gift_cards',
+        //             'sub_route'  => 'admin.gift-cards.index',
+        //             'sub_title'  => 'All Gift Cards',
+        //         ],
+        //     ],
+        // ],
         'home_section' => [
             'icon'   => 'ti-layout-grid',            
             'title'  => 'Home Page',
@@ -163,28 +163,38 @@ return [
                     'sub_route'   => 'admin.newsletter-section.show',
                     'sub_title'   => 'Newsletter Section',
                 ],
+                'announcement_bar' => [
+                    'sub_active'  => 'announcement_bar',
+                    'sub_route'   => 'admin.announcement-bar.show',
+                    'sub_title'   => 'Top Bars / Ticker',
+                ],
+                'highlight_ticker' => [
+                    'sub_active'  => 'highlight_ticker',
+                    'sub_route'   => 'admin.highlight-ticker.show',
+                    'sub_title'   => 'Highlight Ticker',
+                ],
             ]
         ],
         
-        'featured_section' => [
-            'icon'   => 'ti-star',
-            'title'  => 'labels.featured_section',
-            'active' => 'featured_section',
-            'route'  => [
-                'featured_section' => [
-                    'sub_active' => 'featured_section',
-                    'sub_route'  => 'admin.featured-sections.index',
-                    'sub_title'  => 'labels.featured_section',
-                    'permission' => 'featured_section.view',
-                ],
-                'sort_featured_section' => [
-                    'sub_active' => 'sort_featured_section',
-                    'sub_route'  => 'admin.featured-sections.sort',
-                    'sub_title'  => 'labels.sort_featured_section',
-                    'permission' => 'featured_section.sorting_view',
-                ],
-            ],
-        ],
+        // 'featured_section' => [
+        //     'icon'   => 'ti-star',
+        //     'title'  => 'labels.featured_section',
+        //     'active' => 'featured_section',
+        //     'route'  => [
+        //         'featured_section' => [
+        //             'sub_active' => 'featured_section',
+        //             'sub_route'  => 'admin.featured-sections.index',
+        //             'sub_title'  => 'labels.featured_section',
+        //             'permission' => 'featured_section.view',
+        //         ],
+        //         'sort_featured_section' => [
+        //             'sub_active' => 'sort_featured_section',
+        //             'sub_route'  => 'admin.featured-sections.sort',
+        //             'sub_title'  => 'labels.sort_featured_section',
+        //             'permission' => 'featured_section.sorting_view',
+        //         ],
+        //     ],
+        // ],
         'blog' => [
             'icon'   => 'ti-article',
             'title'  => 'Blog',

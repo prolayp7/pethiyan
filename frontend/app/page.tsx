@@ -8,6 +8,7 @@ import PromoBanner from "@/components/sections/PromoBanner";
 import BrandStory from "@/components/sections/BrandStory";
 import Testimonials from "@/components/sections/Testimonials";
 import NewsletterSection from "@/components/sections/NewsletterSection";
+import RecentBlogsSection from "@/components/sections/RecentBlogsSection";
 
 export const metadata: Metadata = {
   title: "Pethiyan — The Power of Perfect Packaging",
@@ -51,16 +52,14 @@ export default async function HomePage() {
       {/* <TrustBadges /> */}
       <CategoryGrid categories={categories} />
       <FeaturedProducts apiProducts={featuredProducts} />
+      <VideoCarouselGrid data={videoStorySection} />
       
-      
-      
-      
-     
       <BrandStory />
       <PromoBanner />
       <Testimonials />
       <NewsletterSection />
-      <VideoCarouselGrid data={videoStorySection} />
+
+      <RecentBlogsSection />
 
       {/* Extra padding for mobile bottom nav */}
       <div className="h-16 lg:hidden" aria-hidden="true" />
