@@ -24,6 +24,15 @@ export interface ApiCategory {
   seo_title?: string | null;
   seo_description?: string | null;
   seo_keywords?: string | null;
+  og_title?: string | null;
+  og_description?: string | null;
+  og_image?: string | null;
+  twitter_title?: string | null;
+  twitter_description?: string | null;
+  twitter_card?: string | null;
+  twitter_image?: string | null;
+  schema_mode?: "auto" | "custom" | null;
+  schema_json_ld?: string | null;
 }
 
 export interface ApiProduct {
@@ -367,10 +376,32 @@ export interface RealApiVariant {
   capacity_unit?: string;
   attributes: Record<string, string>;
   store_pricing: RealApiStorePricing[];
-  metadata?: { seo_title?: string; seo_description?: string; seo_keywords?: string } | null;
+  metadata?: {
+    seo_title?: string | null;
+    seo_description?: string | null;
+    seo_keywords?: string | null;
+    og_title?: string | null;
+    og_description?: string | null;
+    og_image?: string | null;
+    twitter_title?: string | null;
+    twitter_description?: string | null;
+    twitter_card?: string | null;
+    twitter_image?: string | null;
+    schema_mode?: "auto" | "custom" | null;
+    schema_json_ld?: string | null;
+  } | null;
   seo_title?: string | null;
   seo_description?: string | null;
   seo_keywords?: string | null;
+  og_title?: string | null;
+  og_description?: string | null;
+  og_image?: string | null;
+  twitter_title?: string | null;
+  twitter_description?: string | null;
+  twitter_card?: string | null;
+  twitter_image?: string | null;
+  schema_mode?: "auto" | "custom" | null;
+  schema_json_ld?: string | null;
   is_indexable?: boolean;
 }
 
@@ -395,11 +426,33 @@ export interface RealApiProduct {
     made_in?: string;
     warranty_period?: string;
     guarantee_period?: string;
-    metadata?: { seo_title?: string; seo_description?: string; seo_keywords?: string } | null;
+    metadata?: {
+      seo_title?: string | null;
+      seo_description?: string | null;
+      seo_keywords?: string | null;
+      og_title?: string | null;
+      og_description?: string | null;
+      og_image?: string | null;
+      twitter_title?: string | null;
+      twitter_description?: string | null;
+      twitter_card?: string | null;
+      twitter_image?: string | null;
+      schema_mode?: "auto" | "custom" | null;
+      schema_json_ld?: string | null;
+    } | null;
     is_indexable?: boolean;
     seo_title?: string | null;
     seo_description?: string | null;
     seo_keywords?: string | null;
+    og_title?: string | null;
+    og_description?: string | null;
+    og_image?: string | null;
+    twitter_title?: string | null;
+    twitter_description?: string | null;
+    twitter_card?: string | null;
+    twitter_image?: string | null;
+    schema_mode?: "auto" | "custom" | null;
+    schema_json_ld?: string | null;
   };
   policies: {
     minimum_order_quantity: number;

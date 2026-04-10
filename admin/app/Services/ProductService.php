@@ -227,6 +227,7 @@ class ProductService
             if ($request->hasFile($imageName)) {
                 $this->handleVariantMediaUploads($variant, $imageName);
             }
+            $this->handleVariantSeoImageUploads($variant, $request, (string) ($variantData['id'] ?? ''));
             // Handle store pricing for this variant
             $this->handleVariantPricing($variant, $variantData, $pricingData, $mode);
         }
@@ -577,6 +578,32 @@ class ProductService
         $variant->clearMediaCollection(SpatieMediaCollectionName::VARIANT_IMAGE());
         // Upload the new image
         $variant->addMediaFromRequest($payload_image)->toMediaCollection(SpatieMediaCollectionName::VARIANT_IMAGE());
+    }
+
+    private function handleVariantSeoImageUploads(ProductVariant $variant, $request, string $variantId): void
+    {
+        if ($variantId === '') {
+            return;
+        }
+
+        $metadata = $variant->metadata ?? [];
+        $updated = false;
+
+        foreach (['og_image', 'twitter_image'] as $field) {
+            $requestField = 'variant_' . $field . $variantId;
+            if (!$request->hasFile($requestField)) {
+                continue;
+            }
+
+            $metadata[$field] = $request->file($requestField)->store('seo/product-variant', 'public');
+            $updated = true;
+        }
+
+        if ($updated) {
+            $variant->update([
+                'metadata' => array_merge($variant->metadata ?? [], $metadata),
+            ]);
+        }
     }
 
     private function handleMediaUploads($product, $request): void

@@ -13,6 +13,7 @@ import {
   faqPageSchema,
   jsonLd,
 } from "@/lib/structured-data";
+import { getCustomJsonLdSchemas, resolveVariantSeo } from "@/lib/seo";
 import Breadcrumb from "@/components/common/Breadcrumb";
 import RelatedProducts from "@/components/product/RelatedProducts";
 import ProductDetailIsland from "../ProductDetailIsland";
@@ -49,36 +50,15 @@ export async function generateMetadata({
 
   const firstStorePricing = variant.store_pricing?.[0];
   const price = toNum(firstStorePricing?.special_price ?? firstStorePricing?.price ?? 0);
-  const image = variant.image || product.images?.main_image || product.images?.all?.[0];
-
   const productTitle = product.title ?? "Product";
   const variantTitle = variant.title ?? variantSlug;
-
-  // SEO fallback chain: variant → product → auto-generated
-  const variantSeoTitle = variant.metadata?.seo_title ?? variant.seo_title;
-  const variantSeoDesc  = variant.metadata?.seo_description ?? variant.seo_description;
-  const variantSeoKw    = variant.metadata?.seo_keywords ?? variant.seo_keywords;
-
-  const title =
-    variantSeoTitle ||
-    product.features?.seo_title ||
-    `${productTitle} - ${variantTitle}`;
-
-  const description =
-    variantSeoDesc ||
-    product.features?.seo_description ||
-    product.short_description ||
-    `Buy ${productTitle} (${variantTitle}) online at Pethiyan. Premium packaging with GST invoice and fast shipping across India.`;
-
-  const keywords = variantSeoKw || product.features?.seo_keywords || undefined;
-
-  const indexable = variant.is_indexable !== false && product.features?.is_indexable !== false;
+  const seo = resolveVariantSeo(product, variant);
 
   return {
-    title,
-    description,
-    ...(keywords ? { keywords } : {}),
-    robots: indexable
+    title: seo.title,
+    description: seo.description,
+    ...(seo.keywords ? { keywords: seo.keywords } : {}),
+    robots: seo.indexable
       ? { index: true,  follow: true,  googleBot: { index: true,  follow: true  } }
       : { index: false, follow: false, googleBot: { index: false, follow: false } },
     alternates: {
@@ -86,10 +66,18 @@ export async function generateMetadata({
       languages: { "en": `/products/${slug}/${variantSlug}`, "x-default": `/products/${slug}/${variantSlug}` },
     },
     openGraph: {
-      title: `${title} | Pethiyan`,
-      description,
+      title: seo.openGraphTitle,
+      description: seo.openGraphDescription,
       url: `/products/${slug}/${variantSlug}`,
-      ...(image ? { images: [{ url: image, alt: `${productTitle} - ${variantTitle}` }] } : {}),
+      ...(seo.openGraphImage
+        ? { images: [{ url: seo.openGraphImage, alt: `${productTitle} - ${variantTitle}` }] }
+        : {}),
+    },
+    twitter: {
+      card: seo.twitterCard,
+      title: seo.twitterTitle,
+      description: seo.twitterDescription,
+      ...(seo.twitterImage ? { images: [seo.twitterImage] } : {}),
     },
     other: {
       "og:type": "og:product",
@@ -122,7 +110,14 @@ export default async function ProductVariantPage({
   if (!variant) notFound();
 
   // ── JSON-LD schemas ──
-  const pSchema = productSchema(product, reviews);
+  const seo = resolveVariantSeo(product, variant);
+  const pSchema = productSchema(product, reviews, {
+    variant,
+    canonicalPath: `/products/${slug}/${variantSlug}`,
+    titleOverride: seo.openGraphTitle,
+    descriptionOverride: seo.openGraphDescription,
+    imageOverride: seo.openGraphImage,
+  });
   const bcSchema = breadcrumbSchema([
     { label: "Home", href: "/" },
     { label: "Shop", href: "/shop" },
@@ -135,12 +130,21 @@ export default async function ProductVariantPage({
     { label: product.title, href: `/products/${slug}` },
     { label: variant.title, href: `/products/${slug}/${variantSlug}` },
   ]);
+  const customSchemas = getCustomJsonLdSchemas(
+    seo.schemaMode,
+    seo.schemaJsonLd,
+  );
+  const autoSchemas = customSchemas.length > 0 ? [] : [pSchema, bcSchema];
 
   return (
     <div className="min-h-screen bg-(--background)">
       {/* JSON-LD */}
-      <script {...jsonLd(pSchema)} key="product-schema" />
-      <script {...jsonLd(bcSchema)} key="breadcrumb-schema" />
+      {autoSchemas.map((schema, index) => (
+        <script {...jsonLd(schema)} key={`variant-schema-${index}`} />
+      ))}
+      {customSchemas.map((schema, index) => (
+        <script {...jsonLd(schema as Record<string, unknown>)} key={`variant-custom-schema-${index}`} />
+      ))}
       {faqs.length > 0 && (
         <script {...jsonLd(faqPageSchema(faqs))} key="faq-schema" />
       )}

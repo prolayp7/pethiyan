@@ -55,7 +55,7 @@ class StoreCategoryRequest extends FormRequest
         }
 
         if ($this->hasFile('banner')) {
-            $rules['banner'] = 'image|mimes:jpeg,png,jpg,webp|max:5120';
+            $rules['banner'] = 'image|mimes:jpeg,png,jpg,webp|max:10240';
         } else {
             $rules['banner'] = 'nullable';
         }

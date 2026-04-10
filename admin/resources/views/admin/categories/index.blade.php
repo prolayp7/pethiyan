@@ -14,6 +14,7 @@
         ['title' => __('labels.home'), 'url' => route('admin.dashboard')],
         ['title' => __('labels.categories'), 'url' => null],
     ];
+    $canManageCategories = ($createPermission ?? false) || ($editPermission ?? false);
 @endphp
 
 @section('admin-content')
@@ -103,7 +104,7 @@
             </div>
         </div>
     </div>
-    @if(($createPermission ?? false) || ($editPermission ?? false))
+    @if($canManageCategories)
         <div
             class="modal modal-blur fade"
             id="category-modal"
@@ -176,7 +177,7 @@
                                             <label class="form-label">{{ __('labels.banner') }}</label>
                                             <input type="file" class="form-control" id="banner-upload" name="banner"
                                                    data-image-url=""/>
-                                            <small class="form-hint">Recommended: 1600 x 600 px. Max upload size: 5 MB.</small>
+                                            <small class="form-hint">Recommended: 1600 x 600 px. Max upload size: 10 MB.</small>
                                         </div>
 
                                         <div class="mb-3">

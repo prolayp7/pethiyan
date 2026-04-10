@@ -201,5 +201,6 @@ return [
     'order_item_id_required' => 'Order item ID is required.',
     'cashback_info_message' => 'Cashback will be credited once the order is delivered and the return period is completed.',
     'category_cannot_be_deactivated_with_products' => "Category can't be deactivated because it contains products.",
-    'service_account_file_description' => 'The service file is stored in a private directory, so it cannot be accessed directly via URL. If you try to open it in the browser, it will show a 403 Forbidden error. This is expected behavior and there is no issue with the setup.'
+    'service_account_file_description' => 'The service file is stored in a private directory, so it cannot be accessed directly via URL. If you try to open it in the browser, it will show a 403 Forbidden error. This is expected behavior and there is no issue with the setup.',
+    'upload_too_large' => 'The uploaded file is too large. Please reduce the file size and try again.',
 ];

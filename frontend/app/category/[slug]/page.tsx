@@ -11,7 +11,12 @@ import {
 } from "@/lib/api";
 import Container from "@/components/layout/Container";
 import CategoryProducts from "./CategoryProducts";
-import { breadcrumbSchema, jsonLd } from "@/lib/structured-data";
+import {
+  breadcrumbSchema,
+  collectionPageSchema,
+  jsonLd,
+} from "@/lib/structured-data";
+import { getCustomJsonLdSchemas, resolveCategorySeo } from "@/lib/seo";
 
 // ─── Static params (pre-render known categories at build time) ────────────────
 
@@ -37,18 +42,13 @@ export async function generateMetadata({
     return { title: "Category Not Found" };
   }
   const rawTitle = category.name;
-  const title = category.seo_title || `${rawTitle} Packaging Products`;
-  const description =
-    category.seo_description ||
-    `Shop ${rawTitle} packaging products at Pethiyan — premium quality, GST invoice, fast delivery across India.`;
-  const keywords = category.seo_keywords || undefined;
-  const indexable = category.is_indexable !== false;
+  const seo = resolveCategorySeo(category);
 
   return {
-    title,
-    description,
-    ...(keywords ? { keywords } : {}),
-    robots: indexable
+    title: seo.title,
+    description: seo.description,
+    ...(seo.keywords ? { keywords: seo.keywords } : {}),
+    robots: seo.indexable
       ? { index: true,  follow: true,  googleBot: { index: true,  follow: true  } }
       : { index: false, follow: false, googleBot: { index: false, follow: false } },
     alternates: {
@@ -56,10 +56,16 @@ export async function generateMetadata({
       languages: { "en": `/category/${slug}`, "x-default": `/category/${slug}` },
     },
     openGraph: {
-      title: `${title} | Pethiyan`,
-      description,
+      title: seo.openGraphTitle,
+      description: seo.openGraphDescription,
       url: `/category/${slug}`,
-      ...(category.image ? { images: [{ url: category.image, alt: rawTitle }] } : {}),
+      ...(seo.openGraphImage ? { images: [{ url: seo.openGraphImage, alt: rawTitle }] } : {}),
+    },
+    twitter: {
+      card: seo.twitterCard,
+      title: seo.twitterTitle,
+      description: seo.twitterDescription,
+      ...(seo.twitterImage ? { images: [seo.twitterImage] } : {}),
     },
   };
 }
@@ -85,10 +91,23 @@ export default async function CategoryPage({
     { label: "Shop", href: "/shop" },
     { label: category.name, href: `/category/${slug}` },
   ]);
+  const customSchemas = getCustomJsonLdSchemas(
+    category.schema_mode,
+    category.schema_json_ld,
+  );
+  const autoSchemas =
+    customSchemas.length > 0
+      ? []
+      : [collectionPageSchema(category, products), bcSchema];
 
   return (
     <div className="min-h-screen bg-(--background)">
-      <script {...jsonLd(bcSchema)} key="breadcrumb-schema" />
+      {autoSchemas.map((schema, index) => (
+        <script {...jsonLd(schema)} key={`category-schema-${index}`} />
+      ))}
+      {customSchemas.map((schema, index) => (
+        <script {...jsonLd(schema as Record<string, unknown>)} key={`category-custom-schema-${index}`} />
+      ))}
 
       {/* Combined header: title left, breadcrumb right */}
       <div className="relative bg-white border-b border-(--color-border) overflow-hidden">

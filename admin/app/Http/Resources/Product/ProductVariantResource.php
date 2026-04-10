@@ -61,9 +61,26 @@ class ProductVariantResource extends JsonResource
             'currency_code' => $currency->getCode(),
             'attributes' => $attributes,
             'metadata' => $this->metadata ?? null,
+            'is_indexable' => $this->metadata['is_indexable'] ?? true,
             'seo_title' => $this->metadata['seo_title'] ?? null,
             'seo_description' => $this->metadata['seo_description'] ?? null,
             'seo_keywords' => $this->metadata['seo_keywords'] ?? null,
+            'og_title' => $this->metadata['og_title'] ?? null,
+            'og_description' => $this->metadata['og_description'] ?? null,
+            'og_image' => $this->resolveMetadataImageUrl('og_image'),
+            'twitter_title' => $this->metadata['twitter_title'] ?? null,
+            'twitter_description' => $this->metadata['twitter_description'] ?? null,
+            'twitter_card' => $this->metadata['twitter_card'] ?? null,
+            'twitter_image' => $this->resolveMetadataImageUrl('twitter_image'),
+            'schema_mode' => $this->metadata['schema_mode'] ?? 'auto',
+            'schema_json_ld' => $this->metadata['schema_json_ld'] ?? null,
         ];
+    }
+
+    private function resolveMetadataImageUrl(string $key): ?string
+    {
+        $path = $this->metadata[$key] ?? null;
+
+        return !empty($path) ? url('storage/' . ltrim($path, '/')) : null;
     }
 }

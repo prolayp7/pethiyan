@@ -50,7 +50,7 @@ class UpdateCategoryRequest extends FormRequest
 
         // Conditionally validate file fields only if a real file is uploaded
         $hasImage = $this->hasFile('image') && $this->file('image')->getSize() > 0;
-        $rules['image'] = $hasImage ? 'image|mimes:jpeg,png,jpg,webp|max:10240' : 'nullable';
+        $rules['image'] = $hasImage ? 'image|mimes:jpeg,png,jpg,webp|max:5120' : 'nullable';
 
         $hasBanner = $this->hasFile('banner') && $this->file('banner')->getSize() > 0;
         $rules['banner'] = $hasBanner ? 'image|mimes:jpeg,png,jpg,webp|max:10240' : 'nullable';
