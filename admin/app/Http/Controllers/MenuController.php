@@ -23,6 +23,7 @@ use App\Traits\PanelAware;
 use App\Types\Api\ApiResponseType;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 
@@ -319,8 +320,10 @@ class MenuController extends Controller
         try {
             MenuItem::where('menu_id', $menuId)->findOrFail($itemId);
             $data = $request->validated();
+            unset($data['panel_image']);
             $data['menu_item_id'] = $itemId;
             $data['is_active']    = $request->boolean('is_active', true);
+            $data['image_path']   = $this->storeMegaMenuPanelImage($request) ?? ($data['image_path'] ?? null);
             if (empty($data['sort_order'])) {
                 $data['sort_order'] = MegaMenuPanel::where('menu_item_id', $itemId)->max('sort_order') + 1;
             }
@@ -346,11 +349,41 @@ class MenuController extends Controller
         try {
             $panel = MegaMenuPanel::where('menu_item_id', $itemId)->findOrFail($panelId);
             $data  = $request->validated();
+            unset($data['panel_image']);
             $data['is_active'] = $request->boolean('is_active', $panel->is_active);
+            $uploadedImagePath = $this->storeMegaMenuPanelImage($request);
+            if ($uploadedImagePath) {
+                $this->deleteMegaMenuPanelImage($panel->image_path);
+                $data['image_path'] = $uploadedImagePath;
+            }
             $panel->update($data);
             return ApiResponseType::sendJsonResponse(true, 'Panel updated successfully.', $panel->fresh());
         } catch (\Throwable $e) {
             return ApiResponseType::sendJsonResponse(false, $e->getMessage(), [], 500);
+        }
+    }
+
+    private function storeMegaMenuPanelImage(Request $request): ?string
+    {
+        if (!$request->hasFile('panel_image')) {
+            return null;
+        }
+
+        $path = $request->file('panel_image')->store('mega-menu/panels', 'public');
+
+        return '/storage/' . ltrim($path, '/');
+    }
+
+    private function deleteMegaMenuPanelImage(?string $path): void
+    {
+        if (!$path || !str_starts_with($path, '/storage/')) {
+            return;
+        }
+
+        $relativePath = ltrim(Str::after($path, '/storage/'), '/');
+
+        if ($relativePath !== '') {
+            Storage::disk('public')->delete($relativePath);
         }
     }
 

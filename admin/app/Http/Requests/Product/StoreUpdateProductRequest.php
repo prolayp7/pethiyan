@@ -40,6 +40,7 @@ class StoreUpdateProductRequest extends FormRequest
             'cancelable_till' => 'required_if:is_cancelable,1|nullable|in:'. implode(',', [OrderItemStatusEnum::PENDING(), OrderItemStatusEnum::AWAITING_STORE_RESPONSE(), OrderItemStatusEnum::ACCEPTED(), OrderItemStatusEnum::PREPARING()]),
             'is_attachment_required' => 'nullable|boolean',
             'featured' => 'nullable|boolean',
+            'is_top_product' => 'nullable|boolean',
             'requires_otp' => 'nullable|boolean',
             'video_type' => 'nullable|string',
             'video_link' => 'nullable|string|url',
