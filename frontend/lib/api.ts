@@ -13,10 +13,15 @@ export interface ApiCategory {
   slug: string;
   description?: string;
   image?: string;
+  banner?: string;
+  icon?: string;
+  active_icon?: string;
   background_color?: string;
   background_type?: string;
+  background_image?: string;
   font_color?: string;
   parent_id?: number | null;
+  parent_slug?: string | null;
   subcategory_count?: number;
   product_count?: number;
   status?: string;

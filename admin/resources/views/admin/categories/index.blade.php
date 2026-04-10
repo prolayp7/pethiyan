@@ -177,10 +177,10 @@
                                             <label class="form-label">{{ __('labels.banner') }}</label>
                                             <input type="file" class="form-control" id="banner-upload" name="banner"
                                                    data-image-url=""/>
-                                            <small class="form-hint">Recommended: 1600 x 600 px. Max upload size: 10 MB.</small>
+                                            <small class="form-hint">Recommended: 1600 x 600 px. Max upload size: 2 MB.</small>
                                         </div>
 
-                                        <div class="mb-3">
+                                        {{--<div class="mb-3">
                                             <label class="form-label">{{ __('labels.icon') }}</label>
                                             <input type="file" class="form-control" id="icon-upload" name="icon"
                                                    data-image-url=""/>
@@ -199,8 +199,8 @@
                                             <input type="file" class="form-control" id="background-image-upload"
                                                    name="background_image"
                                                    data-image-url=""/>
-                                            <small class="form-hint">Recommended: 1920 x 1080 px. Max upload size: 5 MB.</small>
-                                        </div>
+                                            <small class="form-hint">Recommended: 1920 x 1080 px. Max upload size: 2 MB.</small>
+                                        </div>--}}
                                     </div>
                                 </div>
 
@@ -261,7 +261,7 @@
                                     <div class="col-md-6">
                                         <label class="form-label">OG Image</label>
                                         <input type="file" class="form-control" id="category-og-image-upload" name="og_image"/>
-                                        <small class="form-hint">Recommended: 1200 x 630 px. Max upload size: 4 MB.</small>
+                                        <small class="form-hint">Recommended: 1200 x 630 px. Max upload size: 2 MB.</small>
                                     </div>
                                     <div class="col-12">
                                         <label class="form-label">OG Description</label>
@@ -291,7 +291,7 @@
                                     <div class="col-md-6">
                                         <label class="form-label">Twitter Image</label>
                                         <input type="file" class="form-control" id="category-twitter-image-upload" name="twitter_image"/>
-                                        <small class="form-hint">Recommended: 1200 x 675 px. Max upload size: 4 MB.</small>
+                                        <small class="form-hint">Recommended: 1200 x 675 px. Max upload size: 2 MB.</small>
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label">Twitter Description</label>

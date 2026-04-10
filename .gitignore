@@ -99,6 +99,7 @@ invoice-template-previews/
 *.tmp
 *.swp
 *.json
+*.sh
 .cursorrules
 .windsurfrules
 
@@ -111,3 +112,8 @@ invoice-template-previews/
 !**/README.md
 !**/REAME.md
 LCommerce_API.postman_collection.json
+
+# ------------------------------------------------------------
+# Standalone Tools (not part of the project)
+# ------------------------------------------------------------
+image-optimizer/

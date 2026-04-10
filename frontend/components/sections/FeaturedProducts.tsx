@@ -107,7 +107,7 @@ export default function FeaturedProducts({ apiProducts = [] }: FeaturedProductsP
 
   return (
     <section
-      className="py-16 relative overflow-hidden"
+      className="pt-8 pb-16 relative overflow-hidden"
       style={{ background: "#ffffff" }}
       aria-labelledby="featured-heading"
     >

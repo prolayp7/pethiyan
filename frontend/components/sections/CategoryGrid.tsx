@@ -201,7 +201,7 @@ export default function CategoryGrid({ categories = [] }: CategoryGridProps) {
                  "grid-cols-2 md:grid-cols-3";
 
   return (
-    <section className="cat-section py-12 lg:py-16" aria-labelledby="category-heading">
+    <section className="cat-section pt-12 pb-6 lg:pt-16 lg:pb-8" aria-labelledby="category-heading">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
         {/* ── Heading ── */}

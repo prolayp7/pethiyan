@@ -182,6 +182,7 @@ Route::get('banners', [BannerApiController::class, 'index']);
 // get categories
 Route::get('categories', [CategoryApiController::class, 'index']);
 Route::get('categories/sub-categories', [CategoryApiController::class, 'subCategories']);
+Route::get('categories/find', [CategoryApiController::class, 'find']);
 Route::get('categories/{slug}', [CategoryApiController::class, 'show']);
 
 // get brands

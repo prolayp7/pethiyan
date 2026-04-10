@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Product;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Product\GetProductsByLocationRequest;
+use App\Http\Resources\CategoryResource;
 use App\Http\Resources\Product\ProductCatalogResource;
 use App\Http\Resources\Product\ProductListResource;
 use App\Http\Resources\Product\ProductResource;
@@ -299,9 +300,11 @@ class ProductApiController extends Controller
                 ]);
 
             // Category filter
+            $filteredCategory = null;
             if (!empty($validated['categories'])) {
                 $categorySlugs = array_filter(array_map('trim', explode(',', $validated['categories'])));
-                $categoryIds = Category::whereIn('slug', $categorySlugs)->pluck('id')->toArray();
+                $categories = Category::whereIn('slug', $categorySlugs)->with('parent')->get();
+                $categoryIds = $categories->pluck('id')->toArray();
 
                 if (!empty($validated['include_child_categories'])) {
                     $allIds = $categoryIds;
@@ -312,6 +315,10 @@ class ProductApiController extends Controller
                 }
 
                 $query->whereIn('category_id', $categoryIds);
+
+                $filteredCategory = $categories->count() === 1
+                    ? new CategoryResource($categories->first())
+                    : CategoryResource::collection($categories);
             }
 
             if ($search !== '') {
@@ -338,6 +345,7 @@ class ProductApiController extends Controller
                     'total' => $products->total(),
                     'search' => $search,
                     'data' => $products->items(),
+                    'category' => $filteredCategory,
                 ]
             );
         } catch (\Illuminate\Validation\ValidationException $e) {
