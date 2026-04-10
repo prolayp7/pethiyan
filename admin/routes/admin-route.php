@@ -476,6 +476,20 @@ Route::prefix('admin')->name('admin.')->group(function () {
 //            Route::get('/search', [ProductFaqController::class, 'search'])->name('search');
         });
 
+        // cms pages
+        Route::prefix('pages')->name('pages.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\PageController::class, 'index'])->name('index');
+            Route::get('/{page}/edit', [\App\Http\Controllers\Admin\PageController::class, 'edit'])->name('edit');
+            Route::post('/{page}', [\App\Http\Controllers\Admin\PageController::class, 'update'])->name('update');
+        });
+
+        // enquiries
+        Route::prefix('enquiries')->name('enquiries.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\EnquiryController::class, 'index'])->name('index');
+            Route::get('/{enquiry}', [\App\Http\Controllers\Admin\EnquiryController::class, 'show'])->name('show');
+            Route::delete('/{enquiry}', [\App\Http\Controllers\Admin\EnquiryController::class, 'destroy'])->name('destroy');
+        });
+
         // ── Navigation Menus ─────────────────────────────────────────────
         Route::prefix('menus')->name('menus.')->group(function () {
             // Menu CRUD

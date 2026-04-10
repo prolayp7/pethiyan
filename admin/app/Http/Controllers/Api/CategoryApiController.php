@@ -79,6 +79,45 @@ class CategoryApiController extends Controller
     }
 
     /**
+     * Find a single category by id or slug query parameter.
+     */
+    #[QueryParameter('id', description: 'Category ID', type: 'int', example: 1)]
+    #[QueryParameter('slug', description: 'Category slug', type: 'string', example: 'electronics')]
+    public function find(Request $request): JsonResponse
+    {
+        $request->validate([
+            'id'   => 'nullable|integer|min:1',
+            'slug' => 'nullable|string|max:255',
+        ]);
+
+        if (!$request->filled('id') && !$request->filled('slug')) {
+            return ApiResponseType::sendJsonResponse(false, 'labels.provide_id_or_slug', [], 422);
+        }
+
+        $query = Category::query()
+            ->with('parent')
+            ->withCount(['products', 'children']);
+
+        if ($request->filled('id')) {
+            $query->where('id', $request->integer('id'));
+        } else {
+            $query->where('slug', $request->input('slug'));
+        }
+
+        $category = $query->first();
+
+        if (!$category) {
+            return ApiResponseType::sendJsonResponse(false, 'labels.category_not_found', [], 404);
+        }
+
+        return ApiResponseType::sendJsonResponse(
+            true,
+            'labels.category_fetched_successfully',
+            new CategoryResource($category)
+        );
+    }
+
+    /**
      * Get a single category by slug.
      */
     public function show(string $slug): JsonResponse

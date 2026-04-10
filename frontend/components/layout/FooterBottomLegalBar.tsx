@@ -38,7 +38,7 @@ export default function FooterBottomLegalBar({
         aria-hidden="true"
       />
 
-      <div className="max-w-7xl mx-auto px-6 sm:px-10 lg:px-16 py-7">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-7">
         {/* Row 1: Social icons · Company text · Payment Partners */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-5">
           <div className="flex items-center gap-2.5 shrink-0 order-last sm:order-first">

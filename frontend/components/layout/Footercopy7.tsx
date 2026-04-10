@@ -45,6 +45,16 @@ const navColumns = [
       { label: "FAQs", href: "/faq" },
     ],
   },
+  {
+    title: "Users",
+    links: [
+      { label: "Login / Register", href: "/login" },
+      { label: "Wishlist", href: "/wishlist" },
+      { label: "Orders", href: "/orders" },
+      { label: "My Account", href: "/account" },
+      { label: "Payments", href: "/account/payments" },
+    ],
+  },
 ];
 
 const socialLinks = [

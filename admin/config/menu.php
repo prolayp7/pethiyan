@@ -220,6 +220,23 @@ return [
             'active'     => 'notifications',
             'permission' => 'notification.view',
         ],
+        'other_pages' => [
+            'icon'   => 'ti-file-text',
+            'title'  => 'Other Pages',
+            'active' => 'other_pages',
+            'route'  => [
+                'cms_pages' => [
+                    'sub_active' => 'cms_pages',
+                    'sub_route'  => 'admin.pages.index',
+                    'sub_title'  => 'Pages',
+                ],
+                'enquiries' => [
+                    'sub_active' => 'enquiries',
+                    'sub_route'  => 'admin.enquiries.index',
+                    'sub_title'  => 'Enquiries',
+                ],
+            ],
+        ],
 
         // ─── Administration ──────────────────────────────────────────────
         'roles_permissions' => [

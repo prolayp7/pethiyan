@@ -345,25 +345,10 @@ export default function ShopProductCard({ product }: { product: RealApiProduct }
               );
             })()}
 
-            {/* Bottom row: meta left, price+cart right */}
+            {/* Bottom row: price+meta left, cart right */}
             <div className="flex items-end justify-between gap-2 mt-auto pt-2 border-t border-gray-100">
-              {/* Left: GST + min qty */}
-              {(showGstInGrid || showMinQtyInGrid) && (
-                <div className="flex flex-col gap-0.5 min-w-0">
-                  {showGstInGrid && (
-                    <span className="text-[10px] text-gray-400">+{product.tax?.gst_rate ?? ""}% GST</span>
-                  )}
-                  {showMinQtyInGrid && (
-                    <span className="flex items-center gap-1 text-[10px] text-gray-400">
-                      <Tag className="h-2.5 w-2.5 shrink-0" />
-                      Min: {minQty} pcs
-                    </span>
-                  )}
-                </div>
-              )}
-
-              {/* Right: price + add to cart */}
-              <div className="flex flex-col items-end gap-1.5 shrink-0">
+              {/* Left: price + GST + min qty */}
+              <div className="flex flex-col gap-0.5 min-w-0">
                 <div className="flex items-baseline gap-1">
                   <span className="text-sm font-extrabold text-gray-900">
                     {product.currency?.symbol || "₹"}{price.toFixed(2)}
@@ -374,18 +359,28 @@ export default function ShopProductCard({ product }: { product: RealApiProduct }
                     </span>
                   )}
                 </div>
-                <button
-                  type="button"
-                  onClick={handleAddToCart}
-                  disabled={!inStock}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold text-white transition-all hover:opacity-90 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
-                  style={{ background: "linear-gradient(135deg,#17396f 0%,#2f6f9f 52%,#49ad57 100%)" }}
-                  aria-label="Add to cart"
-                >
-                  <ShoppingBag className="h-3.5 w-3.5" />
-                  Add to Cart
-                </button>
+                {showGstInGrid && (
+                  <span className="text-[10px] text-gray-400">+{product.tax?.gst_rate ?? ""}% GST</span>
+                )}
+                {showMinQtyInGrid && (
+                  <span className="flex items-center gap-1 text-[10px] text-gray-400">
+                    <Tag className="h-2.5 w-2.5 shrink-0" />
+                    Min: {minQty} pcs
+                  </span>
+                )}
               </div>
+
+              {/* Right: add to cart */}
+              <button
+                type="button"
+                onClick={handleAddToCart}
+                disabled={!inStock}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold text-white transition-all hover:opacity-90 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed shrink-0 bg-[linear-gradient(135deg,#17396f_0%,#2f6f9f_52%,#49ad57_100%)]"
+                aria-label="Add to cart"
+              >
+                <ShoppingBag className="h-3.5 w-3.5" />
+                Add to Cart
+              </button>
             </div>
           </div>
         </Link>
