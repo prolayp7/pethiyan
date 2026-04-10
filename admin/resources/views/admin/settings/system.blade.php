@@ -56,6 +56,7 @@
                                 {{--<a class="nav-link" href="#pills-web-country-validation">{{ __('labels.country_validation') }}</a>--}}
                                 <a class="nav-link" href="#pills-web-support">{{ __('labels.support_information') }}</a>
                                 <a class="nav-link" href="#pills-web-seo">{{ __('labels.seo_settings') }}</a>
+                                <a class="nav-link" href="#pills-web-footer-seo">Footer SEO Content</a>
                                 {{--<a class="nav-link" href="#pills-web-app">{{ __('labels.app_download_section') }}</a>--}}
                                 {{--<a class="nav-link" href="#pills-web-features">{{ __('labels.feature_sections') }}</a>--}}
                                 <a class="nav-link" href="#pills-web-policies">{{ __('labels.policy_settings') }}</a>

@@ -1,17 +1,20 @@
 import Link from "next/link";
 import Image from "next/image";
-import { MapPin, Phone, Mail } from "lucide-react";
+import { MapPin, Phone, Mail, type LucideIcon } from "lucide-react";
 import { getSystemSettings } from "@/lib/api";
 
 type NavLink = { label: string; href: string };
 type NavColumn = { title: string; links: NavLink[] };
+type SocialLink = { label: string; icon: LucideIcon; href: string };
+
 type FooterNavigationGridProps = {
   navColumns: NavColumn[];
-  socialLinks?: unknown[];
+  socialLinks: SocialLink[];
 };
 
 export default async function FooterNavigationGrid({
   navColumns,
+  socialLinks,
 }: FooterNavigationGridProps) {
   const system = await getSystemSettings();
   const appName = system?.appName || "Pethiyan";
@@ -19,9 +22,9 @@ export default async function FooterNavigationGrid({
 
   return (
     <div className="relative bg-white border-t border-gray-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-18 relative z-10">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-6 lg:pt-10 lg:pb-8 relative z-10">
 
-        {/* ── Content: brand left, nav right ── */}
+        {/* Top: brand left, nav columns right */}
         <div className="flex flex-col md:flex-row gap-0">
 
           {/* Column 1 — Logo + Business Contact */}
@@ -64,7 +67,7 @@ export default async function FooterNavigationGrid({
             </Link>
           </div>
 
-          {/* Nav columns + Payment Partners */}
+          {/* Nav columns */}
           <div className="pt-8 md:pt-0 md:pl-10 ml-auto grid grid-cols-4 gap-10">
             {navColumns.slice(0, 4).map((col) => (
               <div key={col.title}>
@@ -85,10 +88,56 @@ export default async function FooterNavigationGrid({
                 </ul>
               </div>
             ))}
-
           </div>
 
         </div>
+
+        {/* Bottom: social icons left, payment partners right */}
+        <div className="flex items-center justify-between mt-8 pt-5 border-t border-gray-100">
+
+          {/* Social icons */}
+          <div className="flex items-center gap-2.5">
+            {socialLinks.map(({ label, icon: Icon, href }) => (
+              <a
+                key={label}
+                href={href}
+                aria-label={label}
+                className="w-8 h-8 rounded-full flex items-center justify-center bg-gray-900 text-white transition-all duration-200 hover:bg-gray-700"
+              >
+                <Icon className="h-3.5 w-3.5" aria-hidden="true" />
+              </a>
+            ))}
+          </div>
+
+          {/* Payment Partners */}
+          <div className="flex items-center gap-3">
+            <span className="text-[11px] font-bold uppercase tracking-widest text-gray-600">
+              Payment Partners:
+            </span>
+            <div className="relative w-[160px] h-[50px] rounded-md overflow-hidden bg-white border border-gray-200">
+              <Image
+                src="/images/logos/razorpay.png"
+                alt="Razorpay"
+                fill
+                sizes="160px"
+                className="object-contain p-1.5"
+                unoptimized
+              />
+            </div>
+            <div className="relative w-[160px] h-[50px] rounded-md overflow-hidden bg-white border border-gray-200">
+              <Image
+                src="/images/logos/Easebuzz_Logo.jpg"
+                alt="Easebuzz"
+                fill
+                sizes="160px"
+                className="object-contain p-1.5"
+                unoptimized
+              />
+            </div>
+          </div>
+
+        </div>
+
       </div>
     </div>
   );

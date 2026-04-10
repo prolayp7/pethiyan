@@ -40,6 +40,7 @@ use App\Http\Controllers\GiftCardController;
 use App\Http\Controllers\Admin\InventoryController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\HeroSectionController;
+use App\Http\Controllers\Admin\VideoStorySectionController;
 use App\Http\Controllers\Admin\ProductImportController;
 use App\Http\Controllers\Admin\PinLocationMasterController;
 use Illuminate\Support\Facades\Route;
@@ -88,6 +89,16 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('payment/lock', [SettingController::class, 'lockPaymentSettings'])->name('payment.lock');
             Route::get('{setting}', [SettingController::class, 'show'])->name('show');
             Route::post('store', [SettingController::class, 'store'])->name('store');
+        });
+
+        Route::prefix('video-stories-section')->name('video-stories-section.')->group(function () {
+            Route::get('/', [VideoStorySectionController::class, 'show'])->name('show');
+            Route::post('/videos', [VideoStorySectionController::class, 'store'])->name('videos.store');
+            Route::post('/videos/{id}', [VideoStorySectionController::class, 'update'])->name('videos.update');
+            Route::delete('/videos/{id}', [VideoStorySectionController::class, 'destroy'])->name('videos.destroy');
+            Route::post('/videos/{id}/toggle', [VideoStorySectionController::class, 'toggle'])->name('videos.toggle');
+            Route::post('/videos/reorder', [VideoStorySectionController::class, 'reorder'])->name('videos.reorder');
+            Route::post('/settings', [VideoStorySectionController::class, 'updateSettings'])->name('settings.update');
         });
 
         // system updates
@@ -488,6 +499,42 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/', [\App\Http\Controllers\Admin\EnquiryController::class, 'index'])->name('index');
             Route::get('/{enquiry}', [\App\Http\Controllers\Admin\EnquiryController::class, 'show'])->name('show');
             Route::delete('/{enquiry}', [\App\Http\Controllers\Admin\EnquiryController::class, 'destroy'])->name('destroy');
+        });
+
+        // featured products section (homepage)
+        Route::prefix('featured-products-section')->name('featured-products-section.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\FeaturedProductsSectionController::class, 'show'])->name('show');
+            Route::post('/settings', [\App\Http\Controllers\Admin\FeaturedProductsSectionController::class, 'updateSettings'])->name('settings.update');
+            Route::post('/preview', [\App\Http\Controllers\Admin\FeaturedProductsSectionController::class, 'previewProducts'])->name('preview');
+        });
+
+        // why choose us (homepage)
+        Route::prefix('why-choose-us')->name('why-choose-us.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\WhyChooseUsController::class, 'show'])->name('show');
+            Route::post('/settings', [\App\Http\Controllers\Admin\WhyChooseUsController::class, 'updateSettings'])->name('settings.update');
+        });
+
+        // promo banner (homepage)
+        Route::prefix('promo-banner')->name('promo-banner.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\PromoBannerController::class, 'show'])->name('show');
+            Route::post('/settings', [\App\Http\Controllers\Admin\PromoBannerController::class, 'updateSettings'])->name('settings.update');
+        });
+
+        // newsletter section (homepage)
+        Route::prefix('newsletter-section')->name('newsletter-section.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\NewsletterSectionController::class, 'show'])->name('show');
+            Route::post('/settings', [\App\Http\Controllers\Admin\NewsletterSectionController::class, 'updateSettings'])->name('settings.update');
+        });
+
+        // social proof / testimonials
+        Route::prefix('social-proof')->name('social-proof.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\SocialProofController::class, 'show'])->name('show');
+            Route::post('/settings', [\App\Http\Controllers\Admin\SocialProofController::class, 'updateSettings'])->name('settings.update');
+            Route::post('/testimonials', [\App\Http\Controllers\Admin\SocialProofController::class, 'store'])->name('testimonials.store');
+            Route::post('/testimonials/{id}', [\App\Http\Controllers\Admin\SocialProofController::class, 'update'])->name('testimonials.update');
+            Route::delete('/testimonials/{id}', [\App\Http\Controllers\Admin\SocialProofController::class, 'destroy'])->name('testimonials.destroy');
+            Route::patch('/testimonials/{id}/toggle', [\App\Http\Controllers\Admin\SocialProofController::class, 'toggle'])->name('testimonials.toggle');
+            Route::post('/testimonials/reorder', [\App\Http\Controllers\Admin\SocialProofController::class, 'reorder'])->name('testimonials.reorder');
         });
 
         // ── Navigation Menus ─────────────────────────────────────────────

@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
-import { getCategories, getHeroSection, getFeaturedProducts } from "@/lib/api";
+import { getCategories, getHeroSection, getFeaturedProducts, getVideoStorySection } from "@/lib/api";
 import HeroSection10 from "@/components/hero/HeroSection10";
-import TrustBadges from "@/components/sections/TrustBadges";
 import CategoryGrid from "@/components/sections/CategoryGrid";
 import VideoCarouselGrid from "@/components/sections/VideoCarouselGrid";
 import FeaturedProducts from "@/components/sections/FeaturedProducts";
@@ -35,10 +34,11 @@ function withTimeout<T>(p: Promise<T>, fallback: T, ms = 5000): Promise<T> {
 export default async function HomePage() {
   // Fetch data in parallel — both calls are independent
   // withTimeout ensures a slow/unreachable backend never hangs the page
-  const [featuredProducts, categories, heroData] = await Promise.all([
+  const [featuredProducts, categories, heroData, videoStorySection] = await Promise.all([
     withTimeout(getFeaturedProducts(), []),
     withTimeout(getCategories(), []),
     withTimeout(getHeroSection(), null),
+    withTimeout(getVideoStorySection(), null),
   ]);
 
   return (
@@ -60,7 +60,7 @@ export default async function HomePage() {
       <PromoBanner />
       <Testimonials />
       <NewsletterSection />
-      <VideoCarouselGrid />
+      <VideoCarouselGrid data={videoStorySection} />
 
       {/* Extra padding for mobile bottom nav */}
       <div className="h-16 lg:hidden" aria-hidden="true" />

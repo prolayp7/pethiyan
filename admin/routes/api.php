@@ -33,6 +33,8 @@ use App\Http\Controllers\Payments\PaystackController;
 use App\Http\Controllers\Payments\RazorpayController;
 use App\Http\Controllers\Payments\StripeController;
 use App\Http\Controllers\Api\HeroSectionApiController;
+use App\Http\Controllers\Api\NewsletterSectionApiController;
+use App\Http\Controllers\Api\VideoStorySectionApiController;
 use Illuminate\Support\Facades\Route;
 
 include_once("delivery-boy-api.php");
@@ -40,6 +42,8 @@ include_once("seller-api.php");
 
 // Hero Section (public — consumed by Next.js frontend)
 Route::get('hero-section', [HeroSectionApiController::class, 'index'])->name('hero-section.index');
+Route::get('video-story-section', [VideoStorySectionApiController::class, 'index'])->name('video-story-section.index');
+Route::get('newsletter-section', [NewsletterSectionApiController::class, 'index'])->name('newsletter-section.index');
 
 // Shipping Rates (public)
 Route::post('shipping/rates', [ShippingRateApiController::class, 'index'])->name('shipping.rates');

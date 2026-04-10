@@ -38,6 +38,7 @@ const navColumns = [
     title: "Support",
     links: [
       { label: "Contact", href: "/contact" },
+      { label: "Enquiry Form", href: "/enquiry-form" },
       { label: "Help Center", href: "/help" },
       { label: "Shipping", href: "/shipping" },
       { label: "Returns", href: "/returns" },
@@ -64,10 +65,6 @@ const socialLinks = [
   { label: "LinkedIn", icon: Linkedin, href: "#" },
 ];
 
-const legalLinks = [
-  { label: "Terms", href: "/terms" },
-  { label: "Privacy", href: "/privacy" },
-];
 
 /* ─── Component ──────────────────────────────────────────────── */
 
@@ -99,7 +96,7 @@ export default function Footer() {
 
      
 
-      <FooterBottomLegalBar legalLinks={legalLinks} socialLinks={socialLinks} />
+      <FooterBottomLegalBar />
 
     </footer>
   );

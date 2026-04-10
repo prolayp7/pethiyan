@@ -1674,6 +1674,63 @@ export async function getHeroSection(): Promise<ApiHeroSection | null> {
   }
 }
 
+export interface ApiVideoStoryItem {
+  id: number;
+  title: string;
+  videoUrl: string;
+}
+
+export interface ApiVideoStorySection {
+  videos: ApiVideoStoryItem[];
+  settings: {
+    isActive: boolean;
+    eyebrow: string;
+    heading: string;
+    subheading: string;
+    autoplayEnabled: boolean;
+    autoplayDelay: number;
+    transitionDuration: number;
+    animationStyle: "slide" | "fade" | "none";
+  };
+}
+
+export async function getVideoStorySection(): Promise<ApiVideoStorySection | null> {
+  try {
+    const res = await fetch(`${API_BASE}/api/video-story-section`, {
+      headers: { Accept: "application/json" },
+      next: { tags: ["video-story-section"], revalidate: 3600 },
+    });
+    if (!res.ok) return null;
+    return res.json() as Promise<ApiVideoStorySection>;
+  } catch {
+    return null;
+  }
+}
+
+export interface ApiNewsletterSection {
+  is_active: boolean;
+  badge_text: string;
+  heading: string;
+  heading_highlight: string;
+  subheading: string;
+  perks: string[];
+  form_title: string;
+  form_subtitle: string;
+}
+
+export async function getNewsletterSection(): Promise<ApiNewsletterSection | null> {
+  try {
+    const res = await fetch(`${API_BASE}/api/newsletter-section`, {
+      headers: { Accept: "application/json" },
+      next: { tags: ["newsletter-section"], revalidate: 3600 },
+    });
+    if (!res.ok) return null;
+    return res.json() as Promise<ApiNewsletterSection>;
+  } catch {
+    return null;
+  }
+}
+
 // ─── Products by category ─────────────────────────────────────────────────────
 
 export async function getProductsByCategory(categorySlug: string): Promise<RealApiProduct[]> {
