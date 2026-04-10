@@ -288,6 +288,115 @@
             </div>
         </div>
     </div>
+    
+    <!-- Footer SEO Settings Section -->
+    <div class="card mb-4" id="pills-web-footer-seo">
+        <div class="card-header">
+            <h4 class="card-title">Footer SEO Content</h4>
+        </div>
+        <div class="card-body">
+            <div class="mb-3">
+                <label class="form-label">Enable Footer SEO Section</label>
+                <label class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" name="footerSeoEnabled" value="1" {{ !isset($settings['footerSeoEnabled']) || $settings['footerSeoEnabled'] ? 'checked' : '' }}>
+                    <span class="form-check-label">Show the SEO text section at the bottom of the website</span>
+                </label>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Main Heading</label>
+                <input type="text" class="form-control" name="footerSeoTitle" placeholder="e.g. Pethiyan: Premium Packaging Solutions for Modern Brands" value="{{ $settings['footerSeoTitle'] ?? '' }}">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Introductory Paragraph</label>
+                <textarea class="hugerte-mytextarea form-control" name="footerSeoIntro" rows="4">{{ $settings['footerSeoIntro'] ?? '' }}</textarea>
+            </div>
+            
+            <hr class="my-4">
+            <h5 class="mb-3">Sub-Sections</h5>
+            <p class="text-muted small">Add multiple blocks of text with sub-headings to create a rich SEO structure for the footer.</p>
+            
+            <div id="footer-seo-items-container"></div>
+            
+            <button type="button" class="btn btn-outline-primary mt-2" onclick="addFooterSeoItem()">
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 5l0 14" /><path d="M5 12l14 0" /></svg>
+                Add Sub-Section
+            </button>
+            <input type="hidden" name="footerSeoSectionsJson" id="footerSeoSectionsJsonInput" value="">
+        </div>
+    </div>
+    
+    @push('script')
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const rawJson = `{!! empty($settings['footerSeoSectionsJson']) ? '[]' : addslashes($settings['footerSeoSectionsJson']) !!}`;
+        let items = [];
+        try { items = JSON.parse(rawJson); } catch (e) { items = []; }
+
+        const container = document.getElementById('footer-seo-items-container');
+        const hiddenInput = document.getElementById('footerSeoSectionsJsonInput');
+
+        function renderItems() {
+            container.innerHTML = '';
+            items.forEach((item, index) => {
+                // Ensure safe rendering of html in textarea by escaping inner content slightly if needed, or rely on proper DOM insertion
+                const card = document.createElement('div');
+                card.className = 'card mb-3 border shadow-sm';
+                card.innerHTML = `
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="card-title m-0">Section ${index + 1}</h5>
+                            <button type="button" class="btn btn-sm btn-danger" onclick="removeFooterSeoItem(${index})">Remove</button>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Sub-Heading (Title)</label>
+                            <input type="text" class="form-control footer-seo-title" data-index="${index}" placeholder="e.g. Standup Pouches & Flexible Packaging">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Paragraph Content</label>
+                            <textarea class="form-control footer-seo-content" data-index="${index}" rows="4" placeholder="Enter paragraph content. You can write HTML links like <a href='...'>link</a> here."></textarea>
+                        </div>
+                    </div>
+                `;
+                
+                card.querySelector('.footer-seo-title').value = item.title || '';
+                card.querySelector('.footer-seo-content').value = item.content || '';
+                
+                container.appendChild(card);
+            });
+            updateHiddenField();
+        }
+
+        function updateHiddenField() {
+            hiddenInput.value = JSON.stringify(items);
+        }
+
+        window.addFooterSeoItem = function() {
+            items.push({title: '', content: ''});
+            renderItems();
+        };
+
+        window.removeFooterSeoItem = function(index) {
+            items.splice(index, 1);
+            renderItems();
+        };
+
+        container.addEventListener('input', function(e) {
+            if (e.target.classList.contains('footer-seo-title')) {
+                const index = e.target.getAttribute('data-index');
+                items[index].title = e.target.value;
+                updateHiddenField();
+            } else if (e.target.classList.contains('footer-seo-content')) {
+                const index = e.target.getAttribute('data-index');
+                items[index].content = e.target.value;
+                updateHiddenField();
+            }
+        });
+
+        renderItems();
+    });
+    </script>
+    @endpush
+
     {{-- Social Media card removed here to avoid duplicate with the unified
             "Social Media Links" section in system settings page --}}
     {{-- App Download Section (temporarily hidden) --}}

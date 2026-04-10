@@ -133,6 +133,36 @@ return [
                     'sub_route'   => 'admin.hero-section.show',
                     'sub_title'   => 'labels.hero_section',
                 ],
+                'social_proof' => [
+                    'sub_active'  => 'social_proof',
+                    'sub_route'   => 'admin.social-proof.show',
+                    'sub_title'   => 'Social Proof',
+                ],
+                'video_story_section' => [
+                    'sub_active'  => 'video_story_section',
+                    'sub_route'   => 'admin.video-stories-section.show',
+                    'sub_title'   => 'Video Stories',
+                ],
+                'featured_products_section' => [
+                    'sub_active'  => 'featured_products_section',
+                    'sub_route'   => 'admin.featured-products-section.show',
+                    'sub_title'   => 'Featured Products',
+                ],
+                'why_choose_us' => [
+                    'sub_active'  => 'why_choose_us',
+                    'sub_route'   => 'admin.why-choose-us.show',
+                    'sub_title'   => 'Why Choose Us',
+                ],
+                'promo_banner' => [
+                    'sub_active'  => 'promo_banner',
+                    'sub_route'   => 'admin.promo-banner.show',
+                    'sub_title'   => 'Promo Banner',
+                ],
+                'newsletter_section' => [
+                    'sub_active'  => 'newsletter_section',
+                    'sub_route'   => 'admin.newsletter-section.show',
+                    'sub_title'   => 'Newsletter Section',
+                ],
             ]
         ],
         
