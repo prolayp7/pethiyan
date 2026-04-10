@@ -227,6 +227,7 @@ class ProductService
             if ($request->hasFile($imageName)) {
                 $this->handleVariantMediaUploads($variant, $imageName);
             }
+            $this->handleVariantSeoImageUploads($variant, $request, (string) ($variantData['id'] ?? ''));
             // Handle store pricing for this variant
             $this->handleVariantPricing($variant, $variantData, $pricingData, $mode);
         }
@@ -579,6 +580,32 @@ class ProductService
         $variant->addMediaFromRequest($payload_image)->toMediaCollection(SpatieMediaCollectionName::VARIANT_IMAGE());
     }
 
+    private function handleVariantSeoImageUploads(ProductVariant $variant, $request, string $variantId): void
+    {
+        if ($variantId === '') {
+            return;
+        }
+
+        $metadata = $variant->metadata ?? [];
+        $updated = false;
+
+        foreach (['og_image', 'twitter_image'] as $field) {
+            $requestField = 'variant_' . $field . $variantId;
+            if (!$request->hasFile($requestField)) {
+                continue;
+            }
+
+            $metadata[$field] = $request->file($requestField)->store('seo/product-variant', 'public');
+            $updated = true;
+        }
+
+        if ($updated) {
+            $variant->update([
+                'metadata' => array_merge($variant->metadata ?? [], $metadata),
+            ]);
+        }
+    }
+
     private function handleMediaUploads($product, $request): void
     {
         if ($request->hasFile('main_image')) {
@@ -607,6 +634,29 @@ class ProductService
             }
         } else {
             $product->update(['video_link' => $request['video_link']]);
+        }
+
+        $this->handleSeoImageUploads($product, $request);
+    }
+
+    private function handleSeoImageUploads(Product $product, $request): void
+    {
+        $metadata = $product->metadata ?? [];
+        $updated = false;
+
+        foreach (['og_image', 'twitter_image'] as $field) {
+            if (!$request->hasFile($field)) {
+                continue;
+            }
+
+            $metadata[$field] = $request->file($field)->store('seo/product', 'public');
+            $updated = true;
+        }
+
+        if ($updated) {
+            $product->update([
+                'metadata' => array_merge($product->metadata ?? [], $metadata),
+            ]);
         }
     }
 }

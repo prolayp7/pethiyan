@@ -11,11 +11,75 @@ document.addEventListener('show.bs.modal', function (event) {
         const iconUpload = document.querySelector('#icon-upload');
         const activeIconUpload = document.querySelector('#active-icon-upload');
         const backgroundImageUpload = document.querySelector('#background-image-upload');
+        const ogImageUpload = document.querySelector('#category-og-image-upload');
+        const twitterImageUpload = document.querySelector('#category-twitter-image-upload');
         const backgroundTypeSelect = document.querySelector('#background-type-select');
         const modalTitle = document.querySelector('#category-modal .modal-title');
         const submitButton = document.querySelector('#category-modal button[type="submit"]');
         const parentSelect = document.getElementById("select-parent-category");
         const tomSelectInstance = parentSelect && parentSelect.tomselect; // TomSelect instance
+
+        const normalizeLocalhostOrigin = (url) => {
+            if (!url) return '';
+
+            try {
+                const parsed = new URL(url, window.location.origin);
+                if (parsed.hostname === 'localhost' && window.location.hostname !== 'localhost') {
+                    parsed.hostname = window.location.hostname;
+                }
+                if (parsed.port === '8000' && window.location.port) {
+                    parsed.port = window.location.port;
+                }
+
+                return parsed.toString();
+            } catch (e) {
+                return url;
+            }
+        };
+
+        const ensureFilePondInstance = (input) => {
+            if (!input || typeof FilePond === 'undefined') {
+                return null;
+            }
+
+            let pond = FilePond.find(input);
+            if (pond) {
+                return pond;
+            }
+
+            pond = FilePond.create(input, {
+                allowImagePreview: true,
+                credits: false,
+                storeAsFile: true,
+                acceptedFileTypes: ['image/*'],
+            });
+
+            return pond;
+        };
+
+        const resetFilePondField = (input) => {
+            const pond = ensureFilePondInstance(input);
+            if (pond) {
+                pond.removeFiles();
+            }
+        };
+
+        const preloadFilePondField = (input, source) => {
+            const normalizedSource = normalizeLocalhostOrigin(source || '');
+            if (!normalizedSource) {
+                return;
+            }
+
+            const pond = ensureFilePondInstance(input);
+            if (!pond) {
+                return;
+            }
+
+            pond.removeFiles();
+            pond.addFile(normalizedSource).catch((error) => {
+                console.error('Failed to preload FilePond file:', normalizedSource, error);
+            });
+        };
 
         const setFormFieldValue = (selector, value) => {
             const element = form?.querySelector(selector);
@@ -30,18 +94,13 @@ document.addEventListener('show.bs.modal', function (event) {
         };
 
 // Remove files from FilePond if available
-        if (typeof FilePond !== 'undefined') {
-            const pond = FilePond.find(imageUpload);
-            if (pond) pond.removeFiles();
-            const bannerPond = FilePond.find(bannerUpload);
-            if (bannerPond) bannerPond.removeFiles();
-            const iconPond = FilePond.find(iconUpload);
-            if (iconPond) iconPond.removeFiles();
-            const activeIconPond = FilePond.find(activeIconUpload);
-            if (activeIconPond) activeIconPond.removeFiles();
-            const backgroundImagePond = FilePond.find(backgroundImageUpload);
-            if (backgroundImagePond) backgroundImagePond.removeFiles();
-        }
+        resetFilePondField(imageUpload);
+        resetFilePondField(bannerUpload);
+        resetFilePondField(iconUpload);
+        resetFilePondField(activeIconUpload);
+        resetFilePondField(backgroundImageUpload);
+        resetFilePondField(ogImageUpload);
+        resetFilePondField(twitterImageUpload);
         if (categoryId) {
             // Fetch category data
             fetch(url, {method: 'GET'})
@@ -72,6 +131,13 @@ document.addEventListener('show.bs.modal', function (event) {
                     form.querySelector('input[name="seo_title"]').value = data.metadata?.seo_title || '';
                     form.querySelector('textarea[name="seo_description"]').value = data.metadata?.seo_description || '';
                     form.querySelector('input[name="seo_keywords"]').value = data.metadata?.seo_keywords || '';
+                    form.querySelector('input[name="og_title"]').value = data.metadata?.og_title || '';
+                    form.querySelector('textarea[name="og_description"]').value = data.metadata?.og_description || '';
+                    form.querySelector('input[name="twitter_title"]').value = data.metadata?.twitter_title || '';
+                    form.querySelector('textarea[name="twitter_description"]').value = data.metadata?.twitter_description || '';
+                    form.querySelector('select[name="twitter_card"]').value = data.metadata?.twitter_card || '';
+                    form.querySelector('select[name="schema_mode"]').value = data.metadata?.schema_mode || 'auto';
+                    form.querySelector('textarea[name="schema_json_ld"]').value = data.metadata?.schema_json_ld || '';
 
                     // Set parent_id in TomSelect (auto-select)
                     if (tomSelectInstance) {
@@ -95,38 +161,13 @@ document.addEventListener('show.bs.modal', function (event) {
                     }
 
                     // Image upload via FilePond
-                    if (typeof FilePond !== 'undefined') {
-                        if (data.image !== null && data.image !== undefined && imageUpload && data.image !== '') {
-                            const pond = FilePond.find(imageUpload);
-                            if (pond) {
-                                pond.addFile(data.image, { type: 'local' });
-                            }
-                        }
-                        if (data.banner !== null && data.banner !== undefined && bannerUpload && data.banner !== '') {
-                            const bannerPond = FilePond.find(bannerUpload);
-                            if (bannerPond) {
-                                bannerPond.addFile(data.banner, { type: 'local' });
-                            }
-                        }
-                        if (data.icon !== null && data.icon !== undefined && iconUpload && data.icon !== '') {
-                            const iconPond = FilePond.find(iconUpload);
-                            if (iconPond) {
-                                iconPond.addFile(data.icon, { type: 'local' });
-                            }
-                        }
-                        if (data.active_icon !== null && data.active_icon !== undefined && activeIconUpload && data.active_icon !== '') {
-                            const activeIconPond = FilePond.find(activeIconUpload);
-                            if (activeIconPond) {
-                                activeIconPond.addFile(data.active_icon, { type: 'local' });
-                            }
-                        }
-                        if (data.background_image !== null && data.background_image !== undefined && backgroundImageUpload && data.background_image !== '') {
-                            const backgroundImagePond = FilePond.find(backgroundImageUpload);
-                            if (backgroundImagePond) {
-                                backgroundImagePond.addFile(data.background_image, { type: 'local' });
-                            }
-                        }
-                    }
+                    preloadFilePondField(imageUpload, data.image);
+                    preloadFilePondField(bannerUpload, data.banner);
+                    preloadFilePondField(iconUpload, data.icon);
+                    preloadFilePondField(activeIconUpload, data.active_icon);
+                    preloadFilePondField(backgroundImageUpload, data.background_image);
+                    preloadFilePondField(ogImageUpload, data.og_image || data.metadata?.og_image);
+                    preloadFilePondField(twitterImageUpload, data.twitter_image || data.metadata?.twitter_image);
 
                     // Change form action to update route
                     form.setAttribute('action', `${categoryBaseUrl}/${categoryId}`);
@@ -170,6 +211,13 @@ document.addEventListener('show.bs.modal', function (event) {
             setFormFieldValue('input[name="seo_title"]', '');
             setFormFieldValue('textarea[name="seo_description"]', '');
             setFormFieldValue('input[name="seo_keywords"]', '');
+            setFormFieldValue('input[name="og_title"]', '');
+            setFormFieldValue('textarea[name="og_description"]', '');
+            setFormFieldValue('input[name="twitter_title"]', '');
+            setFormFieldValue('textarea[name="twitter_description"]', '');
+            setFormFieldValue('select[name="twitter_card"]', '');
+            setFormFieldValue('select[name="schema_mode"]', 'auto');
+            setFormFieldValue('textarea[name="schema_json_ld"]', '');
 
             // Set action for create
             form.querySelector('input[id="category-id"]').value = "";

@@ -13,6 +13,7 @@ import {
   faqPageSchema,
   jsonLd,
 } from "@/lib/structured-data";
+import { getCustomJsonLdSchemas, resolveProductSeo } from "@/lib/seo";
 import Breadcrumb from "@/components/common/Breadcrumb";
 import RelatedProducts from "@/components/product/RelatedProducts";
 import ProductDetailIsland from "./ProductDetailIsland";
@@ -43,22 +44,15 @@ export async function generateMetadata({
   const firstVariant = product.variants?.[0];
   const firstStorePricing = firstVariant?.store_pricing?.[0];
   const price = toNum(firstStorePricing?.special_price ?? firstStorePricing?.price ?? 0);
-  const image = product.images?.main_image ?? product.images?.all?.[0];
   const rawTitle = product.title ?? "Product";
-  const title = product.features?.seo_title || rawTitle;
-  const description =
-    product.features?.seo_description ||
-    product.short_description ||
-    `Buy ${rawTitle} online at Pethiyan. Premium packaging with GST invoice and fast shipping across India.`;
-  const keywords = product.features?.seo_keywords || undefined;
-  const indexable = product.features?.is_indexable !== false;
+  const seo = resolveProductSeo(product);
   const inStock = firstVariant?.availability !== false;
 
   return {
-    title,
-    description,
-    ...(keywords ? { keywords } : {}),
-    robots: indexable
+    title: seo.title,
+    description: seo.description,
+    ...(seo.keywords ? { keywords: seo.keywords } : {}),
+    robots: seo.indexable
       ? { index: true,  follow: true,  googleBot: { index: true,  follow: true  } }
       : { index: false, follow: false, googleBot: { index: false, follow: false } },
     alternates: {
@@ -66,10 +60,16 @@ export async function generateMetadata({
       languages: { "en": `/products/${slug}`, "x-default": `/products/${slug}` },
     },
     openGraph: {
-      title: `${title} | Pethiyan`,
-      description,
+      title: seo.openGraphTitle,
+      description: seo.openGraphDescription,
       url: `/products/${slug}`,
-      ...(image ? { images: [{ url: image, alt: rawTitle }] } : {}),
+      ...(seo.openGraphImage ? { images: [{ url: seo.openGraphImage, alt: rawTitle }] } : {}),
+    },
+    twitter: {
+      card: seo.twitterCard,
+      title: seo.twitterTitle,
+      description: seo.twitterDescription,
+      ...(seo.twitterImage ? { images: [seo.twitterImage] } : {}),
     },
     other: {
       "og:type": "og:product",
@@ -100,7 +100,13 @@ export default async function ProductPage({
   if (!product) notFound();
 
   // ── JSON-LD schemas ──
-  const pSchema = productSchema(product, reviews);
+  const seo = resolveProductSeo(product);
+  const pSchema = productSchema(product, reviews, {
+    canonicalPath: `/products/${slug}`,
+    titleOverride: seo.openGraphTitle,
+    descriptionOverride: seo.openGraphDescription,
+    imageOverride: seo.openGraphImage,
+  });
   const bcSchema = breadcrumbSchema([
     { label: "Home", href: "/" },
     { label: "Shop", href: "/shop" },
@@ -112,12 +118,21 @@ export default async function ProductPage({
       : []),
     { label: product.title, href: `/products/${slug}` },
   ]);
+  const customSchemas = getCustomJsonLdSchemas(
+    seo.schemaMode,
+    seo.schemaJsonLd,
+  );
+  const autoSchemas = customSchemas.length > 0 ? [] : [pSchema, bcSchema];
 
   return (
     <div className="min-h-screen bg-(--background)">
       {/* JSON-LD */}
-      <script {...jsonLd(pSchema)} key="product-schema" />
-      <script {...jsonLd(bcSchema)} key="breadcrumb-schema" />
+      {autoSchemas.map((schema, index) => (
+        <script {...jsonLd(schema)} key={`product-schema-${index}`} />
+      ))}
+      {customSchemas.map((schema, index) => (
+        <script {...jsonLd(schema as Record<string, unknown>)} key={`product-custom-schema-${index}`} />
+      ))}
       {faqs.length > 0 && (
         <script {...jsonLd(faqPageSchema(faqs))} key="faq-schema" />
       )}

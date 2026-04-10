@@ -133,6 +133,14 @@ class ProductController extends Controller
             ->orderBy('name')
             ->get(['id', 'name', 'state_code', 'gst_code']);
 
+        $taxClassRateMap = $taxClasses->mapWithKeys(function ($taxClass) {
+            $rateSum = (float) ($taxClass->taxRates->sum('rate') ?? 0);
+            $nearest = collect([0, 5, 12, 18, 28])->sortBy(function ($s) use ($rateSum) {
+                return abs($s - $rateSum);
+            })->first();
+            return [$taxClass->id => (int) $nearest];
+        });
+
         $stores = Store::where('seller_id', $pethiyanSellerId ?? $this->sellerId)
             ->get([
                 'id', 'name', 'city', 'contact_number', 'verification_status', 'visibility_status',
@@ -165,7 +173,7 @@ class ProductController extends Controller
             })
             ->values();
 
-        return view($this->panelView('products.form'), compact('categories', 'attributes', 'pethiyanSellerId', 'pethiyanBrandId', 'taxClasses', 'storeList', 'gstStates'));
+        return view($this->panelView('products.form'), compact('categories', 'attributes', 'pethiyanSellerId', 'pethiyanBrandId', 'taxClasses', 'taxClassRateMap', 'storeList', 'gstStates'));
     }
 
     /**
@@ -292,6 +300,13 @@ class ProductController extends Controller
             ->with(['taxRates:id,rate'])
             ->orderBy('title')
             ->get(['id', 'title']);
+        $taxClassRateMap = $taxClasses->mapWithKeys(function ($taxClass) {
+            $rateSum = (float) ($taxClass->taxRates->sum('rate') ?? 0);
+            $nearest = collect([0, 5, 12, 18, 28])->sortBy(function ($s) use ($rateSum) {
+                return abs($s - $rateSum);
+            })->first();
+            return [$taxClass->id => (int) $nearest];
+        });
         $selectedTaxGroupId = null;
         $selectedGstRate = null;
         $gstStates = State::where('country_id', 101)
@@ -347,6 +362,7 @@ class ProductController extends Controller
             'categories',
             'attributes',
             'taxClasses',
+            'taxClassRateMap',
             'storeList',
             'gstStates',
             'selectedTaxGroupId',

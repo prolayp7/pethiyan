@@ -8,16 +8,19 @@ use App\Enums\CategoryStatusEnum;
 use App\Enums\SpatieMediaCollectionName;
 use App\Http\Requests\Category\StoreCategoryRequest;
 use App\Http\Requests\Category\UpdateCategoryRequest;
+use App\Http\Resources\CategoryResource;
 use App\Models\Category;
 use App\Services\ImageWebpService;
 use App\Traits\ChecksPermissions;
 use App\Traits\PanelAware;
 use App\Types\Api\ApiResponseType;
+use BackedEnum;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
@@ -42,9 +45,9 @@ class CategoryController extends Controller
     public function __construct()
     {
         if ($this->getPanel() === 'admin') {
-            $this->editPermission = $this->hasPermission(AdminPermissionEnum::CATEGORY_EDIT());
-            $this->deletePermission = $this->hasPermission(AdminPermissionEnum::CATEGORY_DELETE());
-            $this->createPermission = $this->hasPermission(AdminPermissionEnum::CATEGORY_CREATE());
+            $this->editPermission = $this->hasPermission(AdminPermissionEnum::CATEGORY_EDIT->value);
+            $this->deletePermission = $this->hasPermission(AdminPermissionEnum::CATEGORY_DELETE->value);
+            $this->createPermission = $this->hasPermission(AdminPermissionEnum::CATEGORY_CREATE->value);
         }
     }
 
@@ -78,13 +81,23 @@ class CategoryController extends Controller
      */
     public function store(StoreCategoryRequest $request): JsonResponse
     {
+        // Guard: detect if PHP silently dropped uploaded files due to upload_max_filesize
+        if ($this->uploadExceededPhpLimit($request)) {
+            return ApiResponseType::sendJsonResponse(
+                success: false,
+                message: 'messages.upload_too_large',
+                data: ['error' => 'The uploaded file exceeds the server upload limit. Max allowed: ' . ini_get('upload_max_filesize')],
+                status: 422
+            );
+        }
+
         try {
             $this->authorize('create', Category::class);
             $validated = $request->validated();
 
             // Set default values
             if (empty($request->status)) {
-                $validated['status'] = CategoryStatusEnum::INACTIVE()();
+                $validated['status'] = CategoryStatusEnum::INACTIVE();
             }
             if (empty($request->requires_approval)) {
                 $validated['requires_approval'] = false;
@@ -94,6 +107,8 @@ class CategoryController extends Controller
 
             // Handle file uploads for creation
             $this->handleFileUploadsForStore($request, $category);
+            $this->handleSeoImageUploads($request, $category);
+            $category->refresh();
 
             return ApiResponseType::sendJsonResponse(
                 success: true,
@@ -127,7 +142,7 @@ class CategoryController extends Controller
             return ApiResponseType::sendJsonResponse(
                 success: true,
                 message: 'labels.category_retrieved_successfully',
-                data: $category->load('parent')
+                data: new CategoryResource($category->load('parent'))
             );
         } catch (ModelNotFoundException) {
             return ApiResponseType::sendJsonResponse(
@@ -142,6 +157,16 @@ class CategoryController extends Controller
      */
     public function update(UpdateCategoryRequest $request, $id): JsonResponse
     {
+        // Guard: detect if PHP silently dropped uploaded files due to upload_max_filesize
+        if ($this->uploadExceededPhpLimit($request)) {
+            return ApiResponseType::sendJsonResponse(
+                success: false,
+                message: 'messages.upload_too_large',
+                data: ['error' => 'The uploaded file exceeds the server upload limit. Max allowed: ' . ini_get('upload_max_filesize')],
+                status: 422
+            );
+        }
+
         try {
             $category = Category::findOrFail($id);
             $this->authorize('update', $category);
@@ -149,19 +174,19 @@ class CategoryController extends Controller
 
             // Set default values
             if (isset($validated['status']) && $validated['status'] === CategoryStatusEnum::INACTIVE()) {
-//                if ($category->products()->exists()) {
-//                    return ApiResponseType::sendJsonResponse(
-//                        success: false,
-//                        message: 'messages.category_cannot_be_deactivated_with_products',
-//                    );
-//                }
-//                // Prevent deletion if any direct child category has products assigned
-//                if ($category->children()->whereHas('products')->exists()) {
-//                    return ApiResponseType::sendJsonResponse(
-//                        success: false,
-//                        message: 'messages.category_cannot_be_deactivated_with_products',
-//                    );
-//                }
+               if ($category->products()->exists()) {
+                   return ApiResponseType::sendJsonResponse(
+                       success: false,
+                       message: 'messages.category_cannot_be_deactivated_with_products',
+                   );
+               }
+               // Prevent deletion if any direct child category has products assigned
+               if ($category->children()->whereHas('products')->exists()) {
+                   return ApiResponseType::sendJsonResponse(
+                       success: false,
+                       message: 'messages.category_cannot_be_deactivated_with_products',
+                   );
+               }
             }
             if (empty($request->status)) {
                 $validated['status'] = CategoryStatusEnum::INACTIVE();
@@ -177,6 +202,8 @@ class CategoryController extends Controller
 
             // Handle file uploads and removals for update
             $this->handleFileUploadsForUpdate($request, $category);
+            $this->handleSeoImageUploads($request, $category);
+            $category->refresh();
 
             return ApiResponseType::sendJsonResponse(
                 success: true,
@@ -205,6 +232,7 @@ class CategoryController extends Controller
             );
         }
     }
+
 
     /**
      * Remove the specified resource from storage.
@@ -273,7 +301,7 @@ class CategoryController extends Controller
     {
         foreach ($this->mediaCollections as $requestField => $collectionName) {
             if ($request->hasFile($requestField)) {
-                $collectionValue = is_callable($collectionName) ? $collectionName() : $collectionName;
+                $collectionValue = $this->resolveMediaCollectionName($collectionName);
                 $converted = ImageWebpService::convert($request->file($requestField));
                 $category->addMedia($converted['path'])
                     ->usingFileName($converted['filename'])
@@ -291,13 +319,13 @@ class CategoryController extends Controller
     private function handleFileUploadsForUpdate(UpdateCategoryRequest $request, Category $category): void
     {
         foreach ($this->mediaCollections as $requestField => $collectionName) {
-            $collectionValue = is_callable($collectionName) ? $collectionName() : $collectionName;
+            $collectionValue = $this->resolveMediaCollectionName($collectionName);
 
-            if ($request->hasFile($requestField) && $request->file($requestField)->getSize() > 0) {
+            $uploadedFile = $request->file($requestField);
+            if ($uploadedFile instanceof UploadedFile && $uploadedFile->isValid()) {
                 // New file uploaded — replace existing media
                 $this->handleSingleFileUpload($request, $category, $requestField, $collectionValue);
             }
-            // No file uploaded — keep existing media untouched
         }
     }
 
@@ -307,17 +335,94 @@ class CategoryController extends Controller
     private function handleSingleFileUpload(UpdateCategoryRequest $request, Category $category, string $requestField, string $collectionName): void
     {
         $newFile = $request->file($requestField);
-        $existingMedia = $category->getFirstMedia($collectionName);
+
+        if (! $newFile instanceof UploadedFile || ! $newFile->isValid()) {
+            return;
+        }
+
+        $category->clearMediaCollection($collectionName);
+
         $converted = ImageWebpService::convert($newFile);
 
-        // Only upload if file doesn't exist or is different
-        if (!$existingMedia || $existingMedia->file_name !== $converted['filename']) {
-            $category->addMedia($converted['path'])
-                ->usingFileName($converted['filename'])
-                ->toMediaCollection($collectionName);
-        }
+        $category->addMedia($converted['path'])
+            ->usingFileName($converted['filename'])
+            ->toMediaCollection($collectionName);
+
         if ($converted['isWebp']) {
             @unlink($converted['path']);
+        }
+    }
+
+    private function resolveMediaCollectionName(string|BackedEnum $collectionName): string
+    {
+        if ($collectionName instanceof BackedEnum) {
+            return (string) $collectionName->value;
+        }
+
+        return $collectionName;
+    }
+
+    /**
+     * Detect if PHP silently dropped uploaded files because the upload exceeded upload_max_filesize.
+     * When this happens, $_FILES is empty yet Content-Length indicates data was sent.
+     */
+    private function uploadExceededPhpLimit(Request $request): bool
+    {
+        // If no files were received but the client sent a multipart body with files
+        // it likely means PHP silently dropped them (UPLOAD_ERR_FORM_SIZE or server limit)
+        $contentLength = (int) ($request->server('CONTENT_LENGTH', 0));
+        $postMaxSize = $this->parsePhpSize(ini_get('post_max_size'));
+
+        if ($contentLength > 0 && $contentLength > $postMaxSize && empty($_FILES)) {
+            return true;
+        }
+
+        // Check if any uploaded file has UPLOAD_ERR_INI_SIZE or UPLOAD_ERR_FORM_SIZE
+        foreach ($_FILES as $file) {
+            $error = is_array($file['error']) ? $file['error'][0] : $file['error'];
+            if (in_array($error, [UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE], true)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Parse a PHP size string (e.g. '20M', '1G') into bytes.
+     */
+    private function parsePhpSize(string $size): int
+    {
+        $size = trim($size);
+        $last = strtolower($size[strlen($size) - 1]);
+        $value = (int) $size;
+
+        return match ($last) {
+            'g' => $value * 1024 * 1024 * 1024,
+            'm' => $value * 1024 * 1024,
+            'k' => $value * 1024,
+            default => $value,
+        };
+    }
+
+    private function handleSeoImageUploads(Request $request, Category $category): void
+    {
+        $metadata = $category->metadata ?? [];
+        $updated = false;
+
+        foreach (['og_image', 'twitter_image'] as $field) {
+            if (!$request->hasFile($field)) {
+                continue;
+            }
+
+            $metadata[$field] = $request->file($field)->store('seo/category', 'public');
+            $updated = true;
+        }
+
+        if ($updated) {
+            $category->update([
+                'metadata' => array_merge($category->metadata ?? [], $metadata),
+            ]);
         }
     }
 
@@ -351,13 +456,13 @@ class CategoryController extends Controller
     {
         $this->authorize('viewAny', Category::class);
 
-        $draw = $request->get('draw');
-        $start = $request->get('start');
-        $length = $request->get('length');
-        $searchValue = $request->get('search')['value'] ?? '';
+        $draw = $request->input('draw');
+        $start = $request->input('start');
+        $length = $request->input('length');
+        $searchValue = $request->input('search.value', '');
 
-        $orderColumnIndex = $request->get('order')[0]['column'] ?? 0;
-        $orderDirection = $request->get('order')[0]['dir'] ?? 'asc';
+        $orderColumnIndex = $request->input('order.0.column', 0);
+        $orderDirection = $request->input('order.0.dir', 'asc');
 
         $columns = ['id', 'title', 'description', 'status', 'created_at'];
         $orderColumn = $columns[$orderColumnIndex] ?? 'id';

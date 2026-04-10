@@ -85,32 +85,34 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        initializeFilePond('backgroundImage', ['image/jpeg','image/png','image/jpg','image/webp']);
-        initializeFilePond('banner');
-        initializeFilePond('profile_image');
-        initializeFilePond('address_proof');
-        initializeFilePond('voided_check');
-        initializeFilePond('activeIcon');
-        initializeFilePond('image');
-        initializeFilePond('active_icon');
-        initializeFilePond('icon');
-        initializeFilePond('desktop_4k_background_image');
-        initializeFilePond('desktop_fdh_background_image');
-        initializeFilePond('tablet_background_image');
-        initializeFilePond('mobile_background_image');
+        initializeFilePond('backgroundImage', ['image/jpeg','image/png','image/jpg','image/webp'], '5MB');
+        initializeFilePond('banner', ['image/*'], '10MB');
+        initializeFilePond('profile_image', ['image/*'], '5MB');
+        initializeFilePond('address_proof', ['image/*'], '5MB');
+        initializeFilePond('voided_check', ['image/*'], '5MB');
+        initializeFilePond('activeIcon', ['image/*'], '2MB');
+        initializeFilePond('image', ['image/*'], '5MB');
+        initializeFilePond('active_icon', ['image/*'], '2MB');
+        initializeFilePond('icon', ['image/*'], '2MB');
+        initializeFilePond('desktop_4k_background_image', ['image/*'], '5MB');
+        initializeFilePond('desktop_fdh_background_image', ['image/*'], '5MB');
+        initializeFilePond('tablet_background_image', ['image/*'], '5MB');
+        initializeFilePond('mobile_background_image', ['image/*'], '5MB');
         initializeFilePond('product_video', ['video/mp4', 'video/mkv', 'video/webm'], '20MB');
-        initializeFilePond('siteFavicon');
-        initializeFilePond('siteHeaderDarkLogo');
-        initializeFilePond('siteHeaderLogo');
-        initializeFilePond('siteFooterLogo');
-        initializeFilePond('seoOgImage');
-        initializeFilePond('seoTwitterImage');
-        initializeFilePond('banner_image');
-        initializeFilePond('favicon', ['image/png']);
-        initializeFilePond('logo');
-        initializeFilePond('store_logo');
-        initializeFilePond('store_banner');
-        initializeFilePond('adminSignature')
+        initializeFilePond('siteFavicon', ['image/*'], '2MB');
+        initializeFilePond('siteHeaderDarkLogo', ['image/*'], '5MB');
+        initializeFilePond('siteHeaderLogo', ['image/*'], '5MB');
+        initializeFilePond('siteFooterLogo', ['image/*'], '5MB');
+        initializeFilePond('seoOgImage', ['image/*'], '4MB');
+        initializeFilePond('seoTwitterImage', ['image/*'], '4MB');
+        initializeFilePond('og_image', ['image/*'], '4MB');
+        initializeFilePond('twitter_image', ['image/*'], '4MB');
+        initializeFilePond('banner_image', ['image/*'], '10MB');
+        initializeFilePond('favicon', ['image/png'], '1MB');
+        initializeFilePond('logo', ['image/*'], '5MB');
+        initializeFilePond('store_logo', ['image/*'], '5MB');
+        initializeFilePond('store_banner', ['image/*'], '10MB');
+        initializeFilePond('adminSignature', ['image/*'], '2MB')
 
         const input = document.querySelector(`[name="additional_images[]"]`);
         if (input) {

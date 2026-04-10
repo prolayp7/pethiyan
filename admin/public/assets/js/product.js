@@ -429,9 +429,19 @@ function initializeVariantAttributes() {
                 availability: serverVariant.availability || '',
                 barcode: serverVariant.barcode || '',
                 is_default: serverVariant.is_default || '',
+                is_indexable: serverVariant.metadata?.is_indexable ?? serverVariant.is_indexable ?? true,
                 seo_title: serverVariant.metadata?.seo_title || serverVariant.seo_title || '',
                 seo_description: serverVariant.metadata?.seo_description || serverVariant.seo_description || '',
                 seo_keywords: serverVariant.metadata?.seo_keywords || serverVariant.seo_keywords || '',
+                og_title: serverVariant.metadata?.og_title || serverVariant.og_title || '',
+                og_description: serverVariant.metadata?.og_description || serverVariant.og_description || '',
+                og_image: normalizeStorageUrl(serverVariant.og_image || serverVariant.metadata?.og_image || ''),
+                twitter_title: serverVariant.metadata?.twitter_title || serverVariant.twitter_title || '',
+                twitter_description: serverVariant.metadata?.twitter_description || serverVariant.twitter_description || '',
+                twitter_card: serverVariant.metadata?.twitter_card || serverVariant.twitter_card || '',
+                twitter_image: normalizeStorageUrl(serverVariant.twitter_image || serverVariant.metadata?.twitter_image || ''),
+                schema_mode: serverVariant.metadata?.schema_mode || serverVariant.schema_mode || 'auto',
+                schema_json_ld: serverVariant.metadata?.schema_json_ld || serverVariant.schema_json_ld || '',
             };
         });
 
@@ -572,6 +582,122 @@ function unitSelect(variantId, field, selected, options) {
     return `<select class="input-group-text form-select ps-2 pe-1" style="max-width:70px" onchange="updateVariant('${variantId}','${field}',this.value)">${opts}</select>`;
 }
 
+function renderVariantSeoSection(v) {
+    const twitterCard = v.twitter_card || '';
+    const schemaMode = v.schema_mode || 'auto';
+    const ogImageLink = v.og_image
+        ? `<small class="form-hint d-block mt-1">Current OG image: <a href="${v.og_image}" target="_blank">View uploaded image</a></small>`
+        : '<small class="form-hint d-block mt-1">Uses the variant image if left blank.</small>';
+    const twitterImageLink = v.twitter_image
+        ? `<small class="form-hint d-block mt-1">Current Twitter image: <a href="${v.twitter_image}" target="_blank">View uploaded image</a></small>`
+        : '<small class="form-hint d-block mt-1">Uses the variant image or OG image if left blank.</small>';
+
+    return `
+        <div class="col-12">
+            <details>
+                <summary class="text-muted small fw-semibold" style="cursor:pointer;user-select:none;">SEO Settings</summary>
+                <div class="row g-3 mt-1">
+                    <div class="col-12">
+                        <label class="row">
+                            <span class="col">Allow search engines to index this variant</span>
+                            <span class="col-auto">
+                                <label class="form-check form-check-single form-switch">
+                                    <input class="form-check-input" type="checkbox"
+                                           data-variant-id="${v.id}"
+                                           ${v.is_indexable === false ? '' : 'checked'}
+                                           onchange="updateVariant('${v.id}', 'is_indexable', this.checked)">
+                                </label>
+                            </span>
+                        </label>
+                        <small class="form-hint">Uncheck to add noindex for this variant.</small>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label mb-1">SEO Title <span class="text-muted">(max 60)</span></label>
+                        <input type="text" class="form-control variant-seo-title-input" maxlength="60"
+                               data-variant-id="${v.id}"
+                               placeholder="Variant SEO title"
+                               value="${v.seo_title || ''}"
+                               oninput="handleVariantSeoTitleInput('${v.id}', this.value)">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label mb-1">SEO Description <span class="text-muted">(max 160)</span></label>
+                        <textarea class="form-control variant-seo-description-input" maxlength="160" rows="3"
+                                  data-variant-id="${v.id}"
+                                  placeholder="Variant SEO description"
+                                  oninput="handleVariantSeoDescriptionInput('${v.id}', this.value)">${v.seo_description || ''}</textarea>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label mb-1">SEO Keywords</label>
+                        <input type="text" class="form-control variant-seo-keywords-input" maxlength="255"
+                               data-variant-id="${v.id}"
+                               placeholder="keyword1, keyword2"
+                               value="${v.seo_keywords || ''}">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label mb-1">OG Title</label>
+                        <input type="text" class="form-control" value="${v.og_title || ''}"
+                               placeholder="Leave blank to use variant SEO title"
+                               oninput="updateVariant('${v.id}', 'og_title', this.value)">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label mb-1">OG Image</label>
+                        <input type="file" name="variant_og_image${v.id}" class="form-control variant-og-image-input" data-image-url="${v.og_image || ''}" accept="image/*">
+                        ${ogImageLink}
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label mb-1">OG Description</label>
+                        <textarea class="form-control" rows="3"
+                                  placeholder="Leave blank to use variant SEO description"
+                                  oninput="updateVariant('${v.id}', 'og_description', this.value)">${v.og_description || ''}</textarea>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label mb-1">Twitter Title</label>
+                        <input type="text" class="form-control" value="${v.twitter_title || ''}"
+                               placeholder="Leave blank to use variant SEO title"
+                               oninput="updateVariant('${v.id}', 'twitter_title', this.value)">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label mb-1">Twitter Card</label>
+                        <select class="form-select" onchange="updateVariant('${v.id}', 'twitter_card', this.value)">
+                            <option value="" ${twitterCard === '' ? 'selected' : ''}>Use automatic fallback</option>
+                            <option value="summary" ${twitterCard === 'summary' ? 'selected' : ''}>Summary</option>
+                            <option value="summary_large_image" ${twitterCard === 'summary_large_image' ? 'selected' : ''}>Summary Large Image</option>
+                            <option value="app" ${twitterCard === 'app' ? 'selected' : ''}>App</option>
+                            <option value="player" ${twitterCard === 'player' ? 'selected' : ''}>Player</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label mb-1">Twitter Image</label>
+                        <input type="file" name="variant_twitter_image${v.id}" class="form-control variant-twitter-image-input" data-image-url="${v.twitter_image || ''}" accept="image/*">
+                        ${twitterImageLink}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label mb-1">Twitter Description</label>
+                        <textarea class="form-control" rows="3"
+                                  placeholder="Leave blank to use variant SEO description"
+                                  oninput="updateVariant('${v.id}', 'twitter_description', this.value)">${v.twitter_description || ''}</textarea>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label mb-1">Schema Mode</label>
+                        <select class="form-select variant-schema-mode-select" data-variant-id="${v.id}"
+                                onchange="updateVariantSchemaMode('${v.id}', this.value)">
+                            <option value="auto" ${schemaMode === 'auto' ? 'selected' : ''}>Auto-generate</option>
+                            <option value="custom" ${schemaMode === 'custom' ? 'selected' : ''}>Custom JSON-LD</option>
+                        </select>
+                    </div>
+                    <div class="col-12 variant-schema-json-ld-wrap" data-variant-id="${v.id}" style="${schemaMode === 'custom' ? '' : 'display:none;'}">
+                        <label class="form-label mb-1">Schema JSON-LD</label>
+                        <textarea class="form-control" rows="6"
+                                  placeholder='{"@@context":"https://schema.org","@@type":"Product"}'
+                                  oninput="updateVariant('${v.id}', 'schema_json_ld', this.value)">${v.schema_json_ld || ''}</textarea>
+                        <small class="form-hint">Used only when Schema Mode is set to Custom JSON-LD.</small>
+                    </div>
+                </div>
+            </details>
+        </div>
+    `;
+}
+
 function renderVariants() {
     Object.keys(dbAttributes).forEach(attrKey => {
         const attr = dbAttributes[attrKey];
@@ -662,35 +788,7 @@ function renderVariants() {
                             <label class="form-check-label" for="flexRadioDefault${v.id}">Set as Default</label>
                         </div>
                     </div>
-                    <div class="col-12">
-                        <details>
-                            <summary class="text-muted small fw-semibold" style="cursor:pointer;user-select:none;">SEO (optional)</summary>
-                            <div class="row g-2 mt-1">
-                                <div class="col-12">
-                                    <label class="form-label form-label-sm mb-1">SEO Title <span class="text-muted">(max 60)</span></label>
-                                    <input type="text" class="form-control variant-seo-title-input" maxlength="60"
-                                           data-variant-id="${v.id}"
-                                           placeholder="Variant SEO title"
-                                           value="${v.seo_title || ''}"
-                                           oninput="handleVariantSeoTitleInput('${v.id}', this.value)">
-                                </div>
-                                <div class="col-12">
-                                    <label class="form-label form-label-sm mb-1">SEO Description <span class="text-muted">(max 160)</span></label>
-                                    <textarea class="form-control variant-seo-description-input" maxlength="160" rows="3"
-                                              data-variant-id="${v.id}"
-                                              placeholder="Variant SEO description"
-                                              oninput="handleVariantSeoDescriptionInput('${v.id}', this.value)">${v.seo_description || ''}</textarea>
-                                </div>
-                                <div class="col-12">
-                                    <label class="form-label form-label-sm mb-1">SEO Keywords</label>
-                                    <input type="text" class="form-control form-control-sm variant-seo-keywords-input" maxlength="255"
-                                           data-variant-id="${v.id}"
-                                           placeholder="keyword1, keyword2"
-                                           value="${v.seo_keywords || ''}">
-                                </div>
-                            </div>
-                        </details>
-                    </div>
+                    ${renderVariantSeoSection(v)}
                 </div>
             </div>
         </div>
@@ -701,6 +799,14 @@ function renderVariants() {
     document.querySelectorAll('.variant-image-input').forEach(input => {
         const inputName = input.getAttribute('name');
         initializeFilePond(inputName, ['image/*'], '2MB');
+    });
+    document.querySelectorAll('.variant-og-image-input').forEach(input => {
+        const inputName = input.getAttribute('name');
+        initializeFilePond(inputName, ['image/*'], '4MB');
+    });
+    document.querySelectorAll('.variant-twitter-image-input').forEach(input => {
+        const inputName = input.getAttribute('name');
+        initializeFilePond(inputName, ['image/*'], '4MB');
     });
     hydrateVariantSeoFields();
     initializeVariantSeoKeywordInputs();
@@ -749,6 +855,16 @@ function normalizeLocalhostOrigin(url) {
     } catch (_e) {
         return url;
     }
+}
+
+function normalizeStorageUrl(path) {
+    if (!path || typeof path !== 'string') return '';
+
+    if (/^https?:\/\//i.test(path)) {
+        return normalizeLocalhostOrigin(path);
+    }
+
+    return normalizeLocalhostOrigin(`${window.location.origin}/storage/${String(path).replace(/^\/+/, '')}`);
 }
 
 function getMainProductTitle() {
@@ -934,6 +1050,14 @@ function handleVariantSeoTitleInput(id, value) {
 
 function handleVariantSeoDescriptionInput(id, value) {
     updateVariant(id, 'seo_description', value);
+}
+
+function updateVariantSchemaMode(id, value) {
+    updateVariant(id, 'schema_mode', value);
+    const wrap = document.querySelector(`.variant-schema-json-ld-wrap[data-variant-id="${id}"]`);
+    if (wrap) {
+        wrap.style.display = value === 'custom' ? '' : 'none';
+    }
 }
 
 function normalizeSeoKeywordList(value) {
@@ -1185,7 +1309,20 @@ function addCustomVariant() {
         length: '', length_unit: 'cm',
         availability: '',
         barcode: '',
-        is_default: ''
+        is_default: '',
+        is_indexable: true,
+        seo_title: '',
+        seo_description: '',
+        seo_keywords: '',
+        og_title: '',
+        og_description: '',
+        og_image: '',
+        twitter_title: '',
+        twitter_description: '',
+        twitter_card: '',
+        twitter_image: '',
+        schema_mode: 'auto',
+        schema_json_ld: '',
     };
     variants.push(variant);
 
@@ -1214,7 +1351,7 @@ function addCustomVariant() {
                 <div class="row g-3">
                     <div class="col-12">
                         <label class="form-label">Title</label>
-                        <input type="text" class="form-control" placeholder="e.g. Meesho Printed 2 Inch 80m" value="" onchange="updateVariant('${id}', 'title', this.value)">
+                        <input type="text" class="form-control variant-title-input" data-variant-id="${id}" placeholder="e.g. Meesho Printed 2 Inch 80m" value="" oninput="handleVariantTitleInput('${id}', this.value)">
                     </div>
                     <div class="col-12">
                         <label class="form-label">Variant Image</label>
@@ -1273,6 +1410,7 @@ function addCustomVariant() {
                             <label class="form-check-label" for="flexRadioDefault${id}">Set as Default</label>
                         </div>
                     </div>
+                    ${renderVariantSeoSection(variant)}
                 </div>
             </div>
         </div>
@@ -1283,6 +1421,7 @@ function addCustomVariant() {
 
     // Init FilePond for the new image input
     initializeFilePond(`variant_image${id}`, ['image/*'], '2MB');
+    initializeVariantSeoKeywordInputs();
 
     // Update pricing UI
     updateVariantPricing();
@@ -2161,9 +2300,17 @@ function addVariantInputsToForm() {
             is_default: variant.is_default || '',
             attributes: [],
             metadata: {
+                is_indexable: variant.is_indexable !== false,
                 seo_title: variant.seo_title || null,
                 seo_description: variant.seo_description || null,
                 seo_keywords: variant.seo_keywords || null,
+                og_title: variant.og_title || null,
+                og_description: variant.og_description || null,
+                twitter_title: variant.twitter_title || null,
+                twitter_description: variant.twitter_description || null,
+                twitter_card: variant.twitter_card || null,
+                schema_mode: variant.schema_mode || 'auto',
+                schema_json_ld: variant.schema_json_ld || null,
             },
         };
 

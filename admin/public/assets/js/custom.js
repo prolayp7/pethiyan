@@ -89,6 +89,41 @@ document.addEventListener('DOMContentLoaded', () => {
                 headers: headers
             };
 
+            if (form.closest('#category-modal') && typeof FilePond !== 'undefined') {
+                [
+                    'image',
+                    'banner',
+                    'icon',
+                    'active_icon',
+                    'background_image',
+                    'og_image',
+                    'twitter_image'
+                ].forEach(function (fieldName) {
+                    const input = form.querySelector(`[name="${fieldName}"]`);
+                    if (!input) return;
+
+                    const pond = FilePond.find(input);
+                    if (!pond) return;
+
+                    formData.delete(fieldName);
+
+                    let appendedAnyFiles = false;
+
+                    pond.getFiles().forEach(function (fileItem) {
+                        if (!fileItem || !fileItem.file) return;
+
+                        formData.append(fieldName, fileItem.file, fileItem.file.name);
+                        appendedAnyFiles = true;
+                    });
+
+                    if (!appendedAnyFiles && input.files && input.files.length > 0) {
+                        Array.from(input.files).forEach(function (file) {
+                            formData.append(fieldName, file, file.name);
+                        });
+                    }
+                });
+            }
+
             if (method === 'GET') {
                 // For GET, append form data as query params
                 const params = new URLSearchParams(formData).toString();

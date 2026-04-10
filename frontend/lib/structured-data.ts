@@ -1,4 +1,11 @@
-import type { ApiProduct, ApiReview, ApiFaq, RealApiProduct } from "./api";
+import type {
+  ApiCategory,
+  ApiProduct,
+  ApiReview,
+  ApiFaq,
+  RealApiProduct,
+  RealApiVariant,
+} from "./api";
 
 const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://pethiyan.com";
@@ -82,12 +89,65 @@ export function breadcrumbSchema(items: BreadcrumbItem[]) {
   };
 }
 
+// ─── Category / Collection ───────────────────────────────────────────────────
+
+export function collectionPageSchema(
+  category: ApiCategory,
+  products: { title?: string; name?: string; slug?: string }[] = [],
+) {
+  const categoryName = category.name?.trim() || category.title?.trim() || "Category";
+  const url = `${SITE_URL}/category/${category.slug}`;
+
+  return {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    name: categoryName,
+    url,
+    description:
+      category.description ||
+      category.seo_description ||
+      `Browse ${categoryName} products on ${SITE_NAME}.`,
+    ...(category.image ? { image: category.image } : {}),
+    mainEntity: {
+      "@type": "ItemList",
+      itemListElement: products.slice(0, 24).map((product, index) => ({
+        "@type": "ListItem",
+        position: index + 1,
+        name: product.title || product.name || `Product ${index + 1}`,
+        url: `${SITE_URL}/products/${product.slug ?? ""}`,
+      })),
+    },
+  };
+}
+
 // ─── Product ──────────────────────────────────────────────────────────────────
 
-export function productSchema(product: ApiProduct | RealApiProduct, reviews: ApiReview[] = []) {
-  const productName = ((product as Partial<ApiProduct>).name ?? (product as Partial<RealApiProduct>).title ?? "Product").trim();
+interface ProductSchemaOptions {
+  variant?: RealApiVariant | null;
+  canonicalPath?: string;
+  titleOverride?: string;
+  descriptionOverride?: string;
+  imageOverride?: string;
+}
+
+export function productSchema(
+  product: ApiProduct | RealApiProduct,
+  reviews: ApiReview[] = [],
+  options: ProductSchemaOptions = {},
+) {
+  const variant = options.variant ?? null;
+  const productName = (
+    options.titleOverride ??
+    variant?.title ??
+    (product as Partial<ApiProduct>).name ??
+    (product as Partial<RealApiProduct>).title ??
+    "Product"
+  ).trim();
   const productSlug = (product as Partial<ApiProduct>).slug ?? (product as Partial<RealApiProduct>).slug ?? "";
   const productDescription =
+    options.descriptionOverride ??
+    (variant?.metadata?.seo_description as string | undefined) ??
+    (variant?.seo_description as string | undefined) ??
     (product as Partial<ApiProduct>).short_description ??
     (product as Partial<RealApiProduct>).short_description ??
     (product as Partial<ApiProduct>).description ??
@@ -105,9 +165,19 @@ export function productSchema(product: ApiProduct | RealApiProduct, reviews: Api
       ? Number((product as Partial<ApiProduct>).sale_price) || Number((product as Partial<ApiProduct>).price)
       : Number((product as Partial<ApiProduct>).price);
 
-  const price = Number.isFinite(storePrice) && storePrice > 0 ? storePrice : fallbackPrice;
+  const variantPrice =
+    variant?.store_pricing?.[0]?.special_price ?? variant?.store_pricing?.[0]?.price ?? 0;
+  const price = Number.isFinite(variantPrice) && variantPrice > 0
+    ? variantPrice
+    : Number.isFinite(storePrice) && storePrice > 0
+    ? storePrice
+    : fallbackPrice;
 
-  const imageList = (product as Partial<RealApiProduct>).images?.all?.length
+  const imageList = options.imageOverride
+    ? [options.imageOverride]
+    : variant?.image
+    ? [variant.image]
+    : (product as Partial<RealApiProduct>).images?.all?.length
     ? (product as Partial<RealApiProduct>).images?.all
     : (product as Partial<ApiProduct>).images?.length
     ? (product as Partial<ApiProduct>).images
@@ -118,17 +188,21 @@ export function productSchema(product: ApiProduct | RealApiProduct, reviews: Api
     : undefined;
 
   const stock =
+    variant?.store_pricing?.[0]?.stock ??
     (product as Partial<RealApiProduct>).variants?.[0]?.store_pricing?.[0]?.stock ??
     (product as Partial<ApiProduct>).stock ??
     null;
 
   const productSku =
+    variant?.slug ||
     (product as Partial<ApiProduct>).sku ||
     (product as Partial<RealApiProduct>).features?.["sku" as never] ||
     String(product.id);
 
   const firstVariantBarcode =
-    (product as Partial<RealApiProduct>).variants?.[0]?.barcode || undefined;
+    variant?.barcode ||
+    (product as Partial<RealApiProduct>).variants?.[0]?.barcode ||
+    undefined;
 
   const schema: Record<string, unknown> = {
     "@context": "https://schema.org",
@@ -143,7 +217,9 @@ export function productSchema(product: ApiProduct | RealApiProduct, reviews: Api
     image: imageList,
     offers: {
       "@type": "Offer",
-      url: `${SITE_URL}/products/${productSlug}`,
+      url: options.canonicalPath
+        ? `${SITE_URL}${options.canonicalPath}`
+        : `${SITE_URL}/products/${productSlug}`,
       priceCurrency: "INR",
       price: price.toFixed(2),
       availability:

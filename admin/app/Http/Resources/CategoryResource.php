@@ -33,8 +33,24 @@ class CategoryResource extends JsonResource
             'seo_title' => $this->metadata['seo_title'] ?? null,
             'seo_description' => $this->metadata['seo_description'] ?? null,
             'seo_keywords' => $this->metadata['seo_keywords'] ?? null,
+            'og_title' => $this->metadata['og_title'] ?? null,
+            'og_description' => $this->metadata['og_description'] ?? null,
+            'og_image' => $this->resolveMetadataImageUrl('og_image'),
+            'twitter_title' => $this->metadata['twitter_title'] ?? null,
+            'twitter_description' => $this->metadata['twitter_description'] ?? null,
+            'twitter_card' => $this->metadata['twitter_card'] ?? null,
+            'twitter_image' => $this->resolveMetadataImageUrl('twitter_image'),
+            'schema_mode' => $this->metadata['schema_mode'] ?? 'auto',
+            'schema_json_ld' => $this->metadata['schema_json_ld'] ?? null,
             'subcategory_count' => $this->children_count ?? 0,
             'product_count' => $this->products_count ?? 0,
         ];
+    }
+
+    private function resolveMetadataImageUrl(string $key): ?string
+    {
+        $path = $this->metadata[$key] ?? null;
+
+        return !empty($path) ? url('storage/' . ltrim($path, '/')) : null;
     }
 }
