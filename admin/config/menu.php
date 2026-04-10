@@ -185,6 +185,28 @@ return [
                 ],
             ],
         ],
+        'blog' => [
+            'icon'   => 'ti-article',
+            'title'  => 'Blog',
+            'active' => 'blog',
+            'route'  => [
+                'blog_settings' => [
+                    'sub_active' => 'blog_settings',
+                    'sub_route'  => 'admin.blog.settings.show',
+                    'sub_title'  => 'Blog Settings',
+                ],
+                'blog_categories' => [
+                    'sub_active' => 'blog_categories',
+                    'sub_route'  => 'admin.blog.categories.index',
+                    'sub_title'  => 'Blog Categories',
+                ],
+                'blog_posts' => [
+                    'sub_active' => 'blog_posts',
+                    'sub_route'  => 'admin.blog.posts.index',
+                    'sub_title'  => 'Blog Posts',
+                ],
+            ],
+        ],
         'menus' => [
             'icon'   => 'ti-menu-2',
             'title'  => 'labels.menus',

@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\SupportTicketApiController;
 use App\Http\Controllers\GiftCardController;
 use App\Http\Controllers\Api\BannerApiController;
 use App\Http\Controllers\Api\BrandApiController;
+use App\Http\Controllers\Api\BlogApiController;
 use App\Http\Controllers\Api\CategoryApiController;
 use App\Http\Controllers\Api\DeliveryZoneApiController;
 use App\Http\Controllers\Api\ShippingRateApiController;
@@ -43,6 +44,14 @@ include_once("seller-api.php");
 // Hero Section (public — consumed by Next.js frontend)
 Route::get('hero-section', [HeroSectionApiController::class, 'index'])->name('hero-section.index');
 Route::get('video-story-section', [VideoStorySectionApiController::class, 'index'])->name('video-story-section.index');
+
+Route::prefix('blog')->name('blog.')->group(function () {
+    Route::get('/', [BlogApiController::class, 'home'])->name('home');
+    Route::get('/posts', [BlogApiController::class, 'posts'])->name('posts');
+    Route::get('/posts/{slug}', [BlogApiController::class, 'show'])->name('posts.show');
+    Route::get('/categories', [BlogApiController::class, 'categories'])->name('categories');
+    Route::get('/categories/{slug}', [BlogApiController::class, 'category'])->name('categories.show');
+});
 Route::get('newsletter-section', [NewsletterSectionApiController::class, 'index'])->name('newsletter-section.index');
 
 // Shipping Rates (public)

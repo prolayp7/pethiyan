@@ -494,6 +494,30 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('/{page}', [\App\Http\Controllers\Admin\PageController::class, 'update'])->name('update');
         });
 
+        // blog
+        Route::prefix('blog')->name('blog.')->group(function () {
+            Route::get('/settings', [\App\Http\Controllers\Admin\BlogSectionController::class, 'show'])->name('settings.show');
+            Route::post('/settings', [\App\Http\Controllers\Admin\BlogSectionController::class, 'update'])->name('settings.update');
+
+            Route::prefix('categories')->name('categories.')->group(function () {
+                Route::get('/', [\App\Http\Controllers\Admin\BlogCategoryController::class, 'index'])->name('index');
+                Route::get('/create', [\App\Http\Controllers\Admin\BlogCategoryController::class, 'create'])->name('create');
+                Route::post('/', [\App\Http\Controllers\Admin\BlogCategoryController::class, 'store'])->name('store');
+                Route::get('/{category}/edit', [\App\Http\Controllers\Admin\BlogCategoryController::class, 'edit'])->name('edit');
+                Route::post('/{category}', [\App\Http\Controllers\Admin\BlogCategoryController::class, 'update'])->name('update');
+                Route::delete('/{category}', [\App\Http\Controllers\Admin\BlogCategoryController::class, 'destroy'])->name('destroy');
+            });
+
+            Route::prefix('posts')->name('posts.')->group(function () {
+                Route::get('/', [\App\Http\Controllers\Admin\BlogPostController::class, 'index'])->name('index');
+                Route::get('/create', [\App\Http\Controllers\Admin\BlogPostController::class, 'create'])->name('create');
+                Route::post('/', [\App\Http\Controllers\Admin\BlogPostController::class, 'store'])->name('store');
+                Route::get('/{post}/edit', [\App\Http\Controllers\Admin\BlogPostController::class, 'edit'])->name('edit');
+                Route::post('/{post}', [\App\Http\Controllers\Admin\BlogPostController::class, 'update'])->name('update');
+                Route::delete('/{post}', [\App\Http\Controllers\Admin\BlogPostController::class, 'destroy'])->name('destroy');
+            });
+        });
+
         // enquiries
         Route::prefix('enquiries')->name('enquiries.')->group(function () {
             Route::get('/', [\App\Http\Controllers\Admin\EnquiryController::class, 'index'])->name('index');
