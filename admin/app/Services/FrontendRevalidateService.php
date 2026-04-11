@@ -25,8 +25,8 @@ class FrontendRevalidateService
      */
     public static function revalidate(array $tags = ['products'], array $paths = []): void
     {
-        $frontendUrl = rtrim(config('app.frontend_url', env('FRONTEND_URL', '')), '/');
-        $secret      = env('REVALIDATE_SECRET', '');
+        $frontendUrl = rtrim((string) config('app.frontend_url', ''), '/');
+        $secret      = (string) config('app.revalidate_secret', '');
 
         if (empty($frontendUrl) || empty($secret)) {
             Log::warning('FrontendRevalidateService: FRONTEND_URL or REVALIDATE_SECRET is not set. Skipping revalidation.');
