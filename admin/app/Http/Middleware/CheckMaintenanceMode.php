@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Support\InstallationState;
 use App\Services\SettingService;
 use Closure;
 use Illuminate\Http\Request;
@@ -21,7 +22,7 @@ class CheckMaintenanceMode
             return $next($request);
         }
 
-        if (!file_exists(storage_path('installed'))) {
+        if (!InstallationState::isInstalled()) {
             return $next($request);
         }
         if (!Schema::hasTable('settings')) {
