@@ -5,13 +5,13 @@ namespace App\Providers;
 
 use App\Models\Product;
 use App\Observers\ProductObserver;
+use App\Support\InstallationState;
 use App\Services\CurrencyService;
 use App\Services\SettingService;
 use Dedoc\Scramble\Scramble;
 use Dedoc\Scramble\Support\Generator\OpenApi;
 use Dedoc\Scramble\Support\Generator\SecurityScheme;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\View;
@@ -42,14 +42,10 @@ class AppServiceProvider extends ServiceProvider
 
         $systemSettings = [];
 
-        try {
-            if (Schema::hasTable('settings')) {
-                $settingService = app(SettingService::class);
-                $resource = $settingService->getSettingByVariable('system');
-                $systemSettings = $resource ? ($resource->toArray(request())['value'] ?? []) : [];
-            }
-        } catch (\Exception $e) {
-            Log::warning($e->getMessage());
+        if (InstallationState::hasTable('settings')) {
+            $settingService = app(SettingService::class);
+            $resource = $settingService->getSettingByVariable('system');
+            $systemSettings = $resource ? ($resource->toArray(request())['value'] ?? []) : [];
         }
         $panel = 'admin';
         if (request()->is('seller/*') || request()->routeIs('seller.*')) {

@@ -6,7 +6,6 @@ use App\Support\InstallationState;
 use App\Services\SettingService;
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Schema;
 use Symfony\Component\HttpFoundation\Response;
 
 class CheckMaintenanceMode
@@ -25,7 +24,7 @@ class CheckMaintenanceMode
         if (!InstallationState::isInstalled()) {
             return $next($request);
         }
-        if (!Schema::hasTable('settings')) {
+        if (!InstallationState::hasTable('settings')) {
             return $next($request);
         }
         // Load system settings

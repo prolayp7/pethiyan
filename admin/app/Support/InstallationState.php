@@ -12,8 +12,13 @@ class InstallationState
             return true;
         }
 
+        return self::hasTable('migrations');
+    }
+
+    public static function hasTable(string $table): bool
+    {
         try {
-            return Schema::hasTable('migrations');
+            return Schema::hasTable($table);
         } catch (\Throwable) {
             return false;
         }

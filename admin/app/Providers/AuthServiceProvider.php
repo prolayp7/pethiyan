@@ -59,9 +59,8 @@ use App\Policies\StorePolicy;
 use App\Policies\SystemUserPolicy;
 use App\Policies\TaxClassPolicy;
 use App\Policies\OrderReturnPolicy;
+use App\Support\InstallationState;
 use App\Models\Wallet;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Schema;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
@@ -112,21 +111,17 @@ class AuthServiceProvider extends ServiceProvider
     {
         $this->registerPolicies();
         $admin_defined = AdminPermissionEnum::values();
-        try {
+        if ($admin_defined && InstallationState::hasTable('permissions')) {
+            foreach ($admin_defined as $perm) {
+                Permission::firstOrCreate(['name' => $perm, 'guard_name' => 'admin']);
+            }
+        }
 
-            if ($admin_defined && Schema::hasTable('permissions')) {
-                foreach ($admin_defined as $perm) {
-                    Permission::firstOrCreate(['name' => $perm, 'guard_name' => 'admin']);
-                }
+        $seller_defined = SellerPermissionEnum::values();
+        if ($seller_defined && InstallationState::hasTable('permissions')) {
+            foreach ($seller_defined as $perm) {
+                Permission::firstOrCreate(['name' => $perm, 'guard_name' => 'seller']);
             }
-            $seller_defined = SellerPermissionEnum::values();
-            if ($seller_defined && Schema::hasTable('permissions')) {
-                foreach ($seller_defined as $perm) {
-                    Permission::firstOrCreate(['name' => $perm, 'guard_name' => 'seller']);
-                }
-            }
-        } catch (\Exception $e) {
-            Log::warning($e->getMessage());
         }
     }
 }

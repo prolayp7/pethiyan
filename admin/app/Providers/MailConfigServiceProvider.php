@@ -6,7 +6,6 @@ use App\Enums\SettingTypeEnum;
 use App\Models\Setting;
 use App\Support\InstallationState;
 use Illuminate\Support\ServiceProvider;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Config;
 
 class MailConfigServiceProvider extends ServiceProvider
@@ -27,7 +26,7 @@ class MailConfigServiceProvider extends ServiceProvider
         if (!InstallationState::isInstalled()) {
             return;
         }
-        if (!Schema::hasTable('settings')) {
+        if (!InstallationState::hasTable('settings')) {
             return;
         }
 
