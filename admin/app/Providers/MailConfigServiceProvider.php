@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Enums\SettingTypeEnum;
 use App\Models\Setting;
+use App\Support\InstallationState;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Config;
@@ -23,7 +24,7 @@ class MailConfigServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        if (!file_exists(storage_path('installed'))) {
+        if (!InstallationState::isInstalled()) {
             return;
         }
         if (!Schema::hasTable('settings')) {

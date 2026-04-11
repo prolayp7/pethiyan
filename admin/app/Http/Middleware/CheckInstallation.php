@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Support\InstallationState;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -15,7 +16,7 @@ class CheckInstallation
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if (!file_exists(storage_path('installed')) && request()->segment(1) !== 'install') {
+        if (!InstallationState::isInstalled() && request()->segment(1) !== 'install') {
             return redirect()->route('LaravelInstaller::welcome');
         }
         return $next($request);

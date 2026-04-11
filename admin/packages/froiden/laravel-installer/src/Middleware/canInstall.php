@@ -2,6 +2,7 @@
 
 namespace Froiden\LaravelInstaller\Middleware;
 
+use App\Support\InstallationState;
 use Closure;
 use DB;
 
@@ -38,7 +39,7 @@ class canInstall
      */
     public function alreadyInstalled()
     {
-        return file_exists(storage_path('installed'));
+        return InstallationState::isInstalled();
     }
 
     private function changePhpConfigs()
