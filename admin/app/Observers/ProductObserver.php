@@ -14,10 +14,10 @@ class ProductObserver
      */
     private function revalidateFrontend(): void
     {
-        $frontendUrl = rtrim(config('app.frontend_url', env('FRONTEND_URL', 'http://localhost:3000')), '/');
-        $secret      = env('REVALIDATE_SECRET');
+        $frontendUrl = rtrim((string) config('app.frontend_url', ''), '/');
+        $secret      = (string) config('app.revalidate_secret', '');
 
-        if (!$secret) {
+        if ($frontendUrl === '' || $secret === '') {
             return; // Secret not configured — skip silently
         }
 
