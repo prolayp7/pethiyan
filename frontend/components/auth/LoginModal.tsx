@@ -342,7 +342,27 @@ export default function LoginModal({ open, onClose, onSuccess, redirectTo }: Log
     } catch (err: unknown) {
       const code = (err as { code?: string })?.code;
       if (code === "auth/popup-closed-by-user" || code === "auth/cancelled-popup-request") return;
-      setApiError("Google sign-in failed. Please try again.");
+      const message = (err as { message?: string })?.message;
+
+      if (code === "auth/unauthorized-domain") {
+        setApiError("Google sign-in failed: this domain is not authorized in Firebase.");
+      } else if (code === "auth/invalid-api-key") {
+        setApiError("Google sign-in failed: Firebase API key is invalid or missing.");
+      } else if (code === "auth/configuration-not-found") {
+        setApiError("Google sign-in failed: Google provider is not enabled in Firebase Authentication.");
+      } else if (code === "auth/popup-blocked") {
+        setApiError("Google sign-in failed: the browser blocked the popup. Please allow popups and try again.");
+      } else if (code === "auth/network-request-failed") {
+        setApiError("Google sign-in failed: network request failed. Please check your internet and Firebase config.");
+      } else if (code) {
+        setApiError(`Google sign-in failed: ${code}.`);
+      } else if (message) {
+        setApiError(`Google sign-in failed: ${message}`);
+      } else {
+        setApiError("Google sign-in failed. Please try again.");
+      }
+
+      console.error("Google sign-in error:", err);
     } finally {
       setLoading(false);
     }

@@ -4,6 +4,25 @@ export const API_BASE =
 
 const LS_TOKEN_KEY = "auth_token";
 
+function getApiErrorMessage(payload: {
+  message?: string;
+  data?: {
+    error?: string;
+    errors?: Record<string, string[]>;
+  };
+} | null | undefined): string | undefined {
+  if (!payload) return undefined;
+
+  if (payload.data?.error) return payload.data.error;
+
+  const firstValidationError = payload.data?.errors
+    ? Object.values(payload.data.errors).flat().find(Boolean)
+    : undefined;
+
+  if (firstValidationError) return firstValidationError;
+  return payload.message;
+}
+
 // ─── API Types ────────────────────────────────────────────────────────────────
 
 export interface ApiCategory {
@@ -688,7 +707,11 @@ export async function googleCallback(
     };
   }
 
-  return { success: false, isNewUser: false, message: res.message ?? "Google sign-in failed" };
+  return {
+    success: false,
+    isNewUser: false,
+    message: getApiErrorMessage(res) ?? "Google sign-in failed",
+  };
 }
 
 export async function registerUser(data: {
@@ -1369,7 +1392,7 @@ export async function serverCartClear(): Promise<boolean> {
 
 export async function syncCartToServer(
   items: { variantId: number; storeId: number; quantity: number }[]
-): Promise<{ success: boolean; message?: string }> {
+): Promise<{ success: boolean; message?: string; failedVariantIds?: number[] }> {
   console.log("[syncCartToServer] items:", items);
   const token = getToken();
   try {
@@ -1389,9 +1412,32 @@ export async function syncCartToServer(
         })),
       }),
     });
-    const body = await res.json() as { success?: boolean; message?: string };
+    const body = await res.json() as {
+      success?: boolean;
+      message?: string;
+      data?: {
+        synced_items?: unknown[];
+        failed_items?: { product_variant_id?: number }[];
+      };
+    };
     console.log("[syncCartToServer] HTTP", res.status, body);
-    return { success: !!body.success, message: body.message };
+
+    const syncedCount = body.data?.synced_items?.length ?? 0;
+    const failedItems = body.data?.failed_items ?? [];
+    const failedVariantIds = failedItems
+      .map((f) => f.product_variant_id)
+      .filter((id): id is number => typeof id === "number");
+
+    // If the API reports success but nothing was actually synced, treat as failure
+    if (body.success && syncedCount === 0 && failedItems.length > 0) {
+      return {
+        success: false,
+        message: "Some items in your cart are not available. Please remove them and try again.",
+        failedVariantIds,
+      };
+    }
+
+    return { success: !!body.success, message: body.message, failedVariantIds };
   } catch (err) {
     console.error("[syncCartToServer] error:", err);
     return { success: false, message: "Cart sync failed." };

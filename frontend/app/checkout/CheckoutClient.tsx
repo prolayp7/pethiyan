@@ -355,7 +355,7 @@ function OrderSummary({ subtotal, discount, shippingCharge, couponResult, curren
 export default function CheckoutClient() {
   const router = useRouter();
   const { user, isLoading: authLoading, isLoggedIn } = useAuth();
-  const { items, total, clearCart } = useCart();
+  const { items, total, clearCart, removeItem } = useCart();
   const currencySymbol = items[0]?.currencySymbol ?? "₹";
   const fmt = makeFmt(currencySymbol);
 
@@ -568,6 +568,14 @@ export default function CheckoutClient() {
       );
       console.log("[handlePlaceOrder] cart sync result:", synced);
       if (!synced.success) {
+        // Remove items that failed to sync from local cart so user isn't stuck in a loop
+        if (synced.failedVariantIds && synced.failedVariantIds.length > 0) {
+          for (const item of items) {
+            if (item.variantId && synced.failedVariantIds.includes(item.variantId)) {
+              removeItem(item.id);
+            }
+          }
+        }
         setPaymentError(synced.message ?? "Failed to sync cart. Please try again.");
         setProcessingPayment(false);
         return;
