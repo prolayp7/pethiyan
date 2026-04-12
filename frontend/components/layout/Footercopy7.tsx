@@ -71,7 +71,7 @@ const socialLinks = [
 export default function Footer() {
   return (
     <footer
-      className="bg-[#050810] text-white overflow-hidden"
+      className="bg-[#050810] text-white overflow-x-hidden pb-20 lg:pb-0"
       aria-label="Site footer"
     >
 

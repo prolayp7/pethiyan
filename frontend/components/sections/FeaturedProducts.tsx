@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { useRef } from "react";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import Container from "@/components/layout/Container";
 import FeaturedProductCard, { type FallbackProduct } from "@/components/ui/FeaturedProductCard";
 import type { RealApiProduct, RealApiVariant } from "@/lib/api";
@@ -100,20 +103,34 @@ interface FeaturedProductsProps {
 // ─── Section ──────────────────────────────────────────────────────────────────
 
 export default function FeaturedProducts({ apiProducts = [] }: FeaturedProductsProps) {
+  const mobileSliderRef = useRef<HTMLDivElement | null>(null);
   const products: FallbackProduct[] =
     apiProducts.length > 0
       ? apiProducts.slice(0, 8).map(adapt)
       : staticProducts;
 
+  function scrollMobileProducts(direction: "prev" | "next") {
+    const el = mobileSliderRef.current;
+    if (!el) return;
+    const firstCard = el.querySelector<HTMLElement>("[data-featured-slide]");
+    const gap = 20;
+    const cardWidth = firstCard?.offsetWidth ?? el.clientWidth * 0.82;
+    const amount = cardWidth + gap;
+    el.scrollBy({
+      left: direction === "next" ? amount : -amount,
+      behavior: "smooth",
+    });
+  }
+
   return (
     <section
-      className="pt-8 pb-16 relative overflow-hidden"
+      className="relative overflow-hidden pt-5 pb-6 sm:pt-8 sm:pb-16"
       style={{ background: "#ffffff" }}
       aria-labelledby="featured-heading"
     >
       <Container className="relative z-10">
         {/* Header */}
-        <div className="flex items-end justify-between mb-10">
+        <div className="mb-6 flex items-end justify-between sm:mb-10">
           <div>
             <p className="text-sm font-semibold uppercase tracking-wider mb-2" style={{ color: "#4ea85f" }}>
               Bestsellers
@@ -144,19 +161,61 @@ export default function FeaturedProducts({ apiProducts = [] }: FeaturedProductsP
           </Link>
         </div>
 
+        {/* Mobile slider */}
+        <div className="overflow-hidden sm:hidden">
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => scrollMobileProducts("prev")}
+              aria-label="Scroll featured products left"
+              className="absolute left-2 top-1/2 z-20 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-[#c8d7ea] bg-white/95 text-[#1a4f83] shadow-sm transition-colors hover:bg-[#f3f8ff]"
+            >
+              <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              onClick={() => scrollMobileProducts("next")}
+              aria-label="Scroll featured products right"
+              className="absolute right-2 top-1/2 z-20 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-[#c8d7ea] bg-white/95 text-[#1a4f83] shadow-sm transition-colors hover:bg-[#f3f8ff]"
+            >
+              <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </button>
+
+            <div
+              ref={mobileSliderRef}
+              className="flex snap-x snap-mandatory gap-5 overflow-x-auto px-12 pb-4 [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+              aria-label="Featured products slider"
+              style={{ scrollbarWidth: "none" }}
+            >
+              {products.map((p) => (
+                <div
+                  key={p.id}
+                  data-featured-slide
+                  className="w-[85%] max-w-[320px] shrink-0 snap-start"
+                >
+                  <FeaturedProductCard p={p} />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
         {/* Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <div className="hidden sm:grid grid-cols-2 lg:grid-cols-4 gap-5">
           {products.map((p) => (
             <FeaturedProductCard key={p.id} p={p} />
           ))}
         </div>
 
         {/* Mobile view all */}
-        <div className="mt-8 text-center sm:hidden">
+        <div className="mt-4 text-center sm:hidden">
           <Link
             href="/shop"
-            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full border-2 text-sm font-semibold transition-all"
-            style={{ borderColor: "#6ea8d8", color: "#6ea8d8" }}
+            className="inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-semibold text-white transition-all"
+            style={{
+              background: "linear-gradient(135deg,#17396f 0%,#2f6f9f 52%,#49ad57 100%)",
+              boxShadow: "0 10px 24px rgba(47,111,159,0.18)",
+            }}
           >
             View All Products
             <ArrowRight className="h-4 w-4" />

@@ -5,7 +5,7 @@ import { CartProvider } from "@/context/CartContext";
 import { AuthProvider } from "@/context/AuthContext";
 import { WishlistProvider } from "@/context/WishlistContext";
 import { SiteSettingsProvider } from "@/context/SiteSettingsContext";
-import { getSystemSettings, getWebSettings } from "@/lib/api";
+import { getHeaderMenu, getSystemSettings, getWebSettings } from "@/lib/api";
 import GoogleAnalytics from "@/components/analytics/GoogleAnalytics";
 import { GTMScript, GTMNoScript } from "@/components/analytics/GoogleTagManager";
 import FacebookPixel from "@/components/analytics/FacebookPixel";
@@ -116,13 +116,14 @@ export default async function RootLayout({
 }>) {
   const orgSchema = organizationSchema();
   const siteSchema = websiteSchema();
-  const [siteSettings, webSettings] = await Promise.all([
+  const [siteSettings, webSettings, headerMenu] = await Promise.all([
     getSystemSettings().then(s => s ?? {
       appName: "Pethiyan", logo: null, favicon: null,
       showVariantColorsInGrid: false, showGstInGrid: false,
       showCategoryNameInGrid: false, showMinQtyInGrid: false,
     }),
     getWebSettings(),
+    getHeaderMenu(),
   ]);
 
   return (
@@ -152,7 +153,7 @@ export default async function RootLayout({
               {/* Sticky header: MainHeader + CategoryNav */}
               <div className="sticky top-0 z-40">
                 <div className="relative z-20">
-                  <MainHeader />
+                  <MainHeader mobileNavItems={headerMenu?.nav_items} />
                 </div>
                 <div className="relative z-10">
                   <NavigationMenu />

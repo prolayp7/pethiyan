@@ -93,7 +93,7 @@ export default async function FooterNavigationGrid({
         </div>
 
         {/* Bottom: social icons left, payment partners right */}
-        <div className="flex items-center justify-between mt-8 pt-5 border-t border-gray-100">
+        <div className="mt-8 flex flex-col gap-4 border-t border-gray-100 pt-5 md:flex-row md:items-center md:justify-between">
 
           {/* Social icons */}
           <div className="flex items-center gap-2.5">
@@ -110,29 +110,28 @@ export default async function FooterNavigationGrid({
           </div>
 
           {/* Payment Partners */}
-          <div className="flex items-center gap-3">
-            <span className="text-[11px] font-bold uppercase tracking-widest text-gray-600">
+          <div className="flex flex-wrap items-center gap-2 md:justify-end">
+            <span className="text-[9px] font-bold uppercase tracking-[0.15em] text-gray-500 md:text-[10px]">
               Payment Partners:
             </span>
-            <div className="relative w-[160px] h-[50px] rounded-md overflow-hidden bg-white border border-gray-200">
-              <Image
-                src="/images/logos/razorpay.png"
-                alt="Razorpay"
-                fill
-                sizes="160px"
-                className="object-contain p-1.5"
-                unoptimized
-              />
-            </div>
-            <div className="relative w-[160px] h-[50px] rounded-md overflow-hidden bg-white border border-gray-200">
-              <Image
-                src="/images/logos/Easebuzz_Logo.jpg"
-                alt="Easebuzz"
-                fill
-                sizes="160px"
-                className="object-contain p-1.5"
-                unoptimized
-              />
+            {/* keep both logos together so they never split across wrapped rows */}
+            <div className="flex items-center gap-2">
+              <div className="h-8 w-24 overflow-hidden rounded border border-gray-200 bg-white p-1.5 md:h-9 md:w-[116px] md:p-2">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/images/logos/razorpay.png"
+                  alt="Razorpay"
+                  className="h-full w-full object-contain"
+                />
+              </div>
+              <div className="h-8 w-24 overflow-hidden rounded border border-gray-200 bg-white p-1.5 md:h-9 md:w-[116px] md:p-2">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/images/logos/Easebuzz_Logo.jpg"
+                  alt="Easebuzz"
+                  className="h-full w-full object-contain"
+                />
+              </div>
             </div>
           </div>
 

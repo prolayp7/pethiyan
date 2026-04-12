@@ -298,10 +298,10 @@ export default function FeaturedProductCard({ p }: { p: FallbackProduct }) {
 
   return (
     <>
-    <div className="featured-card-border transition-all duration-300 hover:-translate-y-1">
+    <div className="featured-card-border flex h-full transition-all duration-300 hover:-translate-y-1">
     <Link
       href={p.href}
-      className="group"
+      className="group flex h-full w-full flex-col"
     >
       {/* Image */}
       <div className="relative aspect-square overflow-hidden bg-gray-50">
@@ -373,7 +373,7 @@ export default function FeaturedProductCard({ p }: { p: FallbackProduct }) {
       </div>
 
       {/* Body */}
-      <div className="flex flex-col flex-1 p-3 gap-1.5">
+      <div className="flex flex-1 flex-col gap-1.5 p-3">
         {/* Category */}
         {showCategoryNameInGrid && p.category && (
           <p className="text-[10px] text-[#1f4f8a] font-semibold uppercase tracking-wider">
@@ -381,24 +381,27 @@ export default function FeaturedProductCard({ p }: { p: FallbackProduct }) {
           </p>
         )}
         {/* Name */}
-        <p className="text-sm font-semibold text-gray-900 leading-snug line-clamp-2 group-hover:text-[#2e7c8a] transition-colors">
+        <p
+          className="min-h-[2.75rem] overflow-hidden text-sm font-semibold leading-snug text-gray-900 transition-colors line-clamp-2 group-hover:text-[#2e7c8a]"
+          title={p.name}
+        >
           {p.name}
         </p>
 
         {/* Color swatches + variant count */}
         {showVariantColorsInGrid && (p.colors.length > 0 || p.variantCount > 1) && (
-          <div className="flex items-center gap-1.5">
+          <div className="flex min-h-[0.875rem] items-center gap-1.5 overflow-hidden">
             {p.colors.slice(0, 5).map((c) => (
               <span key={c} title={c} className="w-3 h-3 rounded-full border border-black/10 shrink-0" style={{ background: COLOR_MAP[c] ?? "#aaa" }} />
             ))}
             {p.variantCount > 1 && (
-              <span className="text-[10px] text-gray-400 ml-0.5">{p.variantCount} variants</span>
+              <span className="ml-0.5 truncate text-[10px] text-gray-400">{p.variantCount} variants</span>
             )}
           </div>
         )}
 
         {/* Bottom row: meta left, price+cart right */}
-        <div className="flex items-end justify-between gap-2 mt-auto pt-2 border-t border-gray-100">
+        <div className="mt-auto flex min-h-[3.75rem] items-end justify-between gap-2 border-t border-gray-100 pt-2">
           {/* Left: GST + min qty */}
           {(showGstInGrid && p.gstRate) || (showMinQtyInGrid && p.minQty) ? (
             <div className="flex flex-col gap-0.5 min-w-0">
