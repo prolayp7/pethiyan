@@ -40,7 +40,7 @@ function PreferencePill({
     }`}>
       <div className="flex items-start gap-3">
         <div className={`mt-0.5 flex h-10 w-10 items-center justify-center rounded-2xl ${
-          active ? "bg-[#17396f] text-white" : "bg-gray-100 text-gray-600"
+          active ? "bg-[#17396f] text-white" : "bg-[#17396f]/10 text-[#17396f]"
         }`}>
           {icon}
         </div>
@@ -104,7 +104,7 @@ export default function CookieConsentPopup() {
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(73,173,87,0.18),_transparent_42%),linear-gradient(135deg,_rgba(23,57,111,0.08),_rgba(31,79,138,0.02)_48%,_rgba(76,175,80,0.1))]" />
           <div className="relative px-5 pt-5 pb-4 sm:px-6 sm:pt-6">
             <div className="flex items-start gap-4">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#17396f] text-white shadow-lg shadow-[#17396f]/20">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-(--color-primary) text-white shadow-lg shadow-(--color-primary)/20">
                 <Cookie className="h-5 w-5" />
               </div>
               <div className="min-w-0 flex-1">

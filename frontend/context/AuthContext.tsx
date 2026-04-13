@@ -59,19 +59,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         }
 
-        const profile = await getProfile();
-        if (cancelled) return;
+        // Only verify with the server when there is a local session marker.
+        // Calling getProfile() unconditionally would hit /api/user/profile on
+        // every page load for every logged-out visitor, producing a 401 in the
+        // console for every guest. The HttpOnly cookie is the real session —
+        // storedToken is the client-side signal that a session should exist.
+        if (storedToken) {
+          const profile = await getProfile();
+          if (cancelled) return;
 
-        if (profile) {
-          setUser(profile);
-          setToken(AUTH_SESSION_MARKER);
-          localStorage.setItem(LS_TOKEN_KEY, AUTH_SESSION_MARKER);
-          localStorage.setItem(LS_USER_KEY, JSON.stringify(profile));
-        } else if (storedToken) {
-          setUser(null);
-          setToken(null);
-          localStorage.removeItem(LS_TOKEN_KEY);
-          localStorage.removeItem(LS_USER_KEY);
+          if (profile) {
+            setUser(profile);
+            setToken(AUTH_SESSION_MARKER);
+            localStorage.setItem(LS_TOKEN_KEY, AUTH_SESSION_MARKER);
+            localStorage.setItem(LS_USER_KEY, JSON.stringify(profile));
+          } else {
+            // Server rejected the session (cookie expired or revoked).
+            // Clear local state so the user is shown as logged out.
+            setUser(null);
+            setToken(null);
+            localStorage.removeItem(LS_TOKEN_KEY);
+            localStorage.removeItem(LS_USER_KEY);
+          }
         }
       } catch {
         localStorage.removeItem(LS_TOKEN_KEY);
