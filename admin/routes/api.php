@@ -36,10 +36,19 @@ use App\Http\Controllers\Payments\StripeController;
 use App\Http\Controllers\Api\HeroSectionApiController;
 use App\Http\Controllers\Api\NewsletterSectionApiController;
 use App\Http\Controllers\Api\VideoStorySectionApiController;
+use App\Http\Controllers\Api\SearchApiController;
 use Illuminate\Support\Facades\Route;
 
 include_once("delivery-boy-api.php");
 include_once("seller-api.php");
+
+// ── Search (public — consumed by Next.js frontend) ──────────────────────────
+Route::prefix('search')->name('search.')->group(function () {
+    Route::get('/',                  [SearchApiController::class, 'search'])->name('unified');
+    Route::get('/top-searches',      [SearchApiController::class, 'topSearches'])->name('top-searches');
+    Route::get('/trending-products', [SearchApiController::class, 'trendingProducts'])->name('trending-products');
+    Route::post('/track',            [SearchApiController::class, 'track'])->name('track');
+});
 
 // Hero Section (public — consumed by Next.js frontend)
 Route::get('hero-section', [HeroSectionApiController::class, 'index'])->name('hero-section.index');

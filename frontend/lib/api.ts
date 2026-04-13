@@ -2000,3 +2000,62 @@ export async function getCategory(slug: string): Promise<ApiCategory | null> {
   const title = (raw as unknown as Record<string, string>).title ?? raw.name ?? "";
   return { ...raw, title, name: title };
 }
+
+// ─── Search ───────────────────────────────────────────────────────────────────
+
+export interface UnifiedSearchResults {
+  query: string;
+  products: RealApiProduct[];
+  categories: ApiCategory[];
+  blogs: ApiBlogSearchResult[];
+  total: number;
+}
+
+export interface ApiBlogSearchResult {
+  id: number;
+  title: string;
+  slug: string;
+  excerpt: string | null;
+  featuredImage: string | null;
+  publishedAt: string | null;
+  category: { title: string; slug: string } | null;
+}
+
+export async function unifiedSearch(
+  q: string,
+  type: "all" | "products" | "categories" | "blogs" = "all"
+): Promise<UnifiedSearchResults> {
+  const empty: UnifiedSearchResults = { query: q, products: [], categories: [], blogs: [], total: 0 };
+  if (!q.trim()) return empty;
+  const res = await apiFetch<UnifiedSearchResults>(
+    `/api/search?q=${encodeURIComponent(q)}&type=${type}`
+  );
+  return res ?? empty;
+}
+
+export async function fetchTopSearches(limit = 8): Promise<string[]> {
+  const res = await apiFetch<{ data: string[] }>(`/api/search/top-searches?limit=${limit}`);
+  return res?.data ?? [];
+}
+
+export async function fetchTrendingProducts(limit = 4): Promise<RealApiProduct[]> {
+  const res = await apiFetch<{ data: RealApiProduct[] }>(`/api/search/trending-products?limit=${limit}`);
+  return res?.data ?? [];
+}
+
+export async function trackSearch(
+  query: string,
+  resultCount: number,
+  entityTypes: string[] = ["products"],
+  sessionId?: string
+): Promise<void> {
+  try {
+    await fetch(`${API_BASE}/api/search/track`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query, result_count: resultCount, entity_types: entityTypes, session_id: sessionId }),
+    });
+  } catch {
+    // fire-and-forget — never block the UI on tracking
+  }
+}

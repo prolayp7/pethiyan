@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { ChevronDown } from "lucide-react";
 import { type RealApiProduct, type ApiCategory } from "@/lib/api";
-import { readCatalogSortPreference, writeCatalogSortPreference } from "@/lib/catalog-preferences";
+import { readCatalogSortPreference, writeCatalogSortPreference, type CatalogSortValue } from "@/lib/catalog-preferences";
 import OtherCategories from "./OtherCategories";
 import CategoryProducts from "./CategoryProducts";
 
@@ -30,7 +30,7 @@ export default function CategoryClientLayout({ currentCategory, categories, prod
     <div className="relative">
       <select
         value={sort}
-        onChange={(e) => setSort(e.target.value)}
+        onChange={(e) => setSort(e.target.value as CatalogSortValue)}
         className="appearance-none rounded-xl border border-(--color-border) bg-white py-2 pl-4 pr-9 text-sm transition focus:border-(--color-primary) focus:outline-none focus:ring-2 focus:ring-(--color-primary)/30"
         aria-label="Sort category products"
       >
