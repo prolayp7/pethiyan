@@ -1,10 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { X, ChevronDown, HelpCircle, MapPin, Phone } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useSiteSettings } from "@/context/SiteSettingsContext";
 import { cn } from "@/lib/utils";
 import type { ApiMenuItem } from "@/lib/api";
 
@@ -161,7 +159,6 @@ function MegaAccordion({ item, onClose }: { item: ApiMenuItem; onClose: () => vo
 
 /* ── Main component ──────────────────────────────────────────── */
 export default function MobileMenu({ isOpen, onClose, navItems }: MobileMenuProps) {
-  const siteSettings = useSiteSettings();
 
   useEffect(() => {
     document.body.style.overflow = isOpen ? "hidden" : "";
@@ -188,27 +185,7 @@ export default function MobileMenu({ isOpen, onClose, navItems }: MobileMenuProp
       >
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 shrink-0">
-          <Link
-            href="/"
-            onClick={onClose}
-            aria-label={`${siteSettings.appName} — Home`}
-            className="inline-flex items-center"
-          >
-            {siteSettings.logo ? (
-              <Image
-                src={siteSettings.logo}
-                alt={siteSettings.appName}
-                width={120}
-                height={36}
-                className="h-9 w-auto object-contain"
-                unoptimized
-              />
-            ) : (
-              <span className="text-lg font-extrabold tracking-tight text-[#214d8f]">
-                {siteSettings.appName}
-              </span>
-            )}
-          </Link>
+          <span className="text-lg font-bold text-slate-800">Menu</span>
           <button
             type="button"
             onClick={onClose}

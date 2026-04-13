@@ -68,8 +68,7 @@ export default function RecentBlogsSection() {
             type="button"
             onClick={() => scrollMobileBlogs("prev")}
             aria-label="Scroll blog posts left"
-            className="absolute left-2 z-20 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-[#c8d7ea] bg-white/95 text-[#1a4f83] shadow-sm transition-colors hover:bg-[#f3f8ff]"
-            style={{ top: "min(34vw, 8rem)" }}
+            className="blog-slider-arrow absolute left-2 z-20 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-[#c8d7ea] bg-white/95 text-[#1a4f83] shadow-sm transition-colors hover:bg-[#f3f8ff]"
           >
             <ArrowLeft className="h-4 w-4" aria-hidden="true" />
           </button>
@@ -77,16 +76,14 @@ export default function RecentBlogsSection() {
             type="button"
             onClick={() => scrollMobileBlogs("next")}
             aria-label="Scroll blog posts right"
-            className="absolute right-2 z-20 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-[#c8d7ea] bg-white/95 text-[#1a4f83] shadow-sm transition-colors hover:bg-[#f3f8ff]"
-            style={{ top: "min(34vw, 8rem)" }}
+            className="blog-slider-arrow absolute right-2 z-20 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-[#c8d7ea] bg-white/95 text-[#1a4f83] shadow-sm transition-colors hover:bg-[#f3f8ff]"
           >
             <ArrowRight className="h-4 w-4" aria-hidden="true" />
           </button>
 
           <div
             ref={mobileSliderRef}
-            className="flex snap-x snap-mandatory gap-6 overflow-x-auto px-12 pb-0 [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
-            style={{ scrollbarWidth: "none" }}
+            className="blog-slider-scroll flex snap-x snap-mandatory gap-6 overflow-x-auto px-12 pb-0 [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
             aria-label="Recent blog posts slider"
           >
             {posts.map((post) => (
