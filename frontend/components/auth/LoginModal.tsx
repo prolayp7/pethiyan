@@ -12,6 +12,7 @@ import { sendOtp, verifyOtp, resendOtp, registerUser, verifyMobile, loginWithPas
 import { signInWithGoogle } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import type { AuthUser } from "@/context/AuthContext";
+import { clearReturnToCookie, resolveLoginRedirect, writeReturnToCookie } from "@/lib/return-to";
 
 interface LoginModalProps {
   open: boolean;
@@ -59,15 +60,23 @@ export default function LoginModal({ open, onClose, onSuccess, redirectTo }: Log
   const router = useRouter();
   const { login } = useAuth();
   const { appName, logo } = useSiteSettings();
+  const finalRedirectTo = resolveLoginRedirect(redirectTo, "/account");
 
-  const completeLogin = useCallback((user: AuthUser, token: string) => {
-    login(user, token);
+  useEffect(() => {
+    if (open && redirectTo) {
+      writeReturnToCookie(redirectTo);
+    }
+  }, [open, redirectTo]);
+
+  const completeLogin = useCallback((user: AuthUser) => {
+    login(user);
+    clearReturnToCookie();
     onClose();
     onSuccess?.();
     if (!onSuccess) {
-      router.push(redirectTo || "/account");
+      router.push(finalRedirectTo);
     }
-  }, [login, onClose, onSuccess, redirectTo, router]);
+  }, [finalRedirectTo, login, onClose, onSuccess, router]);
 
   const [tab, setTab] = useState<Tab>("login");
   const [step, setStep] = useState<Step>("form");
@@ -91,7 +100,7 @@ export default function LoginModal({ open, onClose, onSuccess, redirectTo }: Log
   // OTP
   const [otp, setOtp] = useState("");
 
-  const pendingAuth = useRef<{ token: string; user: AuthUser } | null>(null);
+  const pendingAuth = useRef<{ user: AuthUser } | null>(null);
 
   // Google new-user completion state
   const [googleIdToken, setGoogleIdToken] = useState<string | null>(null);
@@ -247,7 +256,7 @@ export default function LoginModal({ open, onClose, onSuccess, redirectTo }: Log
     setLoading(true);
     try {
       const res = await loginWithPassword(loginIdentifier, loginPassword);
-      if (res.success && res.token && res.user) { completeLogin(res.user, res.token); }
+      if (res.success && res.user) { completeLogin(res.user); }
       else setApiError(res.message ?? "Invalid credentials. Please try again.");
     } catch { setApiError("Something went wrong. Please try again."); }
     finally { setLoading(false); }
@@ -274,7 +283,7 @@ export default function LoginModal({ open, onClose, onSuccess, redirectTo }: Log
     setLoading(true);
     try {
       const res = await verifyOtp(loginMobile, otp);
-      if (res.success && res.token && res.user) { completeLogin(res.user, res.token); }
+      if (res.success && res.user) { completeLogin(res.user); }
       else setApiError(res.message ?? "Invalid OTP. Please try again.");
     } catch { setApiError("Something went wrong. Please try again."); }
     finally { setLoading(false); }
@@ -295,8 +304,8 @@ export default function LoginModal({ open, onClose, onSuccess, redirectTo }: Log
         password: regPassword,
         password_confirmation: regConfirmPassword,
       });
-      if (res.success && res.token && res.user) {
-        pendingAuth.current = { token: res.token, user: res.user };
+      if (res.success && res.user) {
+        pendingAuth.current = { user: res.user };
         setStep("otp");
         startCountdown();
       } else setApiError(res.message ?? "Registration failed. Please try again.");
@@ -312,7 +321,7 @@ export default function LoginModal({ open, onClose, onSuccess, redirectTo }: Log
     setLoading(true);
     try {
       const res = await verifyMobile(regMobile, otp);
-      if (res.success && pendingAuth.current) { completeLogin(pendingAuth.current.user, pendingAuth.current.token); }
+      if (res.success && pendingAuth.current) { completeLogin(pendingAuth.current.user); }
       else setApiError(res.message ?? "Invalid OTP. Please try again.");
     } catch { setApiError("Something went wrong. Please try again."); }
     finally { setLoading(false); }
@@ -328,7 +337,7 @@ export default function LoginModal({ open, onClose, onSuccess, redirectTo }: Log
       const res = await googleCallback(idToken);
 
       if (res.success) {
-        completeLogin(res.user, res.token);
+        completeLogin(res.user);
         return;
       }
 
@@ -386,7 +395,7 @@ export default function LoginModal({ open, onClose, onSuccess, redirectTo }: Log
         password_confirmation: googleNewUserConfirm,
       });
       if (res.success) {
-        completeLogin(res.user, res.token);
+        completeLogin(res.user);
       } else {
         setApiError(res.message ?? "Registration failed. Please try again.");
       }

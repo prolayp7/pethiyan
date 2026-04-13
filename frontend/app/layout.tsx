@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { cookies } from "next/headers";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { CartProvider } from "@/context/CartContext";
@@ -18,6 +19,9 @@ import MobileBottomNav from "@/components/ui/MobileBottomNav";
 import ScrollToTop from "@/components/ui/ScrollToTop";
 import Footer from "@/components/layout/Footercopy7";
 import CouponPopup from "@/components/popups/CouponPopup";
+import CookieConsentPopup from "@/components/popups/CookieConsentPopup";
+import { COOKIE_CONSENT_NAME, parseCookieConsent } from "@/lib/cookie-consent";
+import { CART_COUNT_COOKIE, WISHLIST_COUNT_COOKIE, parseCountCookie } from "@/lib/count-preferences";
 import { organizationSchema, websiteSchema, jsonLd } from "@/lib/structured-data";
 import { Toaster } from "react-hot-toast";
 
@@ -114,6 +118,10 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const cookieStore = await cookies();
+  const consent = parseCookieConsent(cookieStore.get(COOKIE_CONSENT_NAME)?.value);
+  const initialCartCount = parseCountCookie(cookieStore.get(CART_COUNT_COOKIE)?.value);
+  const initialWishlistCount = parseCountCookie(cookieStore.get(WISHLIST_COUNT_COOKIE)?.value);
   const orgSchema = organizationSchema();
   const siteSchema = websiteSchema();
   const [siteSettings, webSettings, headerMenu] = await Promise.all([
@@ -131,12 +139,12 @@ export default async function RootLayout({
       <head>
         <script {...jsonLd(orgSchema)} key="org-schema" />
         <script {...jsonLd(siteSchema)} key="site-schema" />
-        {webSettings?.googleAnalyticsId  && <GoogleAnalytics id={webSettings.googleAnalyticsId} />}
-        {webSettings?.googleTagManagerId && <GTMScript      id={webSettings.googleTagManagerId} />}
+        {consent.analytics && webSettings?.googleAnalyticsId  && <GoogleAnalytics id={webSettings.googleAnalyticsId} />}
+        {consent.analytics && webSettings?.googleTagManagerId && <GTMScript      id={webSettings.googleTagManagerId} />}
       </head>
       <body className="antialiased bg-background text-foreground font-sans">
-        {webSettings?.googleTagManagerId && <GTMNoScript   id={webSettings.googleTagManagerId} />}
-        {webSettings?.facebookPixelId    && <FacebookPixel id={webSettings.facebookPixelId} />}
+        {consent.analytics && webSettings?.googleTagManagerId && <GTMNoScript   id={webSettings.googleTagManagerId} />}
+        {consent.marketing && webSettings?.facebookPixelId    && <FacebookPixel id={webSettings.facebookPixelId} />}
         {/* Portal root — sits above app-root in z-order, outside its stacking context */}
         <div id="portal-root" />
 
@@ -144,8 +152,8 @@ export default async function RootLayout({
         <div id="app-root" style={{ isolation: "isolate", position: "relative", zIndex: 0 }}>
         <SiteSettingsProvider settings={siteSettings}>
         <AuthProvider>
-          <WishlistProvider>
-            <CartProvider>
+          <WishlistProvider initialCount={initialWishlistCount}>
+            <CartProvider initialItemCount={initialCartCount}>
               {/* Non-sticky top bars */}
               <TopAnnouncementBar />
               <OfferTicker />
@@ -179,6 +187,9 @@ export default async function RootLayout({
 
               {/* Coupon popup — shown once per session after 2s */}
               <CouponPopup />
+
+              {/* Cookie preferences */}
+              <CookieConsentPopup />
 
               {/* Toast notifications */}
               <Toaster

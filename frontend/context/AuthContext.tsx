@@ -7,6 +7,7 @@ import React, {
   useCallback,
   useEffect,
 } from "react";
+import { getProfile, logoutUserSession } from "@/lib/api";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -22,28 +23,16 @@ interface AuthContextType {
   token: string | null;
   isLoggedIn: boolean;
   isLoading: boolean;
-  login: (user: AuthUser, token: string) => void;
+  login: (user: AuthUser, token?: string) => void;
   logout: () => void;
   updateUser: (data: Partial<AuthUser>) => void;
-}
-
-// ─── Cookie helpers ───────────────────────────────────────────────────────────
-// We store the token in a cookie (name: "auth_token") so that
-// middleware.ts can read it on the server side for route protection.
-
-function setCookie(name: string, value: string, days = 30) {
-  const expires = new Date(Date.now() + days * 864e5).toUTCString();
-  document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/; SameSite=Lax`;
-}
-
-function deleteCookie(name: string) {
-  document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const LS_TOKEN_KEY = "auth_token";
 const LS_USER_KEY = "auth_user";
+const AUTH_SESSION_MARKER = "__http_only_session__";
 
 // ─── Context ──────────────────────────────────────────────────────────────────
 
@@ -54,31 +43,62 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true); // true until hydration check done
 
-  // Rehydrate from localStorage on mount
   useEffect(() => {
-    try {
-      const storedToken = localStorage.getItem(LS_TOKEN_KEY);
-      const storedUser = localStorage.getItem(LS_USER_KEY);
-      if (storedToken && storedUser) {
-        setToken(storedToken);
-        setUser(JSON.parse(storedUser));
+    let cancelled = false;
+
+    async function hydrateAuth() {
+      try {
+        const storedToken = localStorage.getItem(LS_TOKEN_KEY);
+        const storedUser = localStorage.getItem(LS_USER_KEY);
+
+        if (storedToken && storedUser) {
+          const parsedUser = JSON.parse(storedUser) as AuthUser;
+          if (!cancelled) {
+            setToken(storedToken);
+            setUser(parsedUser);
+          }
+        }
+
+        const profile = await getProfile();
+        if (cancelled) return;
+
+        if (profile) {
+          setUser(profile);
+          setToken(AUTH_SESSION_MARKER);
+          localStorage.setItem(LS_TOKEN_KEY, AUTH_SESSION_MARKER);
+          localStorage.setItem(LS_USER_KEY, JSON.stringify(profile));
+        } else if (storedToken) {
+          setUser(null);
+          setToken(null);
+          localStorage.removeItem(LS_TOKEN_KEY);
+          localStorage.removeItem(LS_USER_KEY);
+        }
+      } catch {
+        localStorage.removeItem(LS_TOKEN_KEY);
+        localStorage.removeItem(LS_USER_KEY);
+        if (!cancelled) {
+          setUser(null);
+          setToken(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
       }
-    } catch {
-      // Corrupted storage — clear it
-      localStorage.removeItem(LS_TOKEN_KEY);
-      localStorage.removeItem(LS_USER_KEY);
-    } finally {
-      setIsLoading(false);
     }
+
+    void hydrateAuth();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  const login = useCallback((authUser: AuthUser, authToken: string) => {
+  const login = useCallback((authUser: AuthUser) => {
     setUser(authUser);
-    setToken(authToken);
-    localStorage.setItem(LS_TOKEN_KEY, authToken);
+    setToken(AUTH_SESSION_MARKER);
+    localStorage.setItem(LS_TOKEN_KEY, AUTH_SESSION_MARKER);
     localStorage.setItem(LS_USER_KEY, JSON.stringify(authUser));
-    // Also set a cookie so middleware can read it
-    setCookie("auth_token", authToken);
   }, []);
 
   const logout = useCallback(() => {
@@ -86,7 +106,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setToken(null);
     localStorage.removeItem(LS_TOKEN_KEY);
     localStorage.removeItem(LS_USER_KEY);
-    deleteCookie("auth_token");
+    void logoutUserSession();
   }, []);
 
   const updateUser = useCallback((data: Partial<AuthUser>) => {

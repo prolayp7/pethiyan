@@ -47,6 +47,7 @@ import {
   getProductFaqs,
 } from "@/lib/api";
 import { trackViewItem, trackAddToCart } from "@/lib/analytics";
+import { pushRecentlyViewedId } from "@/lib/recently-viewed";
 
 function formatCurrency(amount: number | null | undefined, symbol = "₹"): string {
   const value = toNum(amount);
@@ -422,6 +423,7 @@ export default function ProductDetailClient({ product, reviews: initialReviews, 
       item_category: (product as unknown as { category?: { title: string } | null }).category?.title,
       price,
     });
+    pushRecentlyViewedId(product.id);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedVariant]);
 

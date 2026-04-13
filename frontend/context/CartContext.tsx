@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
 import { serverCartAdd, serverCartUpdateQty, serverCartRemove, serverCartClear } from "@/lib/api";
+import { CART_COUNT_COOKIE, writeCountCookie } from "@/lib/count-preferences";
 
 export interface CartItem {
   id: string;               // unique key, e.g. "42-v15" (productId-variantId)
@@ -37,7 +38,13 @@ interface CartContextType {
 const CartContext = createContext<CartContextType | undefined>(undefined);
 const LS_KEY = "pethiyan_cart";
 
-export function CartProvider({ children }: { children: React.ReactNode }) {
+export function CartProvider({
+  children,
+  initialItemCount = 0,
+}: {
+  children: React.ReactNode;
+  initialItemCount?: number;
+}) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [hydrated, setHydrated] = useState(false);
@@ -72,8 +79,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   }, [items, hydrated]);
 
-  const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
+  const liveItemCount = items.reduce((sum, item) => sum + item.quantity, 0);
+  const itemCount = hydrated ? liveItemCount : initialItemCount;
   const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    writeCountCookie(CART_COUNT_COOKIE, liveItemCount);
+  }, [hydrated, liveItemCount]);
 
   const openCart  = useCallback(() => setIsOpen(true),  []);
   const closeCart = useCallback(() => setIsOpen(false), []);

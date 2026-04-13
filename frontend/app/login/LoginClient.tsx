@@ -19,6 +19,7 @@ import MobileInput, { isValidIndianMobile } from "@/components/auth/MobileInput"
 import OtpInput from "@/components/auth/OtpInput";
 import { useAuth } from "@/context/AuthContext";
 import { sendOtp, verifyOtp } from "@/lib/api";
+import { clearReturnToCookie, resolveLoginRedirect, writeReturnToCookie } from "@/lib/return-to";
 
 // ─── Left panel static data ───────────────────────────────────────────────────
 
@@ -50,7 +51,14 @@ export default function LoginClient() {
   const searchParams = useSearchParams();
   const { login, isLoggedIn } = useAuth();
 
-  const redirectTo = searchParams.get("redirect") ?? "/account";
+  const redirectTo = resolveLoginRedirect(searchParams.get("redirect"), "/account");
+
+  useEffect(() => {
+    const requestedRedirect = searchParams.get("redirect");
+    if (requestedRedirect) {
+      writeReturnToCookie(requestedRedirect);
+    }
+  }, [searchParams]);
 
   // If already logged in, redirect immediately
   useEffect(() => {
@@ -118,8 +126,9 @@ export default function LoginClient() {
     const result = await verifyOtp(phone, otp);
     setLoading(false);
 
-    if (result.success && result.token && result.user) {
-      login(result.user, result.token);
+    if (result.success && result.user) {
+      login(result.user);
+      clearReturnToCookie();
       setStep("success");
       // Redirect after brief success animation
       setTimeout(() => router.replace(redirectTo), 1800);

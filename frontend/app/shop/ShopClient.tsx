@@ -1,15 +1,17 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import Link from "next/link";
 import {
   SlidersHorizontal, X, ChevronDown, ChevronRight, Package, Layers, Home,
 } from "lucide-react";
 import Container from "@/components/layout/Container";
 import ShopProductCard from "@/components/shop/ShopProductCard";
+import RecentlyViewedProducts from "@/components/sections/RecentlyViewedProducts";
 import {
   type RealApiProduct, type ApiCategory,
 } from "@/lib/api";
+import { readCatalogSortPreference, writeCatalogSortPreference } from "@/lib/catalog-preferences";
 
 const SORT_OPTIONS = [
   { label: "Featured",           value: "featured"   },
@@ -143,7 +145,7 @@ export default function ShopClient({ initialProducts, initialCategories, initial
   const [search, setSearch] = useState("");
   const [selectedIds,     setSelectedIds]     = useState<Set<number>>(new Set());
   const [expandedCats,    setExpandedCats]    = useState<Set<number>>(new Set());
-  const [sort,    setSort]    = useState("featured");
+  const [sort,    setSort]    = useState(() => readCatalogSortPreference());
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   // Attribute filters: key → Set of selected values
@@ -247,6 +249,10 @@ export default function ShopClient({ initialProducts, initialCategories, initial
       return next;
     });
   }, []);
+
+  useEffect(() => {
+    writeCatalogSortPreference(sort);
+  }, [sort]);
 
   const resetFilters = useCallback(() => {
     setSelectedIds(new Set());
@@ -681,6 +687,13 @@ export default function ShopClient({ initialProducts, initialCategories, initial
           </div>
         </div>
       </Container>
+
+      <RecentlyViewedProducts
+        title="Recently Viewed"
+        eyebrow="Back to what caught your eye"
+        description="Reopen the packaging products you explored recently without losing your place in the catalog."
+        viewAllLabel="Browse full catalog"
+      />
 
       <div className="h-16 lg:hidden" aria-hidden="true" />
     </div>
