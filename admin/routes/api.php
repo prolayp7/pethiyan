@@ -26,6 +26,7 @@ use App\Http\Controllers\Api\User\ProductReviewApiController;
 use App\Http\Controllers\Api\User\PromoApiController;
 use App\Http\Controllers\Api\User\UserApiController;
 use App\Http\Controllers\Api\User\WalletApiController;
+use App\Http\Controllers\Api\BrowsingHistoryApiController;
 use App\Http\Controllers\Api\User\WishlistApiController;
 use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\Payments\EasepayController;
@@ -122,6 +123,12 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('/deduct-balance', [WalletApiController::class, 'deductBalance']);
             Route::get('/transactions', [WalletApiController::class, 'getTransactions']);
             Route::get('/transactions/{id}', [WalletApiController::class, 'getTransaction']);
+        });
+
+        // Browsing history routes
+        Route::prefix('browsing-history')->name('browsing-history.')->group(function () {
+            Route::get('/', [BrowsingHistoryApiController::class, 'index']);
+            Route::post('/', [BrowsingHistoryApiController::class, 'store']);
         });
 
         // Wishlist routes

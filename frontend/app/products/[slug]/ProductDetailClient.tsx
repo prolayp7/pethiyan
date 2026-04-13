@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo, useCallback, type CSSProperties } from "react";
+import { useState, useEffect, useMemo, useCallback, type CSSProperties } from "react";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import toast from "react-hot-toast";
@@ -24,9 +24,7 @@ import {
   CheckCircle2,
   AlertCircle,
   Info,
-  Store,
   Palette,
-  Layers,
   Trash2,
 } from "lucide-react";
 import Container from "@/components/layout/Container";
@@ -47,7 +45,9 @@ import {
   getProductFaqs,
 } from "@/lib/api";
 import { trackViewItem, trackAddToCart } from "@/lib/analytics";
+import { recordBrowsingHistory } from "@/lib/api";
 import { pushRecentlyViewedId } from "@/lib/recently-viewed";
+import { pushBrowsingHistory } from "@/lib/browsingHistory";
 
 function formatCurrency(amount: number | null | undefined, symbol = "₹"): string {
   const value = toNum(amount);
@@ -335,41 +335,10 @@ export default function ProductDetailClient({ product, reviews: initialReviews, 
   const [reviews, setReviews] = useState<ApiReview[]>(initialReviews ?? []);
   const [faqs, setFaqs] = useState<ApiFaq[]>(initialFaqs ?? []);
   const [selectedVariantId, setSelectedVariantId] = useState<number | null>(null);
-  const [selectedStoreId, setSelectedStoreId] = useState<number | null>(null);
   const [qty, setQty] = useState(Math.max(product.policies?.minimum_order_quantity ?? 1, 1));
   const [wishlistBusy, setWishlistBusy] = useState(false);
   const [addedToCart, setAddedToCart] = useState(false);
   const [activeTab, setActiveTab] = useState<"description" | "specs" | "reviews" | "faqs">("description");
-  const [leftColMaxH, setLeftColMaxH] = useState<number | undefined>(undefined);
-
-  const rightColRef = useRef<HTMLDivElement>(null);
-
-  // On desktop (≥768 px) cap the left column to the right column's natural height
-  // so the variant list never extends below the Add to Cart section.
-  // Uses items-start on the grid so the right column height is its own content height.
-  useEffect(() => {
-    const isMd = () => window.matchMedia("(min-width: 768px)").matches;
-
-    const update = () => {
-      if (!rightColRef.current || !isMd()) {
-        setLeftColMaxH(undefined);
-        return;
-      }
-      setLeftColMaxH(rightColRef.current.offsetHeight);
-    };
-
-    const ro = new ResizeObserver(update);
-    if (rightColRef.current) ro.observe(rightColRef.current);
-
-    const mq = window.matchMedia("(min-width: 768px)");
-    mq.addEventListener("change", update);
-    update();
-
-    return () => {
-      ro.disconnect();
-      mq.removeEventListener("change", update);
-    };
-  }, []);
 
   const productName = product.title ?? "Product";
   const variantList = useMemo(() => product.variants ?? [], [product.variants]);
@@ -409,9 +378,6 @@ export default function ProductDetailClient({ product, reviews: initialReviews, 
     return variantList.find((v) => v.is_default) ?? variantList[0];
   }, [selectedVariantId, variantList]);
 
-  // Stable primitive — derived synchronously (not another useMemo) to keep Turbopack happy.
-  const selectedVariantIdSafe = selectedVariant?.id ?? null;
-
   // Fire view_item whenever the selected variant changes (initial load + variant switch).
   useEffect(() => {
     if (!selectedVariant) return;
@@ -424,6 +390,8 @@ export default function ProductDetailClient({ product, reviews: initialReviews, 
       price,
     });
     pushRecentlyViewedId(product.id);
+    pushBrowsingHistory(product.slug, product.id);
+    recordBrowsingHistory(product.id);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedVariant]);
 
@@ -434,10 +402,9 @@ export default function ProductDetailClient({ product, reviews: initialReviews, 
 
   const selectedStoreIdSafe = useMemo(() => {
     if (selectedVariantStorePricing.length === 0) return null;
-    if (selectedStoreId && selectedVariantStorePricing.some((s) => s.store_id === selectedStoreId)) return selectedStoreId;
     const firstInStock = selectedVariantStorePricing.find((s) => s.stock_status === "in_stock" && s.stock > 0);
     return firstInStock?.store_id ?? selectedVariantStorePricing[0].store_id;
-  }, [selectedStoreId, selectedVariantStorePricing]);
+  }, [selectedVariantStorePricing]);
 
   const selectedStorePricing: RealApiStorePricing | undefined = useMemo(() => {
     if (!selectedStoreIdSafe) return selectedVariantStorePricing[0];
@@ -553,7 +520,6 @@ export default function ProductDetailClient({ product, reviews: initialReviews, 
   ];
 
   const tags = product.tags ?? [];
-  const customStateForTax = product.tax?.customer_state_code;
   const displayTitle = selectedVariant?.title?.trim() || productName;
   const wishlisted = isWishlisted(product.id);
 
@@ -642,52 +608,16 @@ export default function ProductDetailClient({ product, reviews: initialReviews, 
     <Container>
       <div className="py-10">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10 lg:gap-16 md:items-start">
-          <div
-            className="flex flex-col gap-6 overflow-hidden"
-            style={leftColMaxH !== undefined ? { maxHeight: leftColMaxH } : undefined}
-          >
-            <div>
-              <Gallery
-                key={`gallery-${selectedVariant?.id ?? "base"}`}
-                images={galleryImages}
-                name={productName}
-                videoUrl={isVideoLink(product.video?.video_link) ? product.video?.video_link : null}
-              />
-            </div>
-
-            {variantList.length > 0 && (
-              <div className="flex flex-col space-y-3 flex-1 min-h-0">
-                <p className="text-sm font-semibold text-(--color-secondary) flex items-center gap-2 shrink-0">
-                  <Layers className="h-4 w-4" /> Product Variants
-                </p>
-                <div className="overflow-y-auto pr-1 grid gap-2 content-start flex-1 min-h-0">
-                  {variantList.map((variant) => {
-                    const selected = selectedVariant?.id === variant.id;
-                    const attributeLabel = Object.entries(variant.attributes ?? {})
-                      .map(([k, v]) => `${k}: ${v}`)
-                      .join(" | ");
-                    return (
-                      <button
-                        key={variant.id}
-                        onClick={() => navigateToVariant(variant)}
-                        className={`text-left border rounded-xl p-3 transition-all ${
-                          selected
-                            ? "btn-brand border-transparent shadow-md"
-                            : "border-(--color-border) hover:border-(--color-primary)/50"
-                        }`}
-                        aria-pressed={selected}
-                      >
-                        <p className={`text-sm font-semibold ${selected ? "text-white" : "text-(--color-secondary)"}`}>{variant.title}</p>
-                        {attributeLabel && <p className={`text-xs mt-0.5 ${selected ? "text-white/80" : "text-gray-500"}`}>{attributeLabel}</p>}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
+          <div className="flex flex-col gap-6">
+            <Gallery
+              key={`gallery-${selectedVariant?.id ?? "base"}`}
+              images={galleryImages}
+              name={productName}
+              videoUrl={isVideoLink(product.video?.video_link) ? product.video?.video_link : null}
+            />
           </div>
 
-          <div ref={rightColRef} className="flex flex-col">
+          <div className="flex flex-col">
             <div className="flex items-center flex-wrap gap-2 mb-3">
               <span className="text-xs font-semibold text-(--color-primary) bg-(--color-primary)/10 px-2.5 py-1 rounded-full">
                 {product.type === "variant" ? "Variant Product" : "Simple Product"}
@@ -739,6 +669,37 @@ export default function ProductDetailClient({ product, reviews: initialReviews, 
               )}
             </div>
 
+            {variantList.length > 0 && (
+              <div className="mt-5 flex flex-col space-y-2">
+                <p className="text-sm font-semibold text-(--color-secondary) flex items-center gap-2">
+                  Product Variants
+                </p>
+                <div className="grid gap-2 max-h-60 overflow-y-auto pr-1">
+                  {variantList.map((variant) => {
+                    const selected = selectedVariant?.id === variant.id;
+                    const attributeLabel = Object.entries(variant.attributes ?? {})
+                      .map(([k, v]) => `${k}: ${v}`)
+                      .join(" | ");
+                    return (
+                      <button
+                        key={variant.id}
+                        onClick={() => navigateToVariant(variant)}
+                        className={`text-left border rounded-xl p-3 transition-all ${
+                          selected
+                            ? "btn-brand border-transparent shadow-md"
+                            : "border-(--color-border) hover:border-(--color-primary)/50"
+                        }`}
+                        aria-pressed={selected}
+                      >
+                        <p className={`text-sm font-semibold ${selected ? "text-white" : "text-(--color-secondary)"}`}>{variant.title}</p>
+                        {attributeLabel && <p className={`text-xs mt-0.5 ${selected ? "text-white/80" : "text-gray-500"}`}>{attributeLabel}</p>}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {colorOptions.length > 0 && (
               <div className="mt-5">
                 <p className="text-sm font-semibold text-(--color-secondary) mb-2 flex items-center gap-2">
@@ -772,104 +733,6 @@ export default function ProductDetailClient({ product, reviews: initialReviews, 
               </div>
             )}
 
-            {selectedVariantStorePricing.length > 0 && (
-              <div className="mt-5">
-                <p className="text-sm font-semibold text-(--color-secondary) mb-2 flex items-center gap-2">
-                  <Store className="h-4 w-4" /> Store-wise Pricing
-                </p>
-
-                <div className="flex flex-wrap gap-2 mb-3">
-                  {selectedVariantStorePricing.map((store) => {
-                    const selected = selectedStorePricing?.store_id === store.store_id;
-                    return (
-                      <button
-                        key={store.store_id}
-                        onClick={() => setSelectedStoreId(store.store_id)}
-                        className={`px-3 py-1.5 rounded-lg text-sm font-semibold border transition-all ${
-                          selected
-                            ? "btn-brand border-transparent shadow-md"
-                            : "border-(--color-border) text-(--color-secondary) hover:border-(--color-primary)/60"
-                        }`}
-                        aria-pressed={selected}
-                      >
-                        {store.store_name}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {selectedStorePricing && (
-                  <div className="border border-(--color-border) rounded-xl p-3 bg-(--color-muted)">
-                    <div className="grid grid-cols-2 gap-2 text-xs mb-2">
-                      <div>
-                        <p className="text-gray-500">Store</p>
-                        <p className="font-semibold text-(--color-secondary)">{selectedStorePricing.store_name}</p>
-                      </div>
-                      <div>
-                        <p className="text-gray-500">State</p>
-                        <p className="font-semibold text-(--color-secondary)">
-                          {selectedStorePricing.store_state_name} ({selectedStorePricing.store_state_code})
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-gray-500">SKU</p>
-                        <p className="font-semibold text-(--color-secondary)">{selectedStorePricing.sku || "-"}</p>
-                      </div>
-                      <div>
-                        <p className="text-gray-500">Stock</p>
-                        <p className="font-semibold text-(--color-secondary)">
-                          {selectedStorePricing.stock} ({selectedStorePricing.stock_status.replace("_", " ")})
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2 text-xs border-t border-(--color-border) pt-2">
-                      <div>
-                        <p className="text-gray-500">Taxable Amount</p>
-                        <p className="font-semibold text-(--color-secondary)">{formatCurrency(selectedStorePricing.gst?.taxable_amount, currencySymbol)}</p>
-                      </div>
-                      <div>
-                        <p className="text-gray-500">GST Type</p>
-                        <p className="font-semibold text-(--color-secondary) uppercase">{selectedStorePricing.gst?.gst_type || "-"}</p>
-                      </div>
-                      <div>
-                        <p className="text-gray-500">CGST</p>
-                        <p className="font-semibold text-(--color-secondary)">
-                          {selectedStorePricing.gst?.cgst_rate ?? 0}% ({formatCurrency(selectedStorePricing.gst?.cgst_amount, currencySymbol)})
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-gray-500">SGST</p>
-                        <p className="font-semibold text-(--color-secondary)">
-                          {selectedStorePricing.gst?.sgst_rate ?? 0}% ({formatCurrency(selectedStorePricing.gst?.sgst_amount, currencySymbol)})
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-gray-500">IGST</p>
-                        <p className="font-semibold text-(--color-secondary)">
-                          {selectedStorePricing.gst?.igst_rate ?? 0}% ({formatCurrency(selectedStorePricing.gst?.igst_amount, currencySymbol)})
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-gray-500">Total GST</p>
-                        <p className="font-semibold text-(--color-secondary)">{formatCurrency(selectedStorePricing.gst?.total_tax_amount, currencySymbol)}</p>
-                      </div>
-                    </div>
-
-                    <div className="border-t border-(--color-border) mt-2 pt-2 flex justify-between items-center">
-                      <p className="text-xs text-gray-500">Final Amount</p>
-                      <p className="text-sm font-bold text-(--color-primary)">{formatCurrency(selectedStorePricing.gst?.total_amount ?? effectivePrice, currencySymbol)}</p>
-                    </div>
-
-                    {customStateForTax && (
-                      <p className="text-[11px] text-gray-500 mt-2">
-                        Customer State for GST split: <strong>{customStateForTax}</strong>
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
 
             {moq > 1 && (
               <p className="mt-4 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">

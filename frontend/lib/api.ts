@@ -2043,6 +2043,27 @@ export async function fetchTrendingProducts(limit = 4): Promise<RealApiProduct[]
   return res?.data ?? [];
 }
 
+/** Fire-and-forget: record a product view in the backend for logged-in users. */
+export async function recordBrowsingHistory(productId: number): Promise<void> {
+  const token = getToken();
+  if (!token || token === AUTH_SESSION_MARKER) return;
+  try {
+    await fetch(`${API_BASE}/api/browsing-history`, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        ...getAuthHeaders(token),
+      },
+      credentials: "include",
+      cache: "no-store",
+      body: JSON.stringify({ product_id: productId }),
+    });
+  } catch {
+    // fire-and-forget
+  }
+}
+
 export async function trackSearch(
   query: string,
   resultCount: number,

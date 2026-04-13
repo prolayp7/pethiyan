@@ -194,7 +194,7 @@ export default function SearchBar() {
                           <li key={p.id}>
                             <Link
                               href={`/products/${p.slug}`}
-                              onMouseDown={() => { trackSearch(query, liveResults.total, ["products"]); setOpen(false); }}
+                              onClick={() => { trackSearch(query, liveResults.total, ["products"]); setOpen(false); }}
                               className="flex items-center gap-3 py-2 px-2 rounded-xl hover:bg-gray-50 transition-colors group"
                             >
                               {getProductImage(p) ? (
@@ -230,7 +230,7 @@ export default function SearchBar() {
                           <Link
                             key={cat.id}
                             href={`/category/${cat.slug}`}
-                            onMouseDown={() => { trackSearch(query, liveResults.total, ["categories"]); setOpen(false); }}
+                            onClick={() => { trackSearch(query, liveResults.total, ["categories"]); setOpen(false); }}
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-50 border border-gray-200 text-sm text-gray-700 hover:border-(--color-primary) hover:text-(--color-primary) transition-colors"
                           >
                             {cat.name ?? (cat as unknown as { title: string }).title}
@@ -252,7 +252,7 @@ export default function SearchBar() {
                           <li key={post.id}>
                             <Link
                               href={`/blog/${post.slug}`}
-                              onMouseDown={() => { trackSearch(query, liveResults.total, ["blogs"]); setOpen(false); }}
+                              onClick={() => { trackSearch(query, liveResults.total, ["blogs"]); setOpen(false); }}
                               className="flex items-center gap-3 py-2 px-2 rounded-xl hover:bg-gray-50 transition-colors group"
                             >
                               <FileText className="h-5 w-5 text-gray-300 shrink-0" />
@@ -280,7 +280,7 @@ export default function SearchBar() {
                 <div className="mt-3 pt-3 border-t border-gray-100 text-right">
                   <button
                     type="button"
-                    onMouseDown={() => handleSubmit(query)}
+                    onClick={() => handleSubmit(query)}
                     className="text-sm font-medium text-(--color-primary) hover:underline"
                   >
                     View all {liveResults.total} results →
@@ -309,7 +309,7 @@ export default function SearchBar() {
                       <li key={term}>
                         <button
                           type="button"
-                          onMouseDown={() => handleTermClick(term)}
+                          onClick={() => handleTermClick(term)}
                           className="w-full text-left text-sm text-gray-600 hover:text-gray-900 py-1.5 px-2 rounded-lg hover:bg-gray-50 transition-colors"
                         >
                           {term}
@@ -345,7 +345,7 @@ export default function SearchBar() {
                       <Link
                         key={product.id}
                         href={`/products/${product.slug}`}
-                        onMouseDown={() => setOpen(false)}
+                        onClick={() => setOpen(false)}
                         className="group text-center"
                       >
                         <div className="aspect-square rounded-xl overflow-hidden bg-gray-50 mb-2 border border-gray-100 group-hover:border-(--color-primary)/30 transition-colors">
@@ -382,7 +382,7 @@ export default function SearchBar() {
             <span className="text-xs text-gray-400">Press ESC to close</span>
             <Link
               href="/products"
-              onMouseDown={() => setOpen(false)}
+              onClick={() => setOpen(false)}
               className="text-sm font-medium text-(--color-primary) hover:underline flex items-center gap-1"
             >
               View all best sellers <span aria-hidden="true">→</span>
