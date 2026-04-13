@@ -60,7 +60,6 @@ export default function MainHeader({ mobileNavItems }: MainHeaderProps) {
                       alt={appName}
                       fill
                       className="object-contain object-left"
-                      unoptimized
                       priority
                     />
                   </div>

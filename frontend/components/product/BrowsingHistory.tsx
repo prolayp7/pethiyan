@@ -69,7 +69,8 @@ function HistoryCard({ product }: { product: RealApiProduct }) {
             fill
             className="object-contain p-3 group-hover:scale-105 transition-transform duration-300"
             sizes="176px"
-            unoptimized
+            loading="lazy"
+            quality={80}
           />
         ) : (
           <div className="absolute inset-0 bg-linear-to-br from-(--color-primary)/10 to-(--color-primary-light)" />

@@ -26,7 +26,8 @@ const nextConfig: NextConfig = {
   // ── Images ─────────────────────────────────────────────────────────────────
   images: {
     formats: ["image/avif", "image/webp"],
-    minimumCacheTTL: 3600,
+    // 30-day cache for optimized images — safe because Next.js uses content-addressed URLs
+    minimumCacheTTL: 2592000,
     remotePatterns: [
       { protocol: "http",  hostname: "localhost", port: apiPort, pathname: "/**" },
       { protocol: "http",  hostname: "localhost",               pathname: "/**" },
@@ -35,6 +36,8 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "127.0.0.1",               pathname: "/**" },
       { protocol: apiProtocol, hostname: apiHostname, ...(apiPort ? { port: apiPort } : {}), pathname: "/**" },
       { protocol: "https", hostname: "*.pethiyan.com",          pathname: "/**" },
+      // Blog post featured images
+      { protocol: "https", hostname: "images.unsplash.com",     pathname: "/**" },
     ],
   },
 

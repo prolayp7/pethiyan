@@ -435,7 +435,7 @@ export default function HeroSection10({ slides: apiSlides, badges: apiBadges, se
             {/* Embla viewport */}
             <div ref={emblaRef} className="absolute inset-0 overflow-hidden">
               <div className="flex h-full">
-                {activeSlides.map((s) => (
+                {activeSlides.map((s, index) => (
                   <div
                     key={s.id}
                     className="relative flex-none w-full h-full"
@@ -445,10 +445,10 @@ export default function HeroSection10({ slides: apiSlides, badges: apiBadges, se
                       src={s.image}
                       alt={s.heading.replace("\n", " ")}
                       fill
-                      unoptimized
                       className="object-cover"
-                      priority={s.id === 1}
+                      priority={index === 0}
                       sizes="(max-width: 1024px) 100vw, 54vw"
+                      quality={85}
                     />
                     {/* Overlay — subtle darkening for visual depth */}
                     <div

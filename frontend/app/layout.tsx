@@ -32,6 +32,9 @@ const inter = Inter({
   subsets: ["latin"],
   display: "swap",
   weight: ["400", "500", "600", "700", "800"],
+  // Minimise CLS from font swap — fallback metrics are tuned to match Inter
+  adjustFontFallback: true,
+  fallback: ["ui-sans-serif", "system-ui", "-apple-system", "sans-serif"],
 });
 
 export const viewport: Viewport = {
