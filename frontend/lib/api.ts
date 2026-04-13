@@ -3,6 +3,26 @@ export const API_BASE =
   process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
 
 const LS_TOKEN_KEY = "auth_token";
+const AUTH_SESSION_MARKER = "__http_only_session__";
+
+function getApiErrorMessage(payload: {
+  message?: string;
+  data?: {
+    error?: string;
+    errors?: Record<string, string[]>;
+  };
+} | null | undefined): string | undefined {
+  if (!payload) return undefined;
+
+  if (payload.data?.error) return payload.data.error;
+
+  const firstValidationError = payload.data?.errors
+    ? Object.values(payload.data.errors).flat().find(Boolean)
+    : undefined;
+
+  if (firstValidationError) return firstValidationError;
+  return payload.message;
+}
 
 // ─── API Types ────────────────────────────────────────────────────────────────
 
@@ -188,6 +208,28 @@ export interface ApiCouponResult {
   message?: string;
 }
 
+export interface ApiPromoPopupProduct {
+  id: number;
+  title: string;
+  slug: string;
+  image_url: string | null;
+  price: number;
+}
+
+export interface ApiPromoPopupData {
+  promo: {
+    id: number;
+    code: string;
+    description?: string | null;
+    discount_type: "percent" | "flat" | "free_shipping";
+    discount_amount: number;
+    discount_label: string;
+    start_date?: string | null;
+    end_date?: string | null;
+  };
+  products: ApiPromoPopupProduct[];
+}
+
 export interface ApiShippingRate {
   id: number;
   label: string;
@@ -268,6 +310,11 @@ function getToken(): string | null {
   return localStorage.getItem(LS_TOKEN_KEY);
 }
 
+function getAuthHeaders(token: string | null): Record<string, string> {
+  if (!token || token === AUTH_SESSION_MARKER) return {};
+  return { Authorization: `Bearer ${token}` };
+}
+
 function normalizeMediaUrl(src?: string | null): string | null {
   if (!src) return null;
   const trimmed = String(src).trim();
@@ -299,6 +346,7 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T | nul
     const res = await fetch(`${API_BASE}${path}`, {
       headers: { Accept: "application/json", ...options?.headers },
       cache: "no-store",
+      credentials: "include",
       ...options,
     });
     // Always parse JSON — error responses (4xx/5xx) carry a message body we need to show
@@ -320,9 +368,10 @@ async function apiAuth<T>(
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...getAuthHeaders(token),
       },
       cache: "no-store",
+      credentials: "include",
       ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
     });
     if (!res.ok) return null;
@@ -562,6 +611,37 @@ export async function getProduct(slug: string, customerStateCode?: string): Prom
   return null;
 }
 
+export async function getProductsByIds(
+  ids: number[],
+  customerStateCode?: string
+): Promise<RealApiProduct[]> {
+  const normalized = Array.from(
+    new Set(
+      ids
+        .map((value) => Number(value))
+        .filter((value) => Number.isInteger(value) && value > 0)
+    )
+  );
+
+  if (normalized.length === 0) return [];
+
+  const params = new URLSearchParams({
+    ids: normalized.join(","),
+  });
+
+  if (customerStateCode) {
+    params.set("customer_state_code", customerStateCode);
+  }
+
+  const res = await apiFetch<ApiResponse<RealApiProduct[]> | RealApiProduct[]>(
+    `/api/products/by-ids?${params.toString()}`
+  );
+  if (!res) return [];
+  if (Array.isArray(res)) return res;
+  if ("data" in res && Array.isArray(res.data)) return res.data;
+  return [];
+}
+
 export async function getProductReviews(slug: string): Promise<ApiReview[]> {
   const res = await apiFetch<ApiResponse<ApiReview[]> | ApiReview[]>(
     `/api/products/${slug}/reviews`
@@ -673,8 +753,8 @@ export async function googleCallback(
   if (!res) return { success: false, isNewUser: false, message: "Request failed" };
 
   // Existing user logged in
-  if (res.success && res.access_token && res.data) {
-    return { success: true, token: res.access_token, user: res.data, isNewUser: false, message: res.message };
+  if (res.success && res.data) {
+    return { success: true, token: AUTH_SESSION_MARKER, user: res.data, isNewUser: false, message: res.message };
   }
 
   // New user — backend needs mobile + password
@@ -688,7 +768,11 @@ export async function googleCallback(
     };
   }
 
-  return { success: false, isNewUser: false, message: res.message ?? "Google sign-in failed" };
+  return {
+    success: false,
+    isNewUser: false,
+    message: getApiErrorMessage(res) ?? "Google sign-in failed",
+  };
 }
 
 export async function registerUser(data: {
@@ -710,7 +794,7 @@ export async function registerUser(data: {
     body: JSON.stringify({ country_code: "+91", ...data }),
   });
   if (!res) return { success: false, message: "Request failed" };
-  return { success: res.success, message: res.message, token: res.access_token, user: res.data?.user };
+  return { success: res.success, message: res.message, token: res.success && res.data?.user ? AUTH_SESSION_MARKER : undefined, user: res.data?.user };
 }
 
 export async function verifyMobile(
@@ -750,7 +834,7 @@ export async function loginWithPassword(
     body: JSON.stringify(body),
   });
   if (!res) return { success: false, message: "Request failed" };
-  return { success: res.success, message: res.message, token: res.access_token, user: res.data };
+  return { success: res.success, message: res.message, token: res.success && res.data ? AUTH_SESSION_MARKER : undefined, user: res.data };
 }
 
 export async function sendOtp(mobile: string): Promise<{ success: boolean; message?: string; demoOtp?: string }> {
@@ -787,7 +871,7 @@ export async function verifyOtp(
   return {
     success: res.success,
     message: res.message,
-    token: res.data?.access_token,
+    token: res.success && res.data?.user ? AUTH_SESSION_MARKER : undefined,
     user: res.data?.user,
   };
 }
@@ -806,7 +890,7 @@ export async function resendOtp(mobile: string): Promise<{ success: boolean; mes
 }
 
 export async function getProfile(): Promise<import("@/context/AuthContext").AuthUser | null> {
-  const res = await apiAuth<ApiResponse<import("@/context/AuthContext").AuthUser>>("/api/auth/profile");
+  const res = await apiAuth<ApiResponse<import("@/context/AuthContext").AuthUser>>("/api/user/profile");
   if (res && "data" in res) return res.data;
   return null;
 }
@@ -815,11 +899,18 @@ export async function updateProfile(
   data: Partial<{ name: string; email: string }>
 ): Promise<{ success: boolean; message?: string }> {
   const res = await apiAuth<{ success: boolean; message?: string }>(
-    "/api/auth/profile",
-    "PUT",
+    "/api/user/profile",
+    "POST",
     data
   );
   return res ?? { success: false };
+}
+
+export async function logoutUserSession(): Promise<void> {
+  await apiFetch("/api/logout", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+  });
 }
 
 // ─── Addresses ────────────────────────────────────────────────────────────────
@@ -896,9 +987,10 @@ export async function createAddressDetailed(
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...getAuthHeaders(token),
       },
       cache: "no-store",
+      credentials: "include",
       body: JSON.stringify(payload),
     });
 
@@ -1058,6 +1150,25 @@ export async function applyCoupon(
   return res ?? { valid: false, code, discount_type: "fixed", discount_value: 0, discount_amount: 0, message: "Invalid coupon" };
 }
 
+export async function getPromoPopup(): Promise<ApiPromoPopupData | null> {
+  const res = await apiFetch<ApiResponse<ApiPromoPopupData | null>>("/api/promos/popup");
+  if (!res?.success || !res.data || Array.isArray(res.data) || typeof res.data !== "object") {
+    return null;
+  }
+
+  const popup = res.data as ApiPromoPopupData;
+
+  return {
+    ...popup,
+    products: Array.isArray(popup.products)
+      ? popup.products.map((product) => ({
+          ...product,
+          image_url: normalizeMediaUrl(product.image_url),
+        }))
+      : [],
+  };
+}
+
 // ─── Shipping ─────────────────────────────────────────────────────────────────
 
 export async function getShippingRates(
@@ -1127,9 +1238,10 @@ export async function verifyRazorpayPayment(data: {
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...getAuthHeaders(token),
       },
       cache: "no-store",
+      credentials: "include",
       body: JSON.stringify(data),
     });
     const body = await res.json();
@@ -1285,9 +1397,10 @@ export async function serverCartAdd(
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
+        ...getAuthHeaders(token),
       },
       cache: "no-store",
+      credentials: "include",
       body: JSON.stringify({ product_variant_id: variantId, store_id: storeId, quantity }),
     });
     const body = await res.json();
@@ -1321,9 +1434,10 @@ export async function serverCartUpdateQty(
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
+        ...getAuthHeaders(token),
       },
       cache: "no-store",
+      credentials: "include",
       body: JSON.stringify({ quantity }),
     });
     return res.ok;
@@ -1340,9 +1454,10 @@ export async function serverCartRemove(cartItemId: number): Promise<boolean> {
       method: "DELETE",
       headers: {
         Accept: "application/json",
-        Authorization: `Bearer ${token}`,
+        ...getAuthHeaders(token),
       },
       cache: "no-store",
+      credentials: "include",
     });
     return res.ok;
   } catch {
@@ -1357,9 +1472,10 @@ export async function serverCartClear(): Promise<boolean> {
     const res = await fetch(`${API_BASE}/api/user/cart/clear-cart`, {
       headers: {
         Accept: "application/json",
-        Authorization: `Bearer ${token}`,
+        ...getAuthHeaders(token),
       },
       cache: "no-store",
+      credentials: "include",
     });
     return res.ok;
   } catch {
@@ -1369,7 +1485,7 @@ export async function serverCartClear(): Promise<boolean> {
 
 export async function syncCartToServer(
   items: { variantId: number; storeId: number; quantity: number }[]
-): Promise<{ success: boolean; message?: string }> {
+): Promise<{ success: boolean; message?: string; failedVariantIds?: number[] }> {
   console.log("[syncCartToServer] items:", items);
   const token = getToken();
   try {
@@ -1378,9 +1494,10 @@ export async function syncCartToServer(
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...getAuthHeaders(token),
       },
       cache: "no-store",
+      credentials: "include",
       body: JSON.stringify({
         items: items.map((i) => ({
           product_variant_id: i.variantId,
@@ -1389,9 +1506,32 @@ export async function syncCartToServer(
         })),
       }),
     });
-    const body = await res.json() as { success?: boolean; message?: string };
+    const body = await res.json() as {
+      success?: boolean;
+      message?: string;
+      data?: {
+        synced_items?: unknown[];
+        failed_items?: { product_variant_id?: number }[];
+      };
+    };
     console.log("[syncCartToServer] HTTP", res.status, body);
-    return { success: !!body.success, message: body.message };
+
+    const syncedCount = body.data?.synced_items?.length ?? 0;
+    const failedItems = body.data?.failed_items ?? [];
+    const failedVariantIds = failedItems
+      .map((f) => f.product_variant_id)
+      .filter((id): id is number => typeof id === "number");
+
+    // If the API reports success but nothing was actually synced, treat as failure
+    if (body.success && syncedCount === 0 && failedItems.length > 0) {
+      return {
+        success: false,
+        message: "Some items in your cart are not available. Please remove them and try again.",
+        failedVariantIds,
+      };
+    }
+
+    return { success: !!body.success, message: body.message, failedVariantIds };
   } catch (err) {
     console.error("[syncCartToServer] error:", err);
     return { success: false, message: "Cart sync failed." };
@@ -1433,9 +1573,10 @@ export async function createCheckout(
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...getAuthHeaders(token),
       },
       cache: "no-store",
+      credentials: "include",
       body: JSON.stringify(mapped),
     });
     httpStatus = res.status;
@@ -1500,9 +1641,10 @@ export async function addToWishlist(
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
+        ...getAuthHeaders(token),
       },
       cache: "no-store",
+      credentials: "include",
       body: JSON.stringify(payload),
     });
 
@@ -1525,9 +1667,10 @@ export async function getWishlistSummary(): Promise<{ total_wishlists: number; t
       method: "GET",
       headers: {
         Accept: "application/json",
-        Authorization: `Bearer ${token}`,
+        ...getAuthHeaders(token),
       },
       cache: "no-store",
+      credentials: "include",
     });
 
     const body = (await res.json()) as {
@@ -1569,9 +1712,10 @@ export async function getWishlistItems(): Promise<ApiWishlistItemRecord[]> {
       method: "GET",
       headers: {
         Accept: "application/json",
-        Authorization: `Bearer ${token}`,
+        ...getAuthHeaders(token),
       },
       cache: "no-store",
+      credentials: "include",
     });
     const body = (await res.json()) as {
       success?: boolean;
@@ -1595,9 +1739,10 @@ export async function removeWishlistItem(itemId: number): Promise<{ success: boo
       method: "DELETE",
       headers: {
         Accept: "application/json",
-        Authorization: `Bearer ${token}`,
+        ...getAuthHeaders(token),
       },
       cache: "no-store",
+      credentials: "include",
     });
     const body = (await res.json()) as { success?: boolean; message?: string };
     return {
@@ -1618,9 +1763,10 @@ export async function clearAllWishlistItems(): Promise<{ success: boolean; messa
       method: "DELETE",
       headers: {
         Accept: "application/json",
-        Authorization: `Bearer ${token}`,
+        ...getAuthHeaders(token),
       },
       cache: "no-store",
+      credentials: "include",
     });
     const body = (await res.json()) as { success?: boolean; message?: string };
     return {

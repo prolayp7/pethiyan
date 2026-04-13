@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Search, Grid3X3, Heart, ShoppingBag } from "lucide-react";
+import { Home, User, Grid3X3, Heart, ShoppingBag } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCart } from "@/context/CartContext";
 
 const navItems = [
   { label: "Home", href: "/", icon: Home },
-  { label: "Search", href: "/search", icon: Search },
+  { label: "Account", href: "/account", icon: User },
   { label: "Categories", href: "/categories", icon: Grid3X3 },
   { label: "Wishlist", href: "/wishlist", icon: Heart },
 ];
@@ -25,7 +25,9 @@ export default function MobileBottomNav() {
       <ul className="flex items-center justify-around h-16 max-w-lg mx-auto px-2">
         {navItems.map((item) => {
           const Icon = item.icon;
-          const isActive = pathname === item.href;
+          const isActive = item.href === "/"
+            ? pathname === "/"
+            : pathname === item.href || pathname.startsWith(item.href + "/");
           return (
             <li key={item.label} className="flex-1">
               <Link
@@ -54,6 +56,7 @@ export default function MobileBottomNav() {
         {/* Cart Button */}
         <li className="flex-1">
           <button
+            type="button"
             onClick={openCart}
             className="flex flex-col items-center gap-0.5 py-2 px-2 rounded-xl text-gray-400 hover:text-gray-600 transition-colors w-full relative"
             aria-label={`Cart with ${itemCount} items`}

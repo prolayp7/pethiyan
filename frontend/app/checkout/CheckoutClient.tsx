@@ -18,6 +18,7 @@ import {
   type ApiAddress, type ApiShippingRate, type ApiCouponResult,
 } from "@/lib/api";
 import { trackBeginCheckout, storePurchaseEvent } from "@/lib/analytics";
+import { readLastPincodeFromCookie, writeLastPincodeCookie } from "@/lib/location-preferences";
 
 // ─── Razorpay types ───────────────────────────────────────────────────────────
 
@@ -355,7 +356,7 @@ function OrderSummary({ subtotal, discount, shippingCharge, couponResult, curren
 export default function CheckoutClient() {
   const router = useRouter();
   const { user, isLoading: authLoading, isLoggedIn } = useAuth();
-  const { items, total, clearCart } = useCart();
+  const { items, total, clearCart, removeItem } = useCart();
   const currencySymbol = items[0]?.currencySymbol ?? "₹";
   const fmt = makeFmt(currencySymbol);
 
@@ -389,11 +390,16 @@ export default function CheckoutClient() {
   const [availablePaymentMethods, setAvailablePaymentMethods] = useState<PaymentMethod[]>([]);
   const [processingPayment, setProcessingPayment] = useState(false);
   const [paymentError, setPaymentError] = useState("");
+  const [lastPincode, setLastPincode] = useState("");
 
   // Redirect if cart empty
   useEffect(() => {
     if (items.length === 0) router.replace("/cart");
   }, [items.length, router]);
+
+  useEffect(() => {
+    setLastPincode(readLastPincodeFromCookie());
+  }, []);
 
   // Fire begin_checkout once when the page mounts with a non-empty cart
   useEffect(() => {
@@ -416,12 +422,24 @@ export default function CheckoutClient() {
 
     getAddresses().then((list) => {
       setAddresses(list);
-      const def = list.find((a) => a.is_default) ?? list[0];
+      const byPincode = lastPincode
+        ? list.find((a) => a.pincode === lastPincode)
+        : undefined;
+      const def = list.find((a) => a.is_default) ?? byPincode ?? list[0];
       if (def) setSelectedAddressId(def.id);
       if (list.length === 0) setShowAddressForm(true);
       setAddressLoading(false);
     });
-  }, [authLoading, isLoggedIn]);
+  }, [authLoading, isLoggedIn, lastPincode]);
+
+  useEffect(() => {
+    if (!showAddressForm) return;
+    if (!lastPincode) return;
+
+    setNewAddress((current) => (
+      current.pincode ? current : { ...current, pincode: lastPincode }
+    ));
+  }, [showAddressForm, lastPincode]);
 
   useEffect(() => {
     getPaymentSettings()
@@ -484,6 +502,9 @@ export default function CheckoutClient() {
       setSavingAddress(false);
       if (updated) {
         setAddresses((prev) => prev.map((a) => (a.id === editingAddressId ? updated : a)));
+        writeLastPincodeCookie(updated.pincode);
+        setLastPincode(updated.pincode);
+        setSelectedAddressId(updated.id);
         setShowAddressForm(false);
         setEditingAddressId(null);
         setNewAddress(BLANK_ADDRESS);
@@ -507,6 +528,8 @@ export default function CheckoutClient() {
     if (result.success && result.address) {
       setAddresses((prev) => [...prev, result.address as ApiAddress]);
       setSelectedAddressId(result.address.id);
+      writeLastPincodeCookie(result.address.pincode);
+      setLastPincode(result.address.pincode);
       setShowAddressForm(false);
       setNewAddress(BLANK_ADDRESS);
       setAddressSaveError("");
@@ -519,6 +542,8 @@ export default function CheckoutClient() {
 
   const handleContinueToShipping = useCallback(async () => {
     if (!selectedAddress) return;
+    writeLastPincodeCookie(selectedAddress.pincode);
+    setLastPincode(selectedAddress.pincode);
     setStep(2);
     setShippingLoading(true);
     // Calculate total weight in grams from all cart items
@@ -568,6 +593,14 @@ export default function CheckoutClient() {
       );
       console.log("[handlePlaceOrder] cart sync result:", synced);
       if (!synced.success) {
+        // Remove items that failed to sync from local cart so user isn't stuck in a loop
+        if (synced.failedVariantIds && synced.failedVariantIds.length > 0) {
+          for (const item of items) {
+            if (item.variantId && synced.failedVariantIds.includes(item.variantId)) {
+              removeItem(item.id);
+            }
+          }
+        }
         setPaymentError(synced.message ?? "Failed to sync cart. Please try again.");
         setProcessingPayment(false);
         return;

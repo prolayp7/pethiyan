@@ -4,6 +4,7 @@ import HeroSection10 from "@/components/hero/HeroSection10";
 import CategoryGrid from "@/components/sections/CategoryGrid";
 import VideoCarouselGrid from "@/components/sections/VideoCarouselGrid";
 import FeaturedProducts from "@/components/sections/FeaturedProducts";
+import RecentlyViewedProducts from "@/components/sections/RecentlyViewedProducts";
 import PromoBanner from "@/components/sections/PromoBanner";
 import BrandStory from "@/components/sections/BrandStory";
 import Testimonials from "@/components/sections/Testimonials";
@@ -52,6 +53,12 @@ export default async function HomePage() {
       {/* <TrustBadges /> */}
       <CategoryGrid categories={categories} />
       <FeaturedProducts apiProducts={featuredProducts} />
+      <RecentlyViewedProducts
+        title="Pick Up Where You Left Off"
+        eyebrow="Your recent views"
+        description="The products you checked out most recently are waiting here for a faster return."
+        viewAllLabel="Explore catalog"
+      />
       <VideoCarouselGrid data={videoStorySection} />
       
       <BrandStory />

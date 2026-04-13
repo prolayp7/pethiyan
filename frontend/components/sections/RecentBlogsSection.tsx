@@ -1,19 +1,36 @@
+"use client";
+
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { useRef } from "react";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import Container from "@/components/layout/Container";
 import BlogCard from "@/components/blog/BlogCard";
 import { getLatestPosts } from "@/lib/blog-data";
 
 export default function RecentBlogsSection() {
+  const mobileSliderRef = useRef<HTMLDivElement | null>(null);
   const posts = getLatestPosts().slice(0, 3);
 
   if (posts.length === 0) {
     return null;
   }
 
+  function scrollMobileBlogs(direction: "prev" | "next") {
+    const el = mobileSliderRef.current;
+    if (!el) return;
+    const firstCard = el.querySelector<HTMLElement>("[data-blog-slide]");
+    const gap = 24;
+    const cardWidth = firstCard?.offsetWidth ?? el.clientWidth * 0.9;
+    const amount = cardWidth + gap;
+    el.scrollBy({
+      left: direction === "next" ? amount : -amount,
+      behavior: "smooth",
+    });
+  }
+
   return (
     <section
-      className="relative overflow-hidden bg-white py-16 sm:py-20"
+      className="relative overflow-hidden bg-white pt-6 pb-0 sm:py-20"
       aria-labelledby="recent-blogs-heading"
     >
       <div
@@ -21,7 +38,7 @@ export default function RecentBlogsSection() {
         aria-hidden="true"
       />
       <Container className="relative z-10">
-        <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div className="max-w-2xl">
             <p className="text-sm font-semibold uppercase tracking-[0.24em] text-emerald-600">
               From The Blog
@@ -46,7 +63,45 @@ export default function RecentBlogsSection() {
           </Link>
         </div>
 
-        <div className="mt-10 grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="relative mt-4 lg:hidden">
+          <button
+            type="button"
+            onClick={() => scrollMobileBlogs("prev")}
+            aria-label="Scroll blog posts left"
+            className="absolute left-2 z-20 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-[#c8d7ea] bg-white/95 text-[#1a4f83] shadow-sm transition-colors hover:bg-[#f3f8ff]"
+            style={{ top: "min(34vw, 8rem)" }}
+          >
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            onClick={() => scrollMobileBlogs("next")}
+            aria-label="Scroll blog posts right"
+            className="absolute right-2 z-20 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-[#c8d7ea] bg-white/95 text-[#1a4f83] shadow-sm transition-colors hover:bg-[#f3f8ff]"
+            style={{ top: "min(34vw, 8rem)" }}
+          >
+            <ArrowRight className="h-4 w-4" aria-hidden="true" />
+          </button>
+
+          <div
+            ref={mobileSliderRef}
+            className="flex snap-x snap-mandatory gap-6 overflow-x-auto px-12 pb-0 [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+            style={{ scrollbarWidth: "none" }}
+            aria-label="Recent blog posts slider"
+          >
+            {posts.map((post) => (
+              <div
+                key={post.slug}
+                data-blog-slide
+                className="w-[calc(100vw-3rem)] max-w-full shrink-0 snap-start"
+              >
+                <BlogCard post={post} />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-10 hidden grid-cols-1 gap-6 lg:grid-cols-3 lg:grid">
           {posts.map((post) => (
             <BlogCard key={post.slug} post={post} />
           ))}

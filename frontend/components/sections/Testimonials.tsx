@@ -1,4 +1,7 @@
-import { Star, Quote } from "lucide-react";
+"use client";
+
+import { useEffect, useRef } from "react";
+import { ArrowLeft, ArrowRight, Quote, Star } from "lucide-react";
 import Container from "@/components/layout/Container";
 
 const testimonials = [
@@ -32,10 +35,46 @@ const testimonials = [
 ];
 
 export default function Testimonials() {
+  const mobileSliderRef = useRef<HTMLDivElement | null>(null);
+
+  function scrollMobileTestimonials(direction: "prev" | "next") {
+    const el = mobileSliderRef.current;
+    if (!el) return;
+    const firstCard = el.querySelector<HTMLElement>("[data-testimonial-slide]");
+    const gap = 24;
+    const cardWidth = firstCard?.offsetWidth ?? el.clientWidth * 0.9;
+    const amount = cardWidth + gap;
+    el.scrollBy({
+      left: direction === "next" ? amount : -amount,
+      behavior: "smooth",
+    });
+  }
+
+  useEffect(() => {
+    const el = mobileSliderRef.current;
+    if (!el) return;
+
+    const timer = window.setInterval(() => {
+      const firstCard = el.querySelector<HTMLElement>("[data-testimonial-slide]");
+      const gap = 24;
+      const cardWidth = firstCard?.offsetWidth ?? el.clientWidth * 0.9;
+      const amount = cardWidth + gap;
+      const maxScrollLeft = el.scrollWidth - el.clientWidth;
+      const nextLeft = el.scrollLeft + amount;
+
+      el.scrollTo({
+        left: nextLeft >= maxScrollLeft - 4 ? 0 : nextLeft,
+        behavior: "smooth",
+      });
+    }, 3500);
+
+    return () => window.clearInterval(timer);
+  }, []);
+
   return (
-    <section className="py-16 bg-(--color-muted)" aria-labelledby="testimonials-heading">
+    <section className="bg-(--color-muted) py-10 md:py-16" aria-labelledby="testimonials-heading">
       <Container>
-        <div className="text-left max-w-3xl mb-12">
+        <div className="mb-7 max-w-3xl text-left md:mb-12">
           <p className="text-sm font-semibold text-(--color-primary) uppercase tracking-wider mb-2">
             Social Proof
           </p>
@@ -50,7 +89,72 @@ export default function Testimonials() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="relative md:hidden">
+          <div
+            ref={mobileSliderRef}
+            className="flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-3 [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+            style={{ scrollbarWidth: "none" }}
+            aria-label="Testimonials slider"
+          >
+            {testimonials.map((t) => (
+              <div
+                key={t.name}
+                data-testimonial-slide
+                className="w-[calc(100vw-3rem)] max-w-full shrink-0 snap-start rounded-2xl border border-(--color-border) bg-white p-6 shadow-sm transition-all duration-300"
+              >
+                <Quote className="mb-4 h-8 w-8 text-(--color-primary)/20" aria-hidden="true" />
+
+                <div className="mb-4 flex gap-1" aria-label={`${t.rating} out of 5 stars`}>
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Star
+                      key={i}
+                      className={`h-4 w-4 ${i < t.rating ? "fill-amber-400 text-amber-400" : "text-gray-200"}`}
+                      aria-hidden="true"
+                    />
+                  ))}
+                </div>
+
+                <p className="min-w-0 whitespace-normal break-words text-sm leading-relaxed text-gray-600">
+                  &ldquo;{t.review}&rdquo;
+                </p>
+
+                <div className="mt-5 flex items-center gap-3 border-t border-gray-100 pt-4">
+                  <div
+                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${t.color} text-xs font-bold text-white`}
+                    aria-hidden="true"
+                  >
+                    {t.initials}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="whitespace-normal break-words text-sm font-semibold text-(--color-secondary)">{t.name}</p>
+                    <p className="whitespace-normal break-words text-xs text-gray-400">{t.role}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-3 flex items-center justify-center gap-3">
+            <button
+              type="button"
+              onClick={() => scrollMobileTestimonials("prev")}
+              aria-label="Scroll testimonials left"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#c8d7ea] bg-white text-[#1a4f83] shadow-sm transition-colors hover:bg-[#f3f8ff]"
+            >
+              <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              onClick={() => scrollMobileTestimonials("next")}
+              aria-label="Scroll testimonials right"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#c8d7ea] bg-white text-[#1a4f83] shadow-sm transition-colors hover:bg-[#f3f8ff]"
+            >
+              <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </button>
+          </div>
+        </div>
+
+        <div className="hidden grid-cols-1 gap-6 md:grid md:grid-cols-3">
           {testimonials.map((t) => (
             <div
               key={t.name}

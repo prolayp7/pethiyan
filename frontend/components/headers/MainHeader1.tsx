@@ -12,8 +12,13 @@ import MobileMenu from "./MobileMenu";
 import { useCart } from "@/context/CartContext";
 import { useWishlist } from "@/context/WishlistContext";
 import { useSiteSettings } from "@/context/SiteSettingsContext";
+import type { ApiMenuItem } from "@/lib/api";
 
-export default function MainHeader() {
+interface MainHeaderProps {
+  mobileNavItems?: ApiMenuItem[];
+}
+
+export default function MainHeader({ mobileNavItems }: MainHeaderProps) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
@@ -83,7 +88,7 @@ export default function MainHeader() {
                 <Search className="h-5 w-5 text-gray-700" />
               </button>
 
-              <UserMenu />
+              <span className="hidden md:contents"><UserMenu /></span>
 
               {/* Wishlist icon */}
               <Link
@@ -102,7 +107,7 @@ export default function MainHeader() {
                 </span>
               </Link>
 
-              <CartButton onClick={openCart} />
+              <span className="hidden md:contents"><CartButton onClick={openCart} /></span>
 
               {/* Track Order icon — desktop only */}
               <Link
@@ -139,6 +144,7 @@ export default function MainHeader() {
       <MobileMenu
         isOpen={mobileMenuOpen}
         onClose={() => setMobileMenuOpen(false)}
+        navItems={mobileNavItems}
       />
     </>
   );

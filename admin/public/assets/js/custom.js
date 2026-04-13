@@ -1,5 +1,6 @@
 const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 const panel = document.getElementById('panel') ? document.getElementById('panel').getAttribute('data-panel') : 'admin';
+const httpClient = window.axios || globalThis.axios;
 
 const root = getComputedStyle(document.documentElement);
 const primaryColor = root.getPropertyValue('--tblr-primary').trim();
@@ -132,7 +133,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 config.data = formData;
             }
 
-            axios(config)
+            if (!httpClient?.request) {
+                submitButton.disabled = false;
+                submitButton.innerHTML = originalButtonContent;
+                console.error('Axios client is unavailable.');
+                Toast.fire({
+                    icon: "error",
+                    title: "A network client error occurred."
+                });
+                return;
+            }
+
+            httpClient.request(config)
                 .then(function (response) {
                     submitButton.disabled = false;
                     submitButton.innerHTML = originalButtonContent;
@@ -237,7 +249,18 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         config.data = formData;
 
-        axios(config)
+        if (!httpClient?.request) {
+            submitButton.disabled = false;
+            submitButton.innerHTML = originalButtonContent;
+            console.error('Axios client is unavailable.');
+            Toast.fire({
+                icon: "error",
+                title: "A network client error occurred."
+            });
+            return;
+        }
+
+        httpClient.request(config)
             .then(function (response) {
                 submitButton.disabled = false;
                 submitButton.innerHTML = originalButtonContent;
@@ -303,16 +326,20 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 
-$(document).on('hidden.bs.modal', '.modal', function () {
-    const forms = this.querySelectorAll('form.form-submit');
+document.addEventListener('hidden.bs.modal', function (event) {
+    if (!event.target.classList.contains('modal')) return;
+
+    const forms = event.target.querySelectorAll('form.form-submit');
     forms.forEach(function (form) {
         clearValidationErrors(form);
     });
 });
 
 // Clear validation errors when modal is shown (optional - for fresh start)
-$(document).on('shown.bs.modal', '.modal', function () {
-    const forms = this.querySelectorAll('form.form-submit');
+document.addEventListener('shown.bs.modal', function (event) {
+    if (!event.target.classList.contains('modal')) return;
+
+    const forms = event.target.querySelectorAll('form.form-submit');
     forms.forEach(function (form) {
         clearValidationErrors(form);
     });
@@ -433,7 +460,12 @@ document.getElementById('view-category-offcanvas')?.addEventListener('show.bs.of
     const categoryId = triggerButton.getAttribute('data-id');
     const url = `${base_url}/${panel}/categories/${categoryId}/edit`
 
-    axios.get(url)
+    if (!httpClient?.get) {
+        console.error('Axios client is unavailable.');
+        return;
+    }
+
+    httpClient.get(url)
         .then(response => {
             const data = response.data;
             if (data.success) {

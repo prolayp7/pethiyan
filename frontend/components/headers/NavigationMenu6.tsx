@@ -635,33 +635,6 @@ export default function NavigationMenu6({
         )}
       </nav>
 
-      {/* ═══════════════════════════════════════════════
-          MOBILE BAR (below lg)
-      ═══════════════════════════════════════════════ */}
-      <div
-        className="lg:hidden flex items-center justify-between px-4 py-3 bg-white"
-        style={{ borderBottom: "1px solid #f0f4f8" }}
-      >
-        <Link href="/" className="text-sm font-bold text-[#1f4f8a] flex items-center gap-1.5">
-          <Package className="h-4 w-4" aria-hidden="true" />
-          Pethiyan
-        </Link>
-        <div className="flex items-center gap-2">
-          <button aria-label="Search" className="p-1.5 text-gray-600 hover:text-[#1f4f8a] transition-colors">
-            <Search className="h-4.5 w-4.5" />
-          </button>
-          <button aria-label="Cart" className="p-1.5 text-gray-600 hover:text-[#1f4f8a] transition-colors">
-            <ShoppingBag className="h-4.5 w-4.5" />
-          </button>
-          <button
-            className="p-1.5 text-gray-700 hover:text-[#1f4f8a] transition-colors"
-            aria-label="Open menu"
-            onClick={() => setMobileOpen(true)}
-          >
-            <Menu className="h-5 w-5" />
-          </button>
-        </div>
-      </div>
 
       {/* ═══════════════════════════════════════════════
           MOBILE FULL-SCREEN OVERLAY MENU

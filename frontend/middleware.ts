@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { RETURN_TO_COOKIE, sanitizeReturnToPath } from "@/lib/return-to";
 
 // Routes that require the user to be logged in
 const PROTECTED_PATHS = ["/account"];
@@ -13,13 +14,22 @@ export function middleware(request: NextRequest) {
 
   if (!isProtected) return NextResponse.next();
 
-  // The AuthContext sets an "auth_token" cookie on login so we can check it here
+  // The backend now sets the HttpOnly "auth_token" cookie on successful auth.
   const token = request.cookies.get("auth_token")?.value;
 
   if (!token) {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("redirect", pathname);
-    return NextResponse.redirect(loginUrl);
+    const response = NextResponse.redirect(loginUrl);
+    const safeReturnTo = sanitizeReturnToPath(`${pathname}${request.nextUrl.search}`);
+    if (safeReturnTo) {
+      response.cookies.set(RETURN_TO_COOKIE, safeReturnTo, {
+        path: "/",
+        sameSite: "lax",
+        maxAge: 60 * 30,
+      });
+    }
+    return response;
   }
 
   return NextResponse.next();

@@ -9,6 +9,7 @@ import {
   getAddresses, createAddress, updateAddress, deleteAddress,
   type ApiAddress,
 } from "@/lib/api";
+import { readLastPincodeFromCookie, writeLastPincodeCookie } from "@/lib/location-preferences";
 
 // ─── Indian states ─────────────────────────────────────────────────────────────
 
@@ -190,6 +191,11 @@ export default function AddressesPage() {
   const [saving, setSaving]         = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [defaultingId, setDefaultingId] = useState<number | null>(null);
+  const [lastPincode, setLastPincode] = useState("");
+
+  useEffect(() => {
+    setLastPincode(readLastPincodeFromCookie());
+  }, []);
 
   useEffect(() => {
     getAddresses().then((list) => {
@@ -197,6 +203,14 @@ export default function AddressesPage() {
       setLoading(false);
     });
   }, []);
+
+  useEffect(() => {
+    if (!showAddForm || !lastPincode) return;
+
+    setFormData((current) => (
+      current.pincode ? current : { ...current, pincode: lastPincode }
+    ));
+  }, [showAddForm, lastPincode]);
 
   const handleAdd = useCallback(async () => {
     setSaving(true);
@@ -208,6 +222,8 @@ export default function AddressesPage() {
     setSaving(false);
     if (saved) {
       setAddresses((prev) => [...prev, saved]);
+      writeLastPincodeCookie(saved.pincode);
+      setLastPincode(saved.pincode);
       setShowAddForm(false);
       setFormData(BLANK);
       toast.success("Address saved!");
@@ -227,6 +243,8 @@ export default function AddressesPage() {
     setSaving(false);
     if (updated) {
       setAddresses((prev) => prev.map((a) => (a.id === editId ? updated : a)));
+      writeLastPincodeCookie(updated.pincode);
+      setLastPincode(updated.pincode);
       setEditId(null);
       setFormData(BLANK);
       toast.success("Address updated!");
@@ -254,6 +272,8 @@ export default function AddressesPage() {
       setAddresses((prev) =>
         prev.map((a) => ({ ...a, is_default: a.id === id }))
       );
+      writeLastPincodeCookie(updated.pincode);
+      setLastPincode(updated.pincode);
       toast.success("Default address updated.");
     } else {
       toast.error("Could not set default address.");

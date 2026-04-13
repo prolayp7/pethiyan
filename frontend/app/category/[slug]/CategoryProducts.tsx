@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { Package } from "lucide-react";
+import { useState, useMemo, useEffect } from "react";
+import { ChevronDown, Package } from "lucide-react";
 import Container from "@/components/layout/Container";
 import ShopProductCard from "@/components/shop/ShopProductCard";
 import { type RealApiProduct } from "@/lib/api";
+import { readCatalogSortPreference, writeCatalogSortPreference } from "@/lib/catalog-preferences";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -32,13 +33,35 @@ function sortProducts(products: RealApiProduct[], sort: string): RealApiProduct[
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function CategoryProducts({ initialProducts }: { initialProducts: RealApiProduct[] }) {
-  const [sort, setSort] = useState("featured");
+  const [sort, setSort] = useState(() => readCatalogSortPreference());
 
   const sorted = useMemo(() => sortProducts(initialProducts, sort), [initialProducts, sort]);
+
+  useEffect(() => {
+    writeCatalogSortPreference(sort);
+  }, [sort]);
 
   return (
     <Container>
       <div className="py-8">
+        <div className="mb-6 flex justify-end">
+          <div className="relative">
+            <select
+              value={sort}
+              onChange={(e) => setSort(e.target.value)}
+              className="appearance-none rounded-xl border border-(--color-border) bg-white py-2.5 pl-4 pr-9 text-sm transition focus:border-(--color-primary) focus:outline-none focus:ring-2 focus:ring-(--color-primary)/30"
+              aria-label="Sort category products"
+            >
+              {SORT_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 text-gray-400" aria-hidden="true" />
+          </div>
+        </div>
+
         {/* Product grid */}
         {sorted.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 text-center">

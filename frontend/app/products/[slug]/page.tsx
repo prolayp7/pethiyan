@@ -16,6 +16,7 @@ import {
 import { getCustomJsonLdSchemas, resolveProductSeo } from "@/lib/seo";
 import Breadcrumb from "@/components/common/Breadcrumb";
 import RelatedProducts from "@/components/product/RelatedProducts";
+import RecentlyViewedProducts from "@/components/sections/RecentlyViewedProducts";
 import ProductDetailIsland from "./ProductDetailIsland";
 
 // ─── Pre-render all known product slugs at build time ─────────────────────────
@@ -161,6 +162,14 @@ export default async function ProductPage({
           currentProductId={product.id}
         />
       )}
+
+      <RecentlyViewedProducts
+        excludeProductId={product.id}
+        title="Recently Viewed"
+        eyebrow="Keep comparing"
+        description="A quick way to revisit the packaging products you explored before this one."
+        viewAllLabel="See all products"
+      />
 
       {/* Mobile bottom nav padding */}
       <div className="h-16 lg:hidden" aria-hidden="true" />

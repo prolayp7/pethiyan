@@ -11,7 +11,7 @@ export default function FooterBottomLegalBar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
 
         {/* Single row: copyright left · payment chips right */}
-        <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex flex-col items-start gap-3 md:flex-row md:items-center md:justify-between">
 
           {/* Copyright */}
           <p className="text-[12px] font-medium text-white/50">

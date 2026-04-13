@@ -9,6 +9,7 @@ import React, {
 } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { getWishlistItems } from "@/lib/api";
+import { WISHLIST_COUNT_COOKIE, writeCountCookie } from "@/lib/count-preferences";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -46,8 +47,15 @@ const WishlistContext = createContext<WishlistContextType>({
   count: 0,
 });
 
-export function WishlistProvider({ children }: { children: React.ReactNode }) {
+export function WishlistProvider({
+  children,
+  initialCount = 0,
+}: {
+  children: React.ReactNode;
+  initialCount?: number;
+}) {
   const [items, setItems] = useState<WishlistItem[]>([]);
+  const [hydrated, setHydrated] = useState(false);
   const { isLoggedIn, token } = useAuth();
 
   // Rehydrate from localStorage on mount
@@ -57,6 +65,8 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
       if (stored) setItems(JSON.parse(stored));
     } catch {
       localStorage.removeItem(LS_KEY);
+    } finally {
+      setHydrated(true);
     }
   }, []);
 
@@ -64,6 +74,11 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     localStorage.setItem(LS_KEY, JSON.stringify(items));
   }, [items]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    writeCountCookie(WISHLIST_COUNT_COOKIE, items.length);
+  }, [hydrated, items.length]);
 
   // Sync count from backend for robust cross-session/device accuracy.
   useEffect(() => {
@@ -124,7 +139,7 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
     setItems([]);
   }, []);
 
-  const count = items.length;
+  const count = hydrated ? items.length : initialCount;
 
   return (
     <WishlistContext.Provider
