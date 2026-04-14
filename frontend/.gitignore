@@ -39,3 +39,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# explicitly include public assets
+!/public/images/*
+!/public/product_video/*.mp4
