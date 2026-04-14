@@ -99,12 +99,12 @@ export default withPWA({
   dest: "public",
   disable: process.env.NODE_ENV !== "production",
   register: true,
-  skipWaiting: true,
   cacheOnFrontEndNav: true,
   aggressiveFrontEndNavCaching: true,
   reloadOnOnline: true,
   // Custom Workbox runtime caching rules
   workboxOptions: {
+    skipWaiting: true,
     // ── Product API ── NetworkFirst: always try network, fall back to cache
     // Keeps data fresh while still working offline
     runtimeCaching: [

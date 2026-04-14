@@ -81,6 +81,7 @@ export interface ApiProduct {
   is_featured?: boolean;
   tags?: string[];
   specifications?: { key: string; value: string }[];
+  sku?: string;
 }
 
 export interface ApiReview {
@@ -771,7 +772,7 @@ export async function googleCallback(
   return {
     success: false,
     isNewUser: false,
-    message: getApiErrorMessage(res) ?? "Google sign-in failed",
+    message: getApiErrorMessage({ message: res.message }) ?? "Google sign-in failed",
   };
 }
 
@@ -1152,7 +1153,7 @@ export async function applyCoupon(
 
 export async function getPromoPopup(): Promise<ApiPromoPopupData | null> {
   const res = await apiFetch<ApiResponse<ApiPromoPopupData | null>>("/api/promos/popup");
-  if (!res?.success || !res.data || Array.isArray(res.data) || typeof res.data !== "object") {
+  if (!res?.status || !res.data || Array.isArray(res.data) || typeof res.data !== "object") {
     return null;
   }
 

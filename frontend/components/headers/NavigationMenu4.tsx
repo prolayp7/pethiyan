@@ -161,7 +161,7 @@ export default function NavigationMenu4() {
                                 return (
                                   <Link
                                     key={item.label}
-                                    href={item.href}
+                                    href={item.href!}
                                     className={cn(
                                       "flex items-center gap-2.5 px-4 py-2.5 text-[13px] transition-colors duration-150 hover:bg-[#f0f7ff] hover:text-[#123f7a]",
                                       "highlight" in item && item.highlight ? "font-bold text-[#123f7a]" : "text-gray-600"
