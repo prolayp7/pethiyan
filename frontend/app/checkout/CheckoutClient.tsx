@@ -331,16 +331,6 @@ function OrderSummary({ subtotal, discount, shippingCharge, couponResult, curren
             <span className="font-semibold">−{fmt(discount)}</span>
           </div>
         )}
-        <div className="flex justify-between text-gray-600">
-          <span>Shipping</span>
-          <span className={shippingCharge === 0 ? "text-green-600 font-semibold" : "font-semibold text-(--color-secondary)"}>
-            {shippingCharge === 0 ? "Free" : fmt(shippingCharge)}
-          </span>
-        </div>
-        <div className="flex justify-between text-xs text-gray-400">
-          <span>GST (18% incl.)</span>
-          <span>{fmt(gst)}</span>
-        </div>
       </div>
 
       <div className="flex justify-between items-center border-t border-gray-200 pt-4 mt-4">
@@ -399,6 +389,20 @@ export default function CheckoutClient() {
 
   useEffect(() => {
     setLastPincode(readLastPincodeFromCookie());
+  }, []);
+
+  // Restore coupon applied on the cart page
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem("applied_coupon");
+      if (saved) {
+        const parsed = JSON.parse(saved) as ApiCouponResult;
+        if (parsed?.valid) {
+          setCouponCode(parsed.code);
+          setCouponResult(parsed);
+        }
+      }
+    } catch {}
   }, []);
 
   // Fire begin_checkout once when the page mounts with a non-empty cart
@@ -568,6 +572,7 @@ export default function CheckoutClient() {
     if (result.valid) {
       setCouponResult(result);
       setCouponCode("");
+      sessionStorage.setItem("applied_coupon", JSON.stringify(result));
     } else {
       setCouponError(result.message ?? "Invalid coupon code.");
     }
@@ -632,6 +637,7 @@ export default function CheckoutClient() {
           })),
         });
         clearCart();
+        sessionStorage.removeItem("applied_coupon");
         router.push(`/order-confirmed?order_number=${result.order_number ?? ""}&order_id=${result.order_id ?? ""}`);
       } else {
         setPaymentError(result.message ?? "Order failed. Please try again.");
@@ -759,6 +765,7 @@ export default function CheckoutClient() {
             })),
           });
           clearCart();
+          sessionStorage.removeItem("applied_coupon");
           router.push(`/order-confirmed?order_number=${result.order_number ?? ""}&order_id=${result.order_id ?? ""}`);
         } else {
           setPaymentError(result.message ?? "Order placement failed. Contact support.");
@@ -1062,7 +1069,7 @@ export default function CheckoutClient() {
                         <span className="text-sm font-semibold text-green-700">{couponResult.code}</span>
                         <span className="text-sm text-green-600">— {fmt(discount)} off</span>
                       </div>
-                      <button onClick={() => setCouponResult(null)} className="text-green-400 hover:text-green-600">
+                      <button onClick={() => { setCouponResult(null); sessionStorage.removeItem("applied_coupon"); }} className="text-green-400 hover:text-green-600">
                         <X className="h-4 w-4" />
                       </button>
                     </div>

@@ -54,16 +54,13 @@ export default function MainHeader({ mobileNavItems }: MainHeaderProps) {
                 aria-label={`${appName} — Home`}
               >
                 {logo ? (
-                  <div className="relative" style={{ width: 160, height: 52 }}>
-                    <Image
-                      src={logo}
-                      alt={appName}
-                      fill
-                      sizes="160px"
-                      className="object-contain object-left"
-                      priority
-                    />
-                  </div>
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    suppressHydrationWarning
+                    src={logo}
+                    alt={appName}
+                    style={{ height: 40, width: "auto", maxWidth: 160, objectFit: "contain", display: "block" }}
+                  />
                 ) : (
                   <span className="text-xl font-extrabold text-(--color-secondary)">{appName}</span>
                 )}

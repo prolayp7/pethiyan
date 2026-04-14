@@ -879,10 +879,9 @@ export default function ProductDetailClient({ product, reviews: initialReviews, 
               </p>
             )}
 
-            <div className="mt-5 grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <div className="mt-5 grid grid-cols-3 gap-2">
               {[
-                { icon: Truck, label: "Free Shipping", sub: `Orders above ${currencySymbol}999` },
-                { icon: RotateCcw, label: "7-Day Returns", sub: "Hassle-free" },
+                { icon: Truck, label: "Pan India Shipping", sub: "Delivered anywhere in India" },
                 { icon: Shield, label: "Secure Payment", sub: "SSL encrypted" },
                 { icon: FileText, label: "GST Invoice", sub: "On every order" },
               ].map(({ icon: Icon, label, sub }) => (

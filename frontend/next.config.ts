@@ -25,6 +25,10 @@ const nextConfig: NextConfig = {
 
   // ── Images ─────────────────────────────────────────────────────────────────
   images: {
+    // In development all images come from localhost (private IP) which Next.js
+    // optimizer refuses to fetch. Disable optimization in dev; production keeps
+    // full optimization via the remotePatterns below.
+    unoptimized: process.env.NODE_ENV === "development",
     formats: ["image/avif", "image/webp"],
     qualities: [75, 80, 85],
     // 30-day cache for optimized images — safe because Next.js uses content-addressed URLs

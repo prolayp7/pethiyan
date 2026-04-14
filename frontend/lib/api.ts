@@ -1143,12 +1143,38 @@ export async function applyCoupon(
   code: string,
   cartTotal: number
 ): Promise<ApiCouponResult> {
-  const res = await apiFetch<ApiCouponResult>("/api/coupons/apply", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ code, cart_total: cartTotal }),
-  });
-  return res ?? { valid: false, code, discount_type: "fixed", discount_value: 0, discount_amount: 0, message: "Invalid coupon" };
+  const INVALID: ApiCouponResult = { valid: false, code, discount_type: "fixed", discount_value: 0, discount_amount: 0, message: "Invalid coupon" };
+  type ValidateRaw = {
+    success: boolean;
+    message: string;
+    data: {
+      promo_code: string;
+      discount: number;
+      promo_details: { discount_type: string; discount_amount: string | number } | null;
+    };
+  };
+  const params = new URLSearchParams({ promo_code: code, cart_amount: String(cartTotal) });
+  const raw = await apiAuth<ValidateRaw>(`/api/user/promos/validate?${params}`);
+  if (!raw) return { ...INVALID, message: "Could not reach server" };
+  if (!raw.success) return { ...INVALID, message: raw.message };
+
+  // Map backend discount_type to frontend union
+  const typeMap: Record<string, ApiCouponResult["discount_type"]> = {
+    percent: "percentage",
+    flat: "fixed",
+    free_shipping: "free_shipping",
+  };
+  const discountType = typeMap[raw.data?.promo_details?.discount_type ?? ""] ?? "fixed";
+  const discountValue = Number(raw.data?.promo_details?.discount_amount ?? 0);
+
+  return {
+    valid: true,
+    code,
+    discount_type: discountType,
+    discount_value: discountValue,
+    discount_amount: raw.data?.discount ?? 0,
+    message: raw.message,
+  };
 }
 
 export async function getPromoPopup(): Promise<ApiPromoPopupData | null> {
@@ -2079,5 +2105,75 @@ export async function trackSearch(
     });
   } catch {
     // fire-and-forget — never block the UI on tracking
+  }
+}
+
+// ─── Your Items: Saved for Later (wishlist) ───────────────────────────────────
+
+/**
+ * Returns wishlist products as RealApiProduct[] for the "Saved for Later" tab.
+ * Extracts slugs from wishlist items then fetches full product data.
+ */
+export async function getSavedForLaterProducts(): Promise<RealApiProduct[]> {
+  const token = getToken();
+  if (!token) return [];
+
+  try {
+    const res = await fetch(`${API_BASE}/api/user/wishlists`, {
+      headers: { Accept: "application/json", ...getAuthHeaders(token) },
+      cache: "no-store",
+      credentials: "include",
+    });
+    if (!res.ok) return [];
+    const body = (await res.json()) as {
+      success?: boolean;
+      data?: { data?: Array<{ items?: Array<{ product?: { slug?: string } | null }> }> } | Array<{ items?: Array<{ product?: { slug?: string } | null }> }>;
+    };
+    if (!body.success || !body.data) return [];
+
+    const wishlistRows = Array.isArray(body.data) ? body.data : (body.data.data ?? []);
+    const slugs = wishlistRows
+      .flatMap((w) => w.items ?? [])
+      .map((item) => item.product?.slug)
+      .filter((s): s is string => Boolean(s));
+
+    if (slugs.length === 0) return [];
+
+    const params = new URLSearchParams({ slugs: [...new Set(slugs)].join(","), per_page: "40" });
+    const prodRes = await fetch(`${API_BASE}/api/products?${params}`, {
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+    });
+    if (!prodRes.ok) return [];
+    const prodJson = (await prodRes.json()) as { data?: { data?: RealApiProduct[] } | RealApiProduct[] };
+    const raw = (prodJson.data as { data?: RealApiProduct[] })?.data ?? (prodJson.data as RealApiProduct[]) ?? [];
+    return Array.isArray(raw) ? raw : [];
+  } catch {
+    return [];
+  }
+}
+
+// ─── Your Items: Buy it Again (delivered orders) ──────────────────────────────
+
+/**
+ * Returns products from the user's past delivered orders as RealApiProduct[].
+ * Backed by GET /api/buy-again (requires auth).
+ */
+export async function getBuyAgainProducts(): Promise<RealApiProduct[]> {
+  const token = getToken();
+  if (!token) return [];
+
+  try {
+    const res = await fetch(`${API_BASE}/api/buy-again`, {
+      headers: { Accept: "application/json", ...getAuthHeaders(token) },
+      cache: "no-store",
+      credentials: "include",
+    });
+    if (!res.ok) return [];
+    const body = (await res.json()) as { success?: boolean; data?: { data?: RealApiProduct[] } };
+    if (!body.success || !body.data?.data) return [];
+    return Array.isArray(body.data.data) ? body.data.data : [];
+  } catch {
+    return [];
   }
 }

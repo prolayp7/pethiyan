@@ -107,6 +107,7 @@ function CategoryCard({ href, name, desc, image, Icon }: CardProps) {
                   sizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, 33vw"
                   loading="lazy"
                   quality={80}
+                  unoptimized={/^https?:\/\//i.test(image)}
                 />
               </motion.div>
             ) : (
