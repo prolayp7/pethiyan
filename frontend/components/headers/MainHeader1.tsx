@@ -59,6 +59,7 @@ export default function MainHeader({ mobileNavItems }: MainHeaderProps) {
                       src={logo}
                       alt={appName}
                       fill
+                      sizes="160px"
                       className="object-contain object-left"
                       priority
                     />

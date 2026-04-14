@@ -26,6 +26,7 @@ const nextConfig: NextConfig = {
   // ── Images ─────────────────────────────────────────────────────────────────
   images: {
     formats: ["image/avif", "image/webp"],
+    qualities: [75, 80, 85],
     // 30-day cache for optimized images — safe because Next.js uses content-addressed URLs
     minimumCacheTTL: 2592000,
     remotePatterns: [
