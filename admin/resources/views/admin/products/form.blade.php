@@ -462,7 +462,7 @@
                                     <div class="mb-4">
                                         <div class="d-flex justify-content-between align-items-center mb-3">
                                             <h5 class="mb-0">Attributes</h5>
-                                            <button type="button" class="btn btn-primary d-none" id="addAttributeBtn">
+                                            <button type="button" class="btn btn-primary" id="addAttributeBtn">
                                                 <i class="ti ti-plus"></i> Add Attribute
                                             </button>
                                         </div>

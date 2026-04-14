@@ -365,7 +365,7 @@ function initializeVariantAttributes() {
             const html = `
                 <div class="card mb-3" data-id="${id}">
                     <div class="card-body">
-                        <div class="row">
+                        <div class="row align-items-end">
                             <div class="col-md-4">
                                 <label class="form-label">Attribute</label>
                                 <select class="form-select attr-select" onchange="loadValues('${id}', this.value)">
@@ -380,6 +380,11 @@ function initializeVariantAttributes() {
                                 <select class="form-select attribute-value-select" multiple size="4" data-values="${id}">
                                     <option disabled>Select attribute first</option>
                                 </select>
+                            </div>
+                            <div class="col-md-1 d-flex align-items-end justify-content-end">
+                                <button type="button" class="btn btn-outline-danger btn-icon" onclick="removeAttributeRow('${id}')" title="Remove attribute">
+                                    <i class="ti ti-trash"></i>
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -513,7 +518,7 @@ function addAttribute() {
     const html = `
                 <div class="card mb-3" data-id="${id}">
                     <div class="card-body">
-                        <div class="row">
+                        <div class="row align-items-end">
                             <div class="col-md-4">
                                 <label class="form-label">Attribute</label>
                                 <select class="form-select attr-select" onchange="loadValues('${id}', this.value)">
@@ -527,11 +532,27 @@ function addAttribute() {
                                     <option disabled>Select attribute first</option>
                                 </select>
                             </div>
+                            <div class="col-md-1 d-flex align-items-end justify-content-end">
+                                <button type="button" class="btn btn-outline-danger btn-icon" onclick="removeAttributeRow('${id}')" title="Remove attribute">
+                                    <i class="ti ti-trash"></i>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
             `;
     document.getElementById('attributesContainer').insertAdjacentHTML('beforeend', html);
+    updateGenerateButton();
+    updateAttributeOptions();
+}
+
+function removeAttributeRow(id) {
+    const card = document.querySelector(`#attributesContainer [data-id="${id}"]`);
+    if (!card) return;
+    // Destroy TomSelect instance if present
+    const ts = card.querySelector('.attribute-value-select');
+    if (ts && ts.tomselect) ts.tomselect.destroy();
+    card.remove();
     updateGenerateButton();
     updateAttributeOptions();
 }
@@ -574,8 +595,8 @@ function generateSKU(attrs) {
 
 const attrIdMap = {};
 
-// Attributes managed as per-variant fields — excluded from the combination generator selector
-const VARIANT_FIELD_ATTRS = ['size', 'capacity', 'weight'];
+// All attributes are available in the combination generator selector
+const VARIANT_FIELD_ATTRS = [];
 
 function unitSelect(variantId, field, selected, options) {
     const opts = options.map(u => `<option value="${u}" ${u === selected ? 'selected' : ''}>${u}</option>`).join('');
