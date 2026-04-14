@@ -22,6 +22,10 @@ export default function BlogCard({ post, variant = "default" }: BlogCardProps) {
             src={post.featuredImage}
             alt={post.title}
             className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
+            loading="lazy"
+            decoding="async"
+            width={800}
+            height={533}
           />
         </div>
       </Link>

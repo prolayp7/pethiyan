@@ -35,12 +35,12 @@ function PreferencePill({
   return (
     <div className={`rounded-2xl border px-4 py-3 transition-colors ${
       active
-        ? "border-[#17396f]/20 bg-[#17396f]/6"
+        ? "border-(--color-primary)/20 bg-(--color-primary)/6"
         : "border-gray-200 bg-white"
     }`}>
       <div className="flex items-start gap-3">
-        <div className={`mt-0.5 flex h-10 w-10 items-center justify-center rounded-2xl ${
-          active ? "bg-[#17396f] text-white" : "bg-[#17396f]/10 text-[#17396f]"
+        <div className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${
+          active ? "bg-(--color-primary) text-white" : "bg-(--color-primary)/10 text-(--color-primary)"
         }`}>
           {icon}
         </div>
@@ -108,7 +108,7 @@ export default function CookieConsentPopup() {
                 <Cookie className="h-5 w-5" />
               </div>
               <div className="min-w-0 flex-1">
-                <div className="inline-flex items-center rounded-full border border-[#17396f]/10 bg-white/80 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.22em] text-[#17396f]">
+                <div className="inline-flex items-center rounded-full border border-(--color-primary)/10 bg-white/80 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.22em] text-(--color-primary)">
                   Privacy controls
                 </div>
                 <h2 className="mt-3 text-lg font-black tracking-[0.04em] text-slate-950 sm:text-xl">
@@ -163,7 +163,7 @@ export default function CookieConsentPopup() {
             <button
               type="button"
               onClick={() => setExpanded((current) => !current)}
-              className="mt-4 inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-[#17396f] transition-opacity hover:opacity-75"
+              className="mt-4 inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-(--color-primary) transition-opacity hover:opacity-75"
               aria-expanded={expanded}
             >
               {expanded ? "Hide details" : "Customize details"}

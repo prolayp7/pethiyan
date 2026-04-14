@@ -7,7 +7,7 @@ const socialLinks = [
   { label: "Facebook", href: "#", icon: Facebook },
   { label: "Instagram", href: "#", icon: Instagram },
   { label: "LinkedIn", href: "#", icon: Linkedin },
-  { label: "X", href: "#", icon: null as const },
+  { label: "X", href: "#", icon: null },
 ];
 
 export default async function FooterBrandStrip() {

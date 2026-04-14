@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -9,6 +9,7 @@ import {
   type Variants,
 } from "framer-motion";
 import {
+  ArrowLeft,
   ArrowRight,
   Package,
   Box,
@@ -102,9 +103,10 @@ function CategoryCard({ href, name, desc, image, Icon }: CardProps) {
                   src={image}
                   alt={name}
                   fill
-                  unoptimized
                   className="object-cover"
-                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                  sizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, 33vw"
+                  loading="lazy"
+                  quality={80}
                 />
               </motion.div>
             ) : (
@@ -196,9 +198,39 @@ export default function CategoryGrid({ categories = [] }: CategoryGridProps) {
 
   const count = hasApiData ? apiParents.length : staticCategories.length;
   const gridCols =
-    count <= 2 ? "grid-cols-1 sm:grid-cols-2" :
-    count <= 4 ? "grid-cols-2 lg:grid-cols-4" :
-                 "grid-cols-2 md:grid-cols-3";
+    count <= 2 ? "sm:grid-cols-2" :
+    count <= 4 ? "sm:grid-cols-2 lg:grid-cols-4" :
+                 "sm:grid-cols-2 md:grid-cols-3";
+
+  // Unified card props for both mobile slider and desktop grid
+  const cards = hasApiData
+    ? apiParents.map((cat, i) => ({
+        key: String(cat.id),
+        href: `/category/${cat.slug}`,
+        name: cat.name,
+        desc: cat.description ?? null,
+        image: cat.image ?? null,
+        Icon: cat.image ? undefined : fallbackIcons[i % fallbackIcons.length],
+      }))
+    : staticCategories.map(({ icon: Icon, title, href, desc }) => ({
+        key: title,
+        href,
+        name: title,
+        desc,
+        image: null as string | null,
+        Icon,
+      }));
+
+  const sliderRef = useRef<HTMLDivElement | null>(null);
+
+  function scrollCatSlider(dir: "prev" | "next") {
+    const el = sliderRef.current;
+    if (!el) return;
+    const card = el.querySelector<HTMLElement>("[data-cat-slide]");
+    const gap = 16;
+    const w = card?.offsetWidth ?? el.clientWidth * 0.78;
+    el.scrollBy({ left: dir === "next" ? w + gap : -(w + gap), behavior: "smooth" });
+  }
 
   return (
     <section className="cat-section pt-12 pb-6 lg:pt-16 lg:pb-8" aria-labelledby="category-heading">
@@ -226,42 +258,67 @@ export default function CategoryGrid({ categories = [] }: CategoryGridProps) {
           </p>
         </motion.div>
 
-        {/* ── Cards grid ── */}
+        {/* ── Mobile horizontal slider (hidden on sm+) ── */}
+        <div className="relative sm:hidden">
+          <button
+            type="button"
+            onClick={() => scrollCatSlider("prev")}
+            aria-label="Previous category"
+            className="absolute left-0 top-1/2 z-20 -translate-y-1/2 inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#c8d7ea] bg-white/95 text-[#1a4f83] shadow-sm transition-colors hover:bg-[#f3f8ff]"
+          >
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            onClick={() => scrollCatSlider("next")}
+            aria-label="Next category"
+            className="absolute right-0 top-1/2 z-20 -translate-y-1/2 inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#c8d7ea] bg-white/95 text-[#1a4f83] shadow-sm transition-colors hover:bg-[#f3f8ff]"
+          >
+            <ArrowRight className="h-4 w-4" aria-hidden="true" />
+          </button>
+          <div
+            ref={sliderRef}
+            className="flex snap-x snap-mandatory gap-4 overflow-x-auto px-10 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          >
+            {cards.map((c) => (
+              <div
+                key={c.key}
+                data-cat-slide
+                className="w-[78vw] shrink-0 snap-start"
+              >
+                <CategoryCard
+                  href={c.href}
+                  name={c.name}
+                  desc={c.desc}
+                  image={c.image}
+                  Icon={c.Icon}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ── Desktop / tablet grid (hidden below sm) ── */}
         <motion.div
-          className={`grid ${gridCols} gap-6 lg:gap-8`}
+          className={`hidden sm:grid ${gridCols} gap-6 lg:gap-8`}
           variants={sectionVariants}
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-80px" }}
         >
-          {hasApiData
-            ? apiParents.map((cat, i) => {
-                const Icon = fallbackIcons[i % fallbackIcons.length];
-                return (
-                  <CategoryCard
-                    key={cat.id}
-                    href={`/category/${cat.slug}`}
-                    name={cat.name}
-                    desc={cat.description}
-                    image={cat.image ?? null}
-                    Icon={cat.image ? undefined : Icon}
-                  />
-                );
-              })
-            : staticCategories.map(({ icon: Icon, title, href, desc }) => (
-                <CategoryCard
-                  key={title}
-                  href={href}
-                  name={title}
-                  desc={desc}
-                  Icon={Icon}
-                />
-              ))
-          }
+          {cards.map((c) => (
+            <CategoryCard
+              key={c.key}
+              href={c.href}
+              name={c.name}
+              desc={c.desc}
+              image={c.image}
+              Icon={c.Icon}
+            />
+          ))}
         </motion.div>
 
-
-</div>
+      </div>
     </section>
   );
 }

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Container from "@/components/layout/Container";
 import Breadcrumb from "@/components/common/Breadcrumb";
 import SearchClient from "./SearchClient";
-import { searchProducts } from "@/lib/api";
+import { unifiedSearch } from "@/lib/api";
 
 // ─── Dynamic metadata ─────────────────────────────────────────────────────────
 
@@ -38,7 +38,7 @@ export default async function SearchPage({
   const query = q?.trim() ?? "";
 
   // Server-side fetch for initial render (SSR — good for SEO when query exists)
-  const initialResults = query ? await searchProducts(query) : [];
+  const initialResults = query ? await unifiedSearch(query, "all") : null;
 
   return (
     <div className="min-h-screen bg-(--background)">
@@ -51,9 +51,9 @@ export default async function SearchPage({
           <h1 className="text-3xl sm:text-4xl font-extrabold text-(--color-secondary)">
             {query ? `Search: "${query}"` : "Search Products"}
           </h1>
-          {query && initialResults.length > 0 && (
+          {query && initialResults && initialResults.total > 0 && (
             <p className="mt-1 text-sm text-gray-500">
-              {initialResults.length} result{initialResults.length !== 1 ? "s" : ""} found
+              {initialResults.total} result{initialResults.total !== 1 ? "s" : ""} found
             </p>
           )}
         </Container>

@@ -152,7 +152,7 @@ export function resolveProductSeo(product: RealApiProduct): ResolvedSeo {
     twitterDescription,
     twitterImage,
     twitterCard: resolveTwitterCard(productFeature(product, "twitter_card"), twitterImage),
-    schemaMode: productFeature(product, "schema_mode"),
+    schemaMode: productFeature(product, "schema_mode") as SchemaMode,
     schemaJsonLd: cleanText(productFeature(product, "schema_json_ld")) ?? null,
   };
 }

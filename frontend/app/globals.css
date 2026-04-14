@@ -399,10 +399,17 @@ img {
 /* ── Heading ── */
 .cat-eyebrow-text { color: #4caf50; }
 .cat-heading-gradient {
-  background-image: linear-gradient(135deg, #1a4f83 0%, #2b6e92 48%, #2d8b6a 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  /* Solid fallback for any browser that doesn't support gradient-clip text */
+  color: #1a4f83;
+}
+@supports (-webkit-background-clip: text) or (background-clip: text) {
+  .cat-heading-gradient {
+    background-image: linear-gradient(135deg, #1a4f83 0%, #2b6e92 48%, #2d8b6a 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+  }
 }
 .cat-subheading { color: #4f6281; }
 
@@ -537,4 +544,19 @@ img {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #cbd5e1;
+}
+
+/* =============================================
+   BLOG SLIDER — shared horizontal snap slider
+   Used in RecentBlogsSection + BlogHomeClient
+   ============================================= */
+
+/* Arrow vertical position — centres on card image */
+.blog-slider-arrow {
+  top: min(34vw, 8rem);
+}
+
+/* Hide Firefox scrollbar on the scroll track */
+.blog-slider-scroll {
+  scrollbar-width: none;
 }

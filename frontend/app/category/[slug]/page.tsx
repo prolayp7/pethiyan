@@ -1,17 +1,14 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Home, ChevronRight } from "lucide-react";
+import { Home, ChevronRight, Tag } from "lucide-react";
 import {
   getCategory,
   getCategories,
   getProductsByCategory,
-  type RealApiProduct,
 } from "@/lib/api";
 import Container from "@/components/layout/Container";
-import CategoryBanner from "./CategoryBanner";
-import CategoryProducts from "./CategoryProducts";
-import OtherCategories from "./OtherCategories";
+import CategoryClientLayout from "./CategoryClientLayout";
 import {
   breadcrumbSchema,
   collectionPageSchema,
@@ -111,54 +108,45 @@ export default async function CategoryPage({
         <script {...jsonLd(schema as Record<string, unknown>)} key={`category-custom-schema-${index}`} />
       ))}
 
-      {/* Combined header: title left, breadcrumb right */}
-      {/* Header inner content — shared between banner and plain variants */}
-      {(() => {
-        const headerContent = (
-          <Container>
-            <div className="relative z-10 flex items-center justify-between gap-4 pt-6 pb-14 sm:pt-7 sm:pb-18">
-              {/* Left: title + subtitle */}
+      {/* Page header with inline breadcrumb */}
+      <div className="bg-white border-b border-(--color-border) py-5">
+        <Container>
+          <div className="flex items-center justify-between gap-4">
+            {/* Left: icon + title + subtitle */}
+            <div className="flex items-center gap-3">
+              <span
+                className="flex items-center justify-center h-10 w-10 rounded-xl shrink-0"
+                style={{ background: "linear-gradient(135deg,#17396f 0%,#2f6f9f 52%,#49ad57 100%)" }}
+              >
+                <Tag className="h-5 w-5 text-white" />
+              </span>
               <div>
-                <p className="text-xs font-semibold text-(--color-primary) uppercase tracking-widest mb-1">
-                  Category
-                </p>
-                <h1 className="text-2xl sm:text-3xl font-extrabold text-(--color-secondary)">
-                  {category.name}
-                </h1>
+                <h1 className="text-2xl sm:text-3xl font-extrabold text-(--color-secondary)">{category.name}</h1>
                 <p className="mt-0.5 text-gray-500 text-sm">
                   Premium {category.name.toLowerCase()} packaging solutions with GST invoice
                 </p>
               </div>
-              {/* Right: breadcrumb */}
-              <nav className="hidden sm:flex items-center gap-1.5 text-sm text-gray-500 shrink-0" aria-label="Breadcrumb">
-                <Link href="/" className="flex items-center gap-1 hover:text-(--color-primary) transition-colors">
-                  <Home className="h-3.5 w-3.5" aria-hidden="true" />
-                  <span>Home</span>
-                </Link>
-                <ChevronRight className="h-3.5 w-3.5 text-gray-300" aria-hidden="true" />
-                <Link href="/shop" className="hover:text-(--color-primary) transition-colors">Shop</Link>
-                <ChevronRight className="h-3.5 w-3.5 text-gray-300" aria-hidden="true" />
-                <span className="text-(--color-secondary) font-medium">{category.name}</span>
-              </nav>
             </div>
-          </Container>
-        );
-
-        return (category.banner || category.image) ? (
-          <CategoryBanner imageUrl={category.banner || category.image!}>
-            {headerContent}
-          </CategoryBanner>
-        ) : (
-          <div className="bg-white border-b border-(--color-border)">
-            {headerContent}
+            {/* Right: breadcrumb */}
+            <nav className="hidden sm:flex items-center gap-1.5 text-sm text-gray-500 shrink-0" aria-label="Breadcrumb">
+              <Link href="/" className="flex items-center gap-1 hover:text-(--color-primary) transition-colors">
+                <Home className="h-3.5 w-3.5" aria-hidden="true" />
+                <span>Home</span>
+              </Link>
+              <ChevronRight className="h-3.5 w-3.5 text-gray-300" aria-hidden="true" />
+              <Link href="/shop" className="hover:text-(--color-primary) transition-colors">Shop</Link>
+              <ChevronRight className="h-3.5 w-3.5 text-gray-300" aria-hidden="true" />
+              <span className="text-(--color-secondary) font-medium">{category.name}</span>
+            </nav>
           </div>
-        );
-      })()}
+        </Container>
+      </div>
 
-      <OtherCategories currentCategory={category} categories={categories} />
-
-      {/* Products with client-side sort/filter */}
-      <CategoryProducts initialProducts={products as RealApiProduct[]} />
+      <CategoryClientLayout
+        currentCategory={category}
+        categories={categories}
+        products={products}
+      />
 
       {/* Mobile bottom padding */}
       <div className="h-16 lg:hidden" aria-hidden="true" />

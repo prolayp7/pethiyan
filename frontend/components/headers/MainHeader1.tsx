@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState } from "react";
-import { Menu, Search, PackageSearch, Heart } from "lucide-react";
+import { Menu, Search, X, PackageSearch, Heart } from "lucide-react";
 import { cn } from "@/lib/utils";
 import SearchBar from "./SearchBar";
 import CartButton from "./CartButton";
@@ -60,7 +60,6 @@ export default function MainHeader({ mobileNavItems }: MainHeaderProps) {
                       alt={appName}
                       fill
                       className="object-contain object-left"
-                      unoptimized
                       priority
                     />
                   </div>
@@ -79,14 +78,27 @@ export default function MainHeader({ mobileNavItems }: MainHeaderProps) {
 
             {/* ── RIGHT: Action icons ── */}
             <div className="flex items-center gap-1 shrink-0 z-10">
-              {/* Search icon — mobile only */}
+              {/* Search / Close icon — mobile only */}
               <button
                 className="md:hidden p-2 rounded-full hover:bg-gray-100 transition-colors"
                 onClick={() => setMobileSearchOpen((s) => !s)}
-                aria-label="Search"
+                aria-label={mobileSearchOpen ? "Close search" : "Search"}
+                aria-expanded={mobileSearchOpen}
               >
-                <Search className="h-5 w-5 text-gray-700" />
+                {mobileSearchOpen
+                  ? <X className="h-5 w-5 text-gray-700" />
+                  : <Search className="h-5 w-5 text-gray-700" />
+                }
               </button>
+
+              {/* Track Order icon — mobile only */}
+              <Link
+                href="/track-order"
+                className="md:hidden p-2 rounded-full hover:bg-gray-100 transition-colors"
+                aria-label="Track Order"
+              >
+                <PackageSearch className="h-5 w-5 text-gray-700" />
+              </Link>
 
               <span className="hidden md:contents"><UserMenu /></span>
 

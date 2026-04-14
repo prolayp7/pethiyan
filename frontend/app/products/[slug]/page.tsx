@@ -17,6 +17,7 @@ import { getCustomJsonLdSchemas, resolveProductSeo } from "@/lib/seo";
 import Breadcrumb from "@/components/common/Breadcrumb";
 import RelatedProducts from "@/components/product/RelatedProducts";
 import RecentlyViewedProducts from "@/components/sections/RecentlyViewedProducts";
+import BrowsingHistory from "@/components/product/BrowsingHistory";
 import ProductDetailIsland from "./ProductDetailIsland";
 
 // ─── Pre-render all known product slugs at build time ─────────────────────────
@@ -162,6 +163,8 @@ export default async function ProductPage({
           currentProductId={product.id}
         />
       )}
+
+      <BrowsingHistory excludeSlug={product.slug} />
 
       <RecentlyViewedProducts
         excludeProductId={product.id}

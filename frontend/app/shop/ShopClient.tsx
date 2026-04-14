@@ -616,7 +616,7 @@ export default function ShopClient({ initialProducts, initialCategories, initial
               <div className="relative">
                 <select
                   value={sort}
-                  onChange={(e) => setSort(e.target.value)}
+                  onChange={(e) => setSort(e.target.value as typeof sort)}
                   className="appearance-none pl-4 pr-9 py-2.5 text-sm bg-white border border-(--color-border) rounded-xl focus:outline-none focus:ring-2 focus:ring-(--color-primary)/30 focus:border-(--color-primary) transition cursor-pointer"
                   aria-label="Sort products"
                 >

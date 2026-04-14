@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState, useEffect } from "react";
-import { Menu, Search, PackageSearch } from "lucide-react";
+import { Menu, Search, X, PackageSearch } from "lucide-react";
 import { cn } from "@/lib/utils";
 import SearchBar from "./SearchBar";
 import CartButton from "./CartButton";
@@ -71,13 +71,17 @@ export default function MainHeader() {
 
             {/* ── RIGHT: Action icons ── */}
             <div className="flex items-center gap-1 shrink-0 z-10">
-              {/* Search icon — mobile only */}
+              {/* Search / Close icon — mobile only */}
               <button
                 className="md:hidden p-2 rounded-full hover:bg-gray-100 transition-colors"
                 onClick={() => setMobileSearchOpen((s) => !s)}
-                aria-label="Search"
+                aria-label={mobileSearchOpen ? "Close search" : "Search"}
+                aria-expanded={mobileSearchOpen ? "true" : "false"}
               >
-                <Search className="h-5 w-5 text-gray-700" />
+                {mobileSearchOpen
+                  ? <X className="h-5 w-5 text-gray-700" />
+                  : <Search className="h-5 w-5 text-gray-700" />
+                }
               </button>
 
               <UserMenu />

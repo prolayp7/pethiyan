@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import BlogCard from "@/components/blog/BlogCard";
 import BlogHero from "@/components/blog/BlogHero";
 import CategoryCard from "@/components/blog/CategoryCard";
@@ -14,9 +15,25 @@ interface BlogHomeClientProps {
   allPosts: BlogPost[];
 }
 
+/** Shared arrow button styles — matches home page blog slider */
+const ARROW_CLASS =
+  "absolute z-20 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-[#c8d7ea] bg-white/95 text-[#1a4f83] shadow-sm transition-colors hover:bg-[#f3f8ff]";
+
+function scrollSlider(ref: React.RefObject<HTMLDivElement | null>, direction: "prev" | "next") {
+  const el = ref.current;
+  if (!el) return;
+  const firstCard = el.querySelector<HTMLElement>("[data-blog-slide]");
+  const gap = 24;
+  const cardWidth = firstCard?.offsetWidth ?? el.clientWidth * 0.9;
+  el.scrollBy({ left: direction === "next" ? cardWidth + gap : -(cardWidth + gap), behavior: "smooth" });
+}
+
 export default function BlogHomeClient({ featuredPosts, latestPosts, allPosts }: BlogHomeClientProps) {
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState("");
+  const featuredSliderRef = useRef<HTMLDivElement | null>(null);
+  const latestSliderRef = useRef<HTMLDivElement | null>(null);
+  const categorySliderRef = useRef<HTMLDivElement | null>(null);
 
   const filteredPosts = useMemo(() => {
     const normalized = search.trim().toLowerCase();
@@ -63,6 +80,7 @@ export default function BlogHomeClient({ featuredPosts, latestPosts, allPosts }:
           onCategoryChange={setActiveCategory}
         />
 
+        {/* ── Featured Posts ── */}
         <section className="mt-12">
           <div className="mb-6 flex items-end justify-between gap-4">
             <div>
@@ -70,7 +88,44 @@ export default function BlogHomeClient({ featuredPosts, latestPosts, allPosts }:
               <h2 className="mt-3 text-3xl font-black tracking-tight text-slate-950">What readers should not miss</h2>
             </div>
           </div>
-          <div className="grid gap-6 lg:grid-cols-3">
+
+          {/* Mobile horizontal slider — hidden on sm+ */}
+          <div className="relative sm:hidden">
+            <button
+              type="button"
+              onClick={() => scrollSlider(featuredSliderRef, "prev")}
+              aria-label="Scroll featured posts left"
+              className={`${ARROW_CLASS} left-2 blog-slider-arrow`}
+            >
+              <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              onClick={() => scrollSlider(featuredSliderRef, "next")}
+              aria-label="Scroll featured posts right"
+              className={`${ARROW_CLASS} right-2 blog-slider-arrow`}
+            >
+              <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </button>
+            <div
+              ref={featuredSliderRef}
+              className="blog-slider-scroll flex snap-x snap-mandatory gap-6 overflow-x-auto px-12 pb-2 [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+              aria-label="Featured blog posts slider"
+            >
+              {featuredPosts.slice(0, 3).map((post) => (
+                <div
+                  key={post.slug}
+                  data-blog-slide
+                  className="w-[calc(100vw-3rem)] max-w-full shrink-0 snap-start"
+                >
+                  <BlogCard post={post} variant="featured" />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Desktop / tablet grid — hidden below sm */}
+          <div className="hidden sm:grid gap-6 lg:grid-cols-3">
             {featuredPosts.slice(0, 3).map((post, index) => (
               <div key={post.slug} className={index === 0 ? "lg:col-span-2" : ""}>
                 <BlogCard post={post} variant="featured" />
@@ -79,6 +134,7 @@ export default function BlogHomeClient({ featuredPosts, latestPosts, allPosts }:
           </div>
         </section>
 
+        {/* ── Browse Topics (categories) — layout unchanged ── */}
         <section className="mt-14">
           <div className="mb-6 flex items-end justify-between gap-4">
             <div>
@@ -86,7 +142,46 @@ export default function BlogHomeClient({ featuredPosts, latestPosts, allPosts }:
               <h2 className="mt-3 text-3xl font-black tracking-tight text-slate-950">Explore by category</h2>
             </div>
           </div>
-          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+          {/* Mobile horizontal slider — hidden on sm+ */}
+          <div className="relative sm:hidden bg-white rounded-[20px] py-3 -mx-4 px-4">
+            <button
+              type="button"
+              onClick={() => scrollSlider(categorySliderRef, "prev")}
+              aria-label="Scroll categories left"
+              className={`${ARROW_CLASS} left-2 blog-slider-arrow`}
+            >
+              <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              onClick={() => scrollSlider(categorySliderRef, "next")}
+              aria-label="Scroll categories right"
+              className={`${ARROW_CLASS} right-2 blog-slider-arrow`}
+            >
+              <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </button>
+            <div
+              ref={categorySliderRef}
+              className="blog-slider-scroll flex snap-x snap-mandatory gap-6 overflow-x-auto px-12 pb-2 [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+              aria-label="Blog categories slider"
+            >
+              {blogCategories.map((category) => (
+                <div
+                  key={category.slug}
+                  data-blog-slide
+                  className="w-[calc(100vw-3rem)] max-w-full shrink-0 snap-start"
+                >
+                  <CategoryCard
+                    category={category}
+                    postCount={categoryCounts[category.slug] ?? 0}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Desktop / tablet grid — hidden below sm */}
+          <div className="hidden sm:grid gap-5 md:grid-cols-2 xl:grid-cols-4">
             {blogCategories.map((category) => (
               <CategoryCard
                 key={category.slug}
@@ -97,6 +192,7 @@ export default function BlogHomeClient({ featuredPosts, latestPosts, allPosts }:
           </div>
         </section>
 
+        {/* ── Latest Posts ── */}
         <section className="mt-14">
           <div className="mb-6 flex items-end justify-between gap-4">
             <div>
@@ -109,11 +205,49 @@ export default function BlogHomeClient({ featuredPosts, latestPosts, allPosts }:
           </div>
 
           {filteredPosts.length > 0 ? (
-            <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-              {filteredPosts.map((post) => (
-                <BlogCard key={post.slug} post={post} />
-              ))}
-            </div>
+            <>
+              {/* Mobile horizontal slider — hidden on sm+ */}
+              <div className="relative sm:hidden">
+                <button
+                  type="button"
+                  onClick={() => scrollSlider(latestSliderRef, "prev")}
+                  aria-label="Scroll latest posts left"
+                  className={`${ARROW_CLASS} left-2 blog-slider-arrow`}
+                >
+                  <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => scrollSlider(latestSliderRef, "next")}
+                  aria-label="Scroll latest posts right"
+                  className={`${ARROW_CLASS} right-2 blog-slider-arrow`}
+                >
+                  <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                </button>
+                <div
+                  ref={latestSliderRef}
+                  className="blog-slider-scroll flex snap-x snap-mandatory gap-6 overflow-x-auto px-12 pb-2 [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+                  aria-label="Latest blog posts slider"
+                >
+                  {filteredPosts.map((post) => (
+                    <div
+                      key={post.slug}
+                      data-blog-slide
+                      className="w-[calc(100vw-3rem)] max-w-full shrink-0 snap-start"
+                    >
+                      <BlogCard post={post} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Desktop / tablet grid — hidden below sm */}
+              <div className="hidden sm:grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+                {filteredPosts.map((post) => (
+                  <BlogCard key={post.slug} post={post} />
+                ))}
+              </div>
+            </>
           ) : (
             <div className="rounded-[24px] border border-dashed border-slate-300 bg-white/80 px-6 py-16 text-center text-slate-500">
               No posts matched that search yet. Try a different topic or clear the active filter.

@@ -32,6 +32,9 @@ const inter = Inter({
   subsets: ["latin"],
   display: "swap",
   weight: ["400", "500", "600", "700", "800"],
+  // Minimise CLS from font swap — fallback metrics are tuned to match Inter
+  adjustFontFallback: true,
+  fallback: ["ui-sans-serif", "system-ui", "-apple-system", "sans-serif"],
 });
 
 export const viewport: Viewport = {
@@ -42,7 +45,11 @@ export const viewport: Viewport = {
 };
 
 export async function generateMetadata(): Promise<Metadata> {
-  const webSettings = await getWebSettings();
+  const [webSettings, siteSettings] = await Promise.all([
+    getWebSettings(),
+    getSystemSettings(),
+  ]);
+  const faviconUrl = siteSettings?.favicon ?? null;
   return {
     metadataBase: new URL(SITE_URL),
     title: {
@@ -102,6 +109,15 @@ export async function generateMetadata(): Promise<Metadata> {
         "x-default": "/",
       },
     },
+    ...(faviconUrl
+      ? {
+          icons: {
+            icon: faviconUrl,
+            shortcut: faviconUrl,
+            apple: faviconUrl,
+          },
+        }
+      : {}),
     verification: {
       ...(webSettings?.googleSiteVerification
         ? { google: webSettings.googleSiteVerification }
@@ -141,6 +157,13 @@ export default async function RootLayout({
         <script {...jsonLd(siteSchema)} key="site-schema" />
         {consent.analytics && webSettings?.googleAnalyticsId  && <GoogleAnalytics id={webSettings.googleAnalyticsId} />}
         {consent.analytics && webSettings?.googleTagManagerId && <GTMScript      id={webSettings.googleTagManagerId} />}
+        {/* Dynamic favicon from admin — placed last so it overrides the static app/favicon.ico */}
+        {siteSettings.favicon && (
+          <>
+            <link rel="icon" href={siteSettings.favicon} />
+            <link rel="shortcut icon" href={siteSettings.favicon} />
+          </>
+        )}
       </head>
       <body className="antialiased bg-background text-foreground font-sans">
         {consent.analytics && webSettings?.googleTagManagerId && <GTMNoScript   id={webSettings.googleTagManagerId} />}

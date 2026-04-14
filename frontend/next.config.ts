@@ -26,7 +26,8 @@ const nextConfig: NextConfig = {
   // ── Images ─────────────────────────────────────────────────────────────────
   images: {
     formats: ["image/avif", "image/webp"],
-    minimumCacheTTL: 3600,
+    // 30-day cache for optimized images — safe because Next.js uses content-addressed URLs
+    minimumCacheTTL: 2592000,
     remotePatterns: [
       { protocol: "http",  hostname: "localhost", port: apiPort, pathname: "/**" },
       { protocol: "http",  hostname: "localhost",               pathname: "/**" },
@@ -35,6 +36,8 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "127.0.0.1",               pathname: "/**" },
       { protocol: apiProtocol, hostname: apiHostname, ...(apiPort ? { port: apiPort } : {}), pathname: "/**" },
       { protocol: "https", hostname: "*.pethiyan.com",          pathname: "/**" },
+      // Blog post featured images
+      { protocol: "https", hostname: "images.unsplash.com",     pathname: "/**" },
     ],
   },
 
@@ -96,12 +99,12 @@ export default withPWA({
   dest: "public",
   disable: process.env.NODE_ENV !== "production",
   register: true,
-  skipWaiting: true,
   cacheOnFrontEndNav: true,
   aggressiveFrontEndNavCaching: true,
   reloadOnOnline: true,
   // Custom Workbox runtime caching rules
   workboxOptions: {
+    skipWaiting: true,
     // ── Product API ── NetworkFirst: always try network, fall back to cache
     // Keeps data fresh while still working offline
     runtimeCaching: [
