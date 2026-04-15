@@ -210,8 +210,8 @@ export default function CategoryGrid({ categories = [] }: CategoryGridProps) {
         href: `/category/${cat.slug}`,
         name: cat.name,
         desc: cat.description ?? null,
-        image: cat.image ?? null,
-        Icon: cat.image ? undefined : fallbackIcons[i % fallbackIcons.length],
+        image: cat.banner ?? cat.image ?? null,
+        Icon: (cat.banner ?? cat.image) ? undefined : fallbackIcons[i % fallbackIcons.length],
       }))
     : staticCategories.map(({ icon: Icon, title, href, desc }) => ({
         key: title,

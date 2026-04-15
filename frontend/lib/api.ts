@@ -5,22 +5,21 @@ export const API_BASE =
 const LS_TOKEN_KEY = "auth_token";
 const AUTH_SESSION_MARKER = "__http_only_session__";
 
-function getApiErrorMessage(payload: {
-  message?: string;
-  data?: {
-    error?: string;
-    errors?: Record<string, string[]>;
-  };
-} | null | undefined): string | undefined {
+function getApiErrorMessage(payload: any): string | undefined {
   if (!payload) return undefined;
 
-  if (payload.data?.error) return payload.data.error;
+  // 1. Check for explicit error string
+  if (payload.data?.error) return String(payload.data.error);
+  if (payload.error) return String(payload.error);
 
-  const firstValidationError = payload.data?.errors
-    ? Object.values(payload.data.errors).flat().find(Boolean)
-    : undefined;
+  // 2. Check for validation errors (Laravel default or custom)
+  const errors = payload.errors || payload.data?.errors;
+  if (errors && typeof errors === "object") {
+    const firstError = Object.values(errors).flat().find(Boolean);
+    if (firstError) return String(firstError);
+  }
 
-  if (firstValidationError) return firstValidationError;
+  // 3. Fallback to message
   return payload.message;
 }
 
@@ -377,7 +376,7 @@ async function apiAuth<T>(
       credentials: "include",
       ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
     });
-    if (!res.ok) return null;
+    // Always parse JSON — error responses (4xx/5xx) carry a message body we need to show
     return res.json() as Promise<T>;
   } catch {
     return null;
@@ -544,7 +543,7 @@ export async function getProducts(params?: Record<string, string>): Promise<Real
   try {
     const res = await fetch(`${API_BASE}/api/products${query}`, {
       headers: { Accept: "application/json" },
-      next: { revalidate: 60, tags: ["products"] },
+      next: { revalidate: 60 },
     } as RequestInit);
     if (!res.ok) return [];
     const json = await res.json();
@@ -561,11 +560,9 @@ export async function getProducts(params?: Record<string, string>): Promise<Real
 
 export async function getFeaturedProducts(): Promise<RealApiProduct[]> {
   try {
-    // Use fetch directly so Next.js ISR cache + tags work on the server.
-    // In the browser the `next` option is ignored and data is fetched fresh.
     const res = await fetch(`${API_BASE}/api/products/featured`, {
       headers: { Accept: "application/json" },
-      next: { revalidate: 60, tags: ["featured-products"] },
+      next: { revalidate: 60 },
     } as RequestInit);
     if (!res.ok) return [];
     const json = await res.json();
@@ -582,7 +579,7 @@ export async function getNewArrivals(days = 30, limit = 40): Promise<RealApiProd
       `${API_BASE}/api/products/new-arrivals?days=${days}&limit=${limit}`,
       {
         headers: { Accept: "application/json" },
-        next: { revalidate: 60, tags: ["new-arrivals"] },
+        next: { revalidate: 60 },
       } as RequestInit
     );
     if (!res.ok) return [];
@@ -690,7 +687,7 @@ export async function getCategories(params?: Record<string, string>): Promise<Ap
   try {
     const res = await fetch(`${API_BASE}/api/categories${query}`, {
       headers: { Accept: "application/json" },
-      next: { revalidate: 300, tags: ["categories"] },
+      next: { revalidate: 30 },
     } as RequestInit);
     if (!res.ok) return [];
     return extractCatArray(await res.json());
@@ -703,7 +700,7 @@ export async function getSubCategories(): Promise<ApiCategory[]> {
   try {
     const res = await fetch(`${API_BASE}/api/categories/sub-categories`, {
       headers: { Accept: "application/json" },
-      next: { revalidate: 300, tags: ["categories"] },
+      next: { revalidate: 30 },
     } as RequestInit);
     if (!res.ok) return [];
     return extractCatArray(await res.json());
@@ -899,14 +896,18 @@ export async function getProfile(): Promise<import("@/context/AuthContext").Auth
 }
 
 export async function updateProfile(
-  data: Partial<{ name: string; email: string }>
+  data: Partial<{ name: string; email: string; gstin: string }>
 ): Promise<{ success: boolean; message?: string }> {
   const res = await apiAuth<{ success: boolean; message?: string }>(
     "/api/user/profile",
     "POST",
     data
   );
-  return res ?? { success: false };
+  if (!res) return { success: false, message: "Request failed" };
+  return {
+    success: res.success ?? false,
+    message: getApiErrorMessage(res as any) ?? res.message,
+  };
 }
 
 export async function logoutUserSession(): Promise<void> {
@@ -1329,7 +1330,7 @@ export async function getSystemSettings(): Promise<ApiSystemSettings | null> {
   // Use fetch directly (not apiFetch) so Next.js ISR caching works server-side.
   const res = await fetch(`${API_BASE}/api/settings/system`, {
     headers: { Accept: "application/json" },
-    next: { revalidate: 3600, tags: ["site-settings"] },
+    cache: "no-store",
   } as RequestInit).then((r) => r.json()).catch(() => null) as {
     success?: boolean;
     data?: { value?: Record<string, unknown> } | Record<string, unknown>;
@@ -1358,7 +1359,7 @@ export async function getSystemSettings(): Promise<ApiSystemSettings | null> {
 export async function getWebSettings(): Promise<ApiWebSettings | null> {
   const res = await fetch(`${API_BASE}/api/settings/web`, {
     headers: { Accept: "application/json" },
-    next: { revalidate: 3600, tags: ["web-settings"] },
+    cache: "no-store",
   } as RequestInit).then((r) => r.json()).catch(() => null) as {
     success?: boolean;
     data?: { value?: Record<string, unknown> } | Record<string, unknown>;
@@ -1397,7 +1398,7 @@ export interface ApiSeoAdvancedSettings {
 export async function getSeoAdvancedSettings(): Promise<ApiSeoAdvancedSettings | null> {
   const res = await fetch(`${API_BASE}/api/settings/seo-advanced`, {
     headers: { Accept: "application/json" },
-    next: { revalidate: 3600, tags: ["seo-advanced-settings"] },
+    next: { revalidate: 600 },
   } as RequestInit).then((r) => r.json()).catch(() => null) as {
     success?: boolean;
     data?: Record<string, unknown>;
@@ -1843,7 +1844,7 @@ export async function getHeroSection(): Promise<ApiHeroSection | null> {
   try {
     const res = await fetch(`${API_BASE}/api/hero-section`, {
       headers: { Accept: "application/json" },
-      next: { tags: ["hero-section"], revalidate: 3600 },
+      next: { revalidate: 300 },
     });
     if (!res.ok) return null;
     return res.json() as Promise<ApiHeroSection>;
@@ -1876,7 +1877,7 @@ export async function getVideoStorySection(): Promise<ApiVideoStorySection | nul
   try {
     const res = await fetch(`${API_BASE}/api/video-story-section`, {
       headers: { Accept: "application/json" },
-      next: { tags: ["video-story-section"], revalidate: 3600 },
+      next: { revalidate: 300 },
     });
     if (!res.ok) return null;
     return res.json() as Promise<ApiVideoStorySection>;
@@ -1954,7 +1955,7 @@ export async function getHeaderMenu(): Promise<ApiHeaderMenu | null> {
   try {
     const res = await fetch(`${API_BASE}/api/menus/header_main`, {
       headers: { Accept: "application/json" },
-      next: { tags: ["header-menu"], revalidate: 3600 },
+      cache: "no-store",
     });
     if (!res.ok) return null;
     const json = await res.json();
@@ -1979,7 +1980,7 @@ export async function getNewsletterSection(): Promise<ApiNewsletterSection | nul
   try {
     const res = await fetch(`${API_BASE}/api/newsletter-section`, {
       headers: { Accept: "application/json" },
-      next: { tags: ["newsletter-section"], revalidate: 3600 },
+      next: { revalidate: 300 },
     });
     if (!res.ok) return null;
     return res.json() as Promise<ApiNewsletterSection>;
@@ -1998,7 +1999,7 @@ export async function getProductsByCategory(categorySlug: string): Promise<RealA
       `${API_BASE}/api/products?categories=${encodeURIComponent(categorySlug)}&per_page=100&include_child_categories=1`,
       {
         headers: { Accept: "application/json" },
-        next: { revalidate: 300, tags: ["products", `category-${categorySlug}`] },
+        next: { revalidate: 60 },
       } as RequestInit
     );
     if (!res.ok) return [];

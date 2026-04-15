@@ -16,6 +16,7 @@ export interface AuthUser {
   name: string;
   mobile: string;
   email?: string | null;
+  gstin?: string | null;
 }
 
 interface AuthContextType {
