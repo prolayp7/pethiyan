@@ -302,6 +302,8 @@ export interface ApiWebSettings {
   metaKeywords: string;
   googleSiteVerification: string;
   bingSiteVerification: string;
+  footerSeoEnabled: boolean;
+  footerSeoHomepageOnly: boolean;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -1368,6 +1370,7 @@ export async function getWebSettings(): Promise<ApiWebSettings | null> {
   if (!s) return null;
 
   const str = (key: string) => (typeof s[key] === "string" ? (s[key] as string).trim() : "");
+  const bool = (key: string, fallback: boolean) => (key in s ? Boolean(s[key]) : fallback);
 
   return {
     googleAnalyticsId:   str("googleAnalyticsId"),
@@ -1378,6 +1381,8 @@ export async function getWebSettings(): Promise<ApiWebSettings | null> {
     metaKeywords:        str("metaKeywords"),
     googleSiteVerification: str("googleSiteVerification"),
     bingSiteVerification:   str("bingSiteVerification"),
+    footerSeoEnabled:       bool("footerSeoEnabled", true),
+    footerSeoHomepageOnly:  bool("footerSeoHomepageOnly", false),
   };
 }
 
