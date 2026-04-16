@@ -225,7 +225,8 @@ class StoreController extends Controller
         $bankAccountTypes = BankAccountTypeEnum::values();
         $setting = Setting::find(SettingTypeEnum::AUTHENTICATION());
         $googleApiKey = $setting->value['googleApiKey'] ?? null;
-        return view($this->panelView('stores.form'), compact('bankAccountTypes', 'googleApiKey'));
+        $states = State::orderBy('name')->get(['id', 'name', 'state_code', 'gst_code']);
+        return view($this->panelView('stores.form'), compact('bankAccountTypes', 'googleApiKey', 'states'));
     }
 
     public function store(StoreStoreRequest $request): JsonResponse
@@ -245,9 +246,6 @@ class StoreController extends Controller
             $validated = $request->safe()->except('address_proof', 'voided_check');
             $validated['seller_id'] = $seller->id;
             $isExistInZone = DeliveryZoneService::getZonesAtPoint($validated['latitude'], $validated['longitude']);
-            if ($isExistInZone['exists'] === false) {
-                return ApiResponseType::sendJsonResponse(success: false, message: 'Store location is not within any delivery zone');
-            }
             $country = Country::where('name', $validated['country'])->firstOrFail();
             if (!empty($country->phonecode)) {
                 $validated['country_code'] = $country->phonecode;
@@ -297,7 +295,8 @@ class StoreController extends Controller
         $bankAccountTypes = BankAccountTypeEnum::values();
         $setting = Setting::find(SettingTypeEnum::AUTHENTICATION());
         $googleApiKey = $setting->value['googleApiKey'] ?? null;
-        return view($this->panelView('stores.form'), compact('bankAccountTypes', 'store', 'googleApiKey'));
+        $states = State::orderBy('name')->get(['id', 'name', 'state_code', 'gst_code']);
+        return view($this->panelView('stores.form'), compact('bankAccountTypes', 'store', 'googleApiKey', 'states'));
     }
 
     public function show($id): View
@@ -318,9 +317,6 @@ class StoreController extends Controller
             $store = Store::findOrFail($id);
             $validated = $request->validated();
             $isExistInZone = DeliveryZoneService::getZonesAtPoint($validated['latitude'], $validated['longitude']);
-            if ($isExistInZone['exists'] === false) {
-                return ApiResponseType::sendJsonResponse(success: false, message: 'Store location is not within any delivery zone');
-            }
             $country = Country::where('name', $validated['country'])->firstOrFail();
             if (!empty($country->phonecode)) {
                 $validated['country_code'] = $country->phonecode;

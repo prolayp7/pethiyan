@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { MapPin, Phone, Mail, type LucideIcon } from "lucide-react";
 import { getSystemSettings } from "@/lib/api";
+import FooterUserLinks from "./FooterUserLinks";
 
 type NavLink = { label: string; href: string };
 type NavColumn = { title: string; links: NavLink[] };
@@ -74,18 +75,22 @@ export default async function FooterNavigationGrid({
                 <h3 className="font-bold text-[15px] mb-4 text-gray-900">
                   {col.title}
                 </h3>
-                <ul className="space-y-3">
-                  {col.links.map((link) => (
-                    <li key={link.label}>
-                      <Link
-                        href={link.href}
-                        className="text-sm text-gray-500 hover:text-gray-900 transition-colors duration-150"
-                      >
-                        {link.label}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
+                {col.title === "Users" ? (
+                  <FooterUserLinks links={col.links} />
+                ) : (
+                  <ul className="space-y-3">
+                    {col.links.map((link) => (
+                      <li key={link.label}>
+                        <Link
+                          href={link.href}
+                          className="text-sm text-gray-500 hover:text-gray-900 transition-colors duration-150"
+                        >
+                          {link.label}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             ))}
           </div>

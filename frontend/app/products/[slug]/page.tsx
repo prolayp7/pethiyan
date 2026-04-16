@@ -164,15 +164,15 @@ export default async function ProductPage({
         />
       )}
 
-      <BrowsingHistory excludeSlug={product.slug} />
-
       <RecentlyViewedProducts
         excludeProductId={product.id}
         title="Recently Viewed"
-        eyebrow="Keep comparing"
+        eyebrow="Keep shopping"
         description="A quick way to revisit the packaging products you explored before this one."
         viewAllLabel="See all products"
       />
+
+      <BrowsingHistory excludeSlug={product.slug} />
 
       {/* Mobile bottom nav padding */}
       <div className="h-16 lg:hidden" aria-hidden="true" />

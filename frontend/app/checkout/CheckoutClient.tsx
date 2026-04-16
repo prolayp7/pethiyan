@@ -59,6 +59,16 @@ function fmtWeight(weightG: number): string {
     : `${weightG} g`;
 }
 
+function formatItemTotalWeight(weight?: number, weightUnit?: string, quantity = 1): string | null {
+  if (weight == null || weight <= 0) return null;
+
+  const unit = (weightUnit ?? "g").toLowerCase();
+  const unitG = unit === "kg" ? weight * 1000 : weight;
+  const totalG = unitG * quantity;
+
+  return `Total weight: ${fmtWeight(totalG)} (${fmtWeight(unitG)} x ${quantity})`;
+}
+
 function shouldBypassOptimizer(src?: string | null): boolean {
   if (!src) return false;
   return /^https?:\/\//i.test(src);
@@ -91,7 +101,7 @@ type Step = 1 | 2 | 3;
 type PaymentMethod = "razorpay" | "easepay" | "cod";
 
 const BLANK_ADDRESS = {
-  name: "", phone: "", address_line1: "", address_line2: "",
+  name: "", phone: "", company_name: "", address_line1: "", address_line2: "",
   city: "", state: "", pincode: "",
 };
 
@@ -196,6 +206,11 @@ function AddressForm({ value, onChange, onSave, onCancel, saving, errorMessage, 
       </div>
 
       <div>
+        <label className="text-xs font-semibold text-gray-500 mb-1 block">Company Name</label>
+        <input className={inputCls} placeholder="Company / Business name (optional)" value={value.company_name} onChange={set("company_name")} />
+      </div>
+
+      <div>
         <label className="text-xs font-semibold text-gray-500 mb-1 block">Address Line 1 *</label>
         <input className={inputCls} placeholder="Flat / House No., Building, Street" value={value.address_line1} onChange={set("address_line1")} />
       </div>
@@ -268,7 +283,10 @@ function OrderSummary({ subtotal, discount, shippingCharge, couponResult, curren
 
       {/* Items preview */}
       <div className="space-y-2.5 mb-4 max-h-48 overflow-y-auto">
-        {items.map((item, i) => (
+        {items.map((item, i) => {
+          const weightSummary = formatItemTotalWeight(item.weight, item.weightUnit, item.quantity);
+
+          return (
           <div key={i} className="flex items-center gap-3">
             <div className="relative shrink-0 w-10 h-10 mt-1.5 mr-1.5">
               <div className="w-10 h-10 rounded-lg overflow-hidden border border-gray-100 bg-gray-50 relative">
@@ -292,22 +310,15 @@ function OrderSummary({ subtotal, discount, shippingCharge, couponResult, curren
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-xs font-medium text-(--color-secondary) line-clamp-1">{item.name}</p>
-              {item.weight != null && item.weight > 0 && (() => {
-                const unit = (item.weightUnit ?? "g").toLowerCase();
-                const unitG = unit === "kg" ? item.weight * 1000 : item.weight;
-                const totalG = unitG * item.quantity;
-                return (
-                  <p className="text-[10px] text-gray-400 mt-0.5">
-                    {fmtWeight(unitG)} × {item.quantity} = <span className="font-medium text-gray-500">{fmtWeight(totalG)}</span>
-                  </p>
-                );
-              })()}
+              {weightSummary && (
+                <p className="text-[10px] text-gray-400 mt-0.5">{weightSummary}</p>
+              )}
             </div>
             <p className="text-xs font-bold text-(--color-secondary) shrink-0">
               {fmt(item.price * item.quantity)}
             </p>
           </div>
-        ))}
+        );})}
       </div>
 
       {/* Coupon badge */}
@@ -331,16 +342,6 @@ function OrderSummary({ subtotal, discount, shippingCharge, couponResult, curren
             <span className="font-semibold">−{fmt(discount)}</span>
           </div>
         )}
-        <div className="flex justify-between text-gray-600">
-          <span>Shipping</span>
-          <span className={shippingCharge === 0 ? "text-green-600 font-semibold" : "font-semibold text-(--color-secondary)"}>
-            {shippingCharge === 0 ? "Free" : fmt(shippingCharge)}
-          </span>
-        </div>
-        <div className="flex justify-between text-xs text-gray-400">
-          <span>GST (18% incl.)</span>
-          <span>{fmt(gst)}</span>
-        </div>
       </div>
 
       <div className="flex justify-between items-center border-t border-gray-200 pt-4 mt-4">
@@ -399,6 +400,20 @@ export default function CheckoutClient() {
 
   useEffect(() => {
     setLastPincode(readLastPincodeFromCookie());
+  }, []);
+
+  // Restore coupon applied on the cart page
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem("applied_coupon");
+      if (saved) {
+        const parsed = JSON.parse(saved) as ApiCouponResult;
+        if (parsed?.valid) {
+          setCouponCode(parsed.code);
+          setCouponResult(parsed);
+        }
+      }
+    } catch {}
   }, []);
 
   // Fire begin_checkout once when the page mounts with a non-empty cart
@@ -472,6 +487,7 @@ export default function CheckoutClient() {
     setNewAddress({
       name: addr.name,
       phone: addr.phone,
+      company_name: addr.company_name ?? "",
       address_line1: addr.address_line1,
       address_line2: addr.address_line2 ?? "",
       city: addr.city,
@@ -493,6 +509,7 @@ export default function CheckoutClient() {
       const updated = await updateAddress(editingAddressId, {
         name: newAddress.name,
         phone: newAddress.phone,
+        company_name: newAddress.company_name,
         address_line1: newAddress.address_line1,
         address_line2: newAddress.address_line2,
         city: newAddress.city,
@@ -518,6 +535,7 @@ export default function CheckoutClient() {
     const result = await createAddressDetailed({
       name: newAddress.name,
       phone: newAddress.phone,
+      company_name: newAddress.company_name,
       address_line1: newAddress.address_line1,
       address_line2: newAddress.address_line2,
       city: newAddress.city,
@@ -568,6 +586,7 @@ export default function CheckoutClient() {
     if (result.valid) {
       setCouponResult(result);
       setCouponCode("");
+      sessionStorage.setItem("applied_coupon", JSON.stringify(result));
     } else {
       setCouponError(result.message ?? "Invalid coupon code.");
     }
@@ -632,6 +651,7 @@ export default function CheckoutClient() {
           })),
         });
         clearCart();
+        sessionStorage.removeItem("applied_coupon");
         router.push(`/order-confirmed?order_number=${result.order_number ?? ""}&order_id=${result.order_id ?? ""}`);
       } else {
         setPaymentError(result.message ?? "Order failed. Please try again.");
@@ -759,6 +779,7 @@ export default function CheckoutClient() {
             })),
           });
           clearCart();
+          sessionStorage.removeItem("applied_coupon");
           router.push(`/order-confirmed?order_number=${result.order_number ?? ""}&order_id=${result.order_id ?? ""}`);
         } else {
           setPaymentError(result.message ?? "Order placement failed. Contact support.");
@@ -878,6 +899,9 @@ export default function CheckoutClient() {
                                   </span>
                                 )}
                               </div>
+                              {addr.company_name && (
+                                <p className="text-sm text-gray-500 mt-0.5">{addr.company_name}</p>
+                              )}
                               <p className="text-sm text-gray-500 mt-0.5">
                                 {addr.address_line1}
                                 {addr.address_line2 ? `, ${addr.address_line2}` : ""}
@@ -956,6 +980,7 @@ export default function CheckoutClient() {
                 {selectedAddress && (
                   <div className="mb-4 p-3 rounded-xl bg-gray-50 border border-gray-100 text-xs text-gray-600">
                     <span className="font-semibold text-(--color-secondary)">{selectedAddress.name}</span>
+                    {selectedAddress.company_name ? <><span>{" · "}</span>{selectedAddress.company_name}</> : null}
                     {" · "}{selectedAddress.address_line1}, {selectedAddress.city}, {selectedAddress.pincode}
                   </div>
                 )}
@@ -1062,7 +1087,7 @@ export default function CheckoutClient() {
                         <span className="text-sm font-semibold text-green-700">{couponResult.code}</span>
                         <span className="text-sm text-green-600">— {fmt(discount)} off</span>
                       </div>
-                      <button onClick={() => setCouponResult(null)} className="text-green-400 hover:text-green-600">
+                      <button onClick={() => { setCouponResult(null); sessionStorage.removeItem("applied_coupon"); }} className="text-green-400 hover:text-green-600">
                         <X className="h-4 w-4" />
                       </button>
                     </div>

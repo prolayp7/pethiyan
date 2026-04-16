@@ -26,6 +26,8 @@ import {
   Info,
   Palette,
   Trash2,
+  Globe,
+  MapPin,
 } from "lucide-react";
 import Container from "@/components/layout/Container";
 import { useCart } from "@/context/CartContext";
@@ -43,6 +45,7 @@ import {
   removeWishlistItem,
   getProductReviews,
   getProductFaqs,
+  getAddresses,
 } from "@/lib/api";
 import { trackViewItem, trackAddToCart } from "@/lib/analytics";
 import { recordBrowsingHistory } from "@/lib/api";
@@ -109,6 +112,7 @@ function colorSwatchStyle(color: string): CSSProperties {
 
   return { background: palette[normalized] ?? "#94a3b8" };
 }
+
 
 function Gallery({
   images,
@@ -339,6 +343,7 @@ export default function ProductDetailClient({ product, reviews: initialReviews, 
   const [wishlistBusy, setWishlistBusy] = useState(false);
   const [addedToCart, setAddedToCart] = useState(false);
   const [activeTab, setActiveTab] = useState<"description" | "specs" | "reviews" | "faqs">("description");
+  const [customerStateName, setCustomerStateName] = useState<string | null>(null);
 
   const productName = product.title ?? "Product";
   const variantList = useMemo(() => product.variants ?? [], [product.variants]);
@@ -366,6 +371,50 @@ export default function ProductDetailClient({ product, reviews: initialReviews, 
       getProductFaqs(product.slug).then((data) => setFaqs(data));
     }
   }, [product.slug, initialReviews.length, initialFaqs.length]);
+
+  // Detect delivery state: saved address (logged in) → geolocation fallback
+  useEffect(() => {
+    let cancelled = false;
+
+    async function detectDeliveryState() {
+      // 1. Try saved address when logged in
+      if (isLoggedIn) {
+        try {
+          const addresses = await getAddresses();
+          const addr = addresses.find((a) => a.is_default) ?? addresses[0];
+          if (addr?.state && !cancelled) {
+            setCustomerStateName(addr.state);
+            return;
+          }
+        } catch {
+          // fall through to geolocation
+        }
+      }
+
+      // 2. Geolocation fallback (silent — no error shown if denied)
+      if (!("geolocation" in navigator)) return;
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          if (cancelled) return;
+          try {
+            const res = await fetch(
+              `https://nominatim.openstreetmap.org/reverse?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&format=json`,
+              { headers: { "Accept-Language": "en" } }
+            );
+            const data = (await res.json()) as { address?: { state?: string } };
+            const stateName = data?.address?.state;
+            if (stateName && !cancelled) setCustomerStateName(stateName);
+          } catch {
+            // silently ignore reverse-geocode failures
+          }
+        },
+        () => { /* permission denied — silently skip */ }
+      );
+    }
+
+    detectDeliveryState();
+    return () => { cancelled = true; };
+  }, [isLoggedIn]);
 
   // Single memo resolves both "which variant is selected" and "what is its id".
   // Keeping it as one memo avoids the chained-memo TDZ that Turbopack flags.
@@ -628,6 +677,10 @@ export default function ProductDetailClient({ product, reviews: initialReviews, 
               {product.status && (
                 <span className="text-xs text-gray-500 bg-gray-100 px-2.5 py-1 rounded-full capitalize">{product.status}</span>
               )}
+              <span className="inline-flex items-center gap-1 text-xs font-semibold text-green-700 bg-green-50 border border-green-200 px-2.5 py-1 rounded-full">
+                <Globe className="h-3 w-3" aria-hidden="true" />
+                Pan India Delivery
+              </span>
             </div>
 
             <h2 className="text-2xl sm:text-3xl font-extrabold text-(--color-secondary) leading-tight">{displayTitle}</h2>
@@ -646,7 +699,15 @@ export default function ProductDetailClient({ product, reviews: initialReviews, 
                 </>
               )}
             </div>
-            <p className="text-[11px] text-gray-400 mt-0.5">Inclusive of all taxes. GST invoice available.</p>
+            <div className="flex items-center flex-wrap gap-x-2 gap-y-0.5 mt-0.5">
+              <p className="text-[11px] text-gray-400">Inclusive of all taxes. GST invoice available.</p>
+              {customerStateName && (
+                <span className="inline-flex items-center gap-0.5 text-[11px] text-blue-600">
+                  <MapPin className="h-3 w-3" aria-hidden="true" />
+                  Delivering to {customerStateName}
+                </span>
+              )}
+            </div>
 
             {product.short_description && <p className="mt-4 text-gray-600 text-sm leading-relaxed">{product.short_description}</p>}
 
@@ -818,10 +879,9 @@ export default function ProductDetailClient({ product, reviews: initialReviews, 
               </p>
             )}
 
-            <div className="mt-5 grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <div className="mt-5 grid grid-cols-3 gap-2">
               {[
-                { icon: Truck, label: "Free Shipping", sub: `Orders above ${currencySymbol}999` },
-                { icon: RotateCcw, label: "7-Day Returns", sub: "Hassle-free" },
+                { icon: Truck, label: "Pan India Shipping", sub: "Delivered anywhere in India" },
                 { icon: Shield, label: "Secure Payment", sub: "SSL encrypted" },
                 { icon: FileText, label: "GST Invoice", sub: "On every order" },
               ].map(({ icon: Icon, label, sub }) => (

@@ -5,6 +5,7 @@ import CategoryGrid from "@/components/sections/CategoryGrid";
 import VideoCarouselGrid from "@/components/sections/VideoCarouselGrid";
 import FeaturedProducts from "@/components/sections/FeaturedProducts";
 import RecentlyViewedProducts from "@/components/sections/RecentlyViewedProducts";
+import YourItems from "@/components/sections/YourItems";
 import PromoBanner from "@/components/sections/PromoBanner";
 import BrandStory from "@/components/sections/BrandStory";
 import Testimonials from "@/components/sections/Testimonials";
@@ -53,6 +54,7 @@ export default async function HomePage() {
       {/* <TrustBadges /> */}
       <CategoryGrid categories={categories} />
       <FeaturedProducts apiProducts={featuredProducts} />
+      <YourItems />
       <RecentlyViewedProducts
         title="Pick Up Where You Left Off"
         eyebrow="Your recent views"

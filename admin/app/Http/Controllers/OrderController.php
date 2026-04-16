@@ -3,9 +3,13 @@
 namespace App\Http\Controllers;
 
 use Barryvdh\DomPDF\Facade\Pdf;
+use App\Enums\AdminPermissionEnum;
 use App\Enums\DateRangeFilterEnum;
 use App\Enums\DefaultSystemRolesEnum;
 use App\Enums\Order\OrderItemStatusEnum;
+use App\Enums\Order\OrderStatusEnum;
+use App\Enums\Payment\PaymentTypeEnum;
+use App\Enums\PaymentStatusEnum;
 use App\Enums\Product\ProductTypeEnum;
 use App\Enums\SellerPermissionEnum;
 use App\Http\Resources\OrderResource;
@@ -24,15 +28,28 @@ use Carbon\Carbon;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class OrderController extends Controller
 {
     use PanelAware, AuthorizesRequests, ChecksPermissions;
+
+    private const ADMIN_ORDER_STATUS_OPTIONS = [
+        'accepted_by_seller' => 'Order Accepted',
+        'preparing' => 'Order Start Packing',
+        'ready_for_pickup' => 'Order Packing Done',
+        'assigned' => 'Order Ready for Pickup',
+        'collected' => 'Order Collected',
+        'cancelled' => 'Order Cancelled',
+        'failed' => 'Order Failed',
+        'delivered' => 'Order Completed',
+    ];
 
     public bool $editPermission = false;
     protected OrderService $orderService;
@@ -62,7 +79,8 @@ class OrderController extends Controller
             ['data' => 'order_date', 'name' => 'order_date', 'title' => __('labels.order_date'), 'orderable' => false, 'searchable' => false],
             ['data' => 'order_details', 'name' => 'order_details', 'title' => __('labels.order_details'), 'orderable' => false, 'searchable' => false],
             ['data' => 'product_details', 'name' => 'product_details', 'title' => __('labels.product_details'), 'orderable' => false, 'searchable' => false],
-            ['data' => 'status', 'name' => 'status', 'title' => __('labels.status'), 'orderable' => false, 'searchable' => false],
+            ['data' => 'promo', 'name' => 'promo', 'title' => 'Promo', 'orderable' => false, 'searchable' => false],
+            ['data' => 'payment_status', 'name' => 'payment_status', 'title' => __('labels.payment_status'), 'orderable' => false, 'searchable' => false],
             ['data' => 'actions', 'name' => 'actions', 'title' => __('labels.actions'), 'orderable' => false, 'searchable' => false],
         ];
         return view($this->panelView('orders.index'), compact('columns'));
@@ -83,6 +101,7 @@ class OrderController extends Controller
         $status = $request->get('status');
         $paymentType = $request->get('payment_type');
         $dateRange = $request->get('range');
+        $promoCode = trim($request->get('promo_code', ''));
 
         $orderColumnIndex = $request->get('order')[0]['column'] ?? 0;
         $orderDirection = $request->get('order')[0]['dir'] ?? 'desc';
@@ -138,6 +157,13 @@ class OrderController extends Controller
             if ($fromDate) {
                 $query->where('created_at', '>=', $fromDate);
             }
+        }
+
+        // Filter by promo code
+        if (!empty($promoCode)) {
+            $query->whereHas('sellerOrder.order', function ($q) use ($promoCode) {
+                $q->where('promo_code', 'like', "%$promoCode%");
+            });
         }
 
         // Search functionality
@@ -248,9 +274,13 @@ class OrderController extends Controller
                         <p class='m-0 fw-medium'>" . __('labels.quantity') . ": " . e((string)($orderItem?->quantity ?? 0)) . "</p>
                         <p class='m-0 fw-medium'>" . __('labels.item_sub_total') . ": " . $this->currencyService->format($orderItem?->subtotal ?? 0) . "</p>
                         </div>",
-            'status' => view('partials.order-status', [
-                'status' => $orderItem?->status ?? OrderItemStatusEnum::PENDING(),
-            ])->render(),
+            'promo' => $orderPromo > 0
+                ? "<div class='text-center'>
+                     <span class='badge bg-green-lt text-uppercase fw-bold'>" . e($order?->promo_code ?? '') . "</span>
+                     <div class='text-danger small mt-1'>−" . $this->currencyService->format($orderPromo) . "</div>
+                   </div>"
+                : "<span class='text-muted'>—</span>",
+            'payment_status' => $this->renderPaymentStatusBadge((string) ($order?->payment_status ?? PaymentStatusEnum::PENDING())),
             'actions' => view('partials.order-actions', [
                 'panel' => $this->getPanel(),
                 'uuid' => $order?->uuid ?? '',
@@ -262,6 +292,18 @@ class OrderController extends Controller
                 'editPermission' => $this->getPanel() === 'admin' ? false : $this->editPermission,
             ])->render(),
         ];
+    }
+
+    private function renderPaymentStatusBadge(string $paymentStatus): string
+    {
+        $color = match ($paymentStatus) {
+            PaymentStatusEnum::COMPLETED(), 'paid' => 'green',
+            PaymentStatusEnum::FAILED() => 'red',
+            PaymentStatusEnum::REFUNDED(), PaymentStatusEnum::PARTIALLY_REFUNDED() => 'azure',
+            default => 'yellow',
+        };
+
+        return '<span class="badge bg-' . $color . '-lt text-uppercase">' . e(Str::replace('_', ' ', $paymentStatus)) . '</span>';
     }
 
     private function getDateRange($dateRange): ?Carbon
@@ -315,16 +357,87 @@ class OrderController extends Controller
                 ->where('seller_id', $seller->id)
                 ->firstOrFail();
         } else {
-            $order = Order::with(['items', 'items.product', 'items.variant', 'items.store', 'promoLine'])
+            $order = Order::with([
+                'user',
+                'items',
+                'items.product',
+                'items.variant',
+                'items.store',
+                'promoLine',
+                'paymentTransactions' => fn($query) => $query->latest()->with(['settlements', 'order']),
+            ])
                 ->findOrFail($id);
         }
         $this->authorize('view', $order);
         // Transform the order data using the resource
         $orderData = new OrderResource($order);
+        $adminOrderStatusOptions = $this->getAdminOrderStatusOptions((string) $order->status);
 
         return view($this->panelView('orders.show'), [
             'order' => $orderData->toArray(request()),
+            'canManageOrder' => $this->canManageAdminOrder(),
+            'orderStatusOptions' => $adminOrderStatusOptions,
+            'paymentStatusOptions' => PaymentStatusEnum::values(),
+            'isCodOrder' => strtolower((string)$order->payment_method) === PaymentTypeEnum::COD(),
+            'currentOrderStatusLabel' => $this->resolveAdminOrderStatusLabel((string) $order->status),
         ]);
+    }
+
+    public function updateAdminOrder(Request $request, int $id): RedirectResponse
+    {
+        if ($this->getPanel() === 'seller') {
+            abort(404);
+        }
+
+        $order = Order::findOrFail($id);
+        $this->authorize('view', $order);
+
+        $allowedStatusValues = array_keys($this->getAdminOrderStatusOptions((string) $order->status));
+
+        $validated = $request->validate([
+            'status' => ['required', Rule::in($allowedStatusValues)],
+            'payment_status' => ['nullable', Rule::in(PaymentStatusEnum::values())],
+            'admin_note' => ['nullable', 'string', 'max:2000'],
+            'tracking_code' => ['nullable', 'string', 'max:100'],
+        ]);
+
+        $result = $this->orderService->updateOrderByAdmin($order, $validated, Auth::id());
+
+        return redirect()
+            ->route('admin.orders.show', $order->id)
+            ->with($result['success'] ? 'success' : 'error', $result['message']);
+    }
+
+    public function downloadShippingAddress(int $id)
+    {
+        if ($this->getPanel() === 'seller') {
+            abort(404);
+        }
+
+        $order = Order::with('user')->findOrFail($id);
+        $this->authorize('view', $order);
+
+        $pdf = Pdf::loadView('admin.orders.shipping-address-pdf', [
+            'order' => $order,
+        ])->setPaper('a5', 'portrait');
+
+        return $pdf->download('shipping-address-' . $order->order_number . '.pdf');
+    }
+
+    private function getAdminOrderStatusOptions(?string $currentStatus = null): array
+    {
+        $options = self::ADMIN_ORDER_STATUS_OPTIONS;
+
+        if ($currentStatus !== null && !array_key_exists($currentStatus, $options)) {
+            $options = [$currentStatus => Str::headline($currentStatus)] + $options;
+        }
+
+        return $options;
+    }
+
+    private function resolveAdminOrderStatusLabel(string $status): string
+    {
+        return $this->getAdminOrderStatusOptions($status)[$status] ?? Str::headline($status);
     }
 
     /**
@@ -406,10 +519,15 @@ class OrderController extends Controller
                     $so->seller->authorized_signature = $so->seller->getFirstMediaUrl(SpatieMediaCollectionName::AUTHORIZED_SIGNATURE()) ?? null;
                 }
             }
-            $orderData = $sellerOrder[0]['order'];
+            $orderData = $sellerOrder->first()->order;
+            $systemSettingResource = app(\App\Services\SettingService::class)
+                ->getSettingByVariable('system');
+            $systemSettings = $systemSettingResource?->toArray(request())['value'] ?? [];
+
             return view('layouts.order-invoice', [
-                'order'       => $orderData,
-                'sellerOrder' => $sellerOrder,
+                'order'          => $orderData,
+                'sellerOrder'    => $sellerOrder,
+                'systemSettings' => $systemSettings,
             ]);
         } catch (AuthorizationException) {
             abort(403, __('messages.unauthorized_action'));
@@ -462,12 +580,21 @@ class OrderController extends Controller
                 ->setPaper('a4', 'portrait')
                 ->setOptions(['isHtml5ParserEnabled' => true, 'isRemoteEnabled' => false]);
 
-            $filename = 'invoice-' . ($order->uuid ?? $order->id) . '.pdf';
+            $filename = 'invoice-' . ($order->invoice_number ?? $order->order_number ?? $order->uuid ?? $order->id) . '.pdf';
 
             return $pdf->download($filename);
 
         } catch (AuthorizationException) {
             abort(403, __('messages.unauthorized_action'));
         }
+    }
+
+    private function canManageAdminOrder(): bool
+    {
+        if ($this->getPanel() === 'seller' || !Auth::check()) {
+            return false;
+        }
+
+        return $this->hasPermission(AdminPermissionEnum::ORDER_VIEW());
     }
 }

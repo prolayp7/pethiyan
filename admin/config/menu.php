@@ -127,13 +127,7 @@ return [
             'title'  => 'Home Page',
             'active' => 'home_section',
             'route'  => [
-                'system' => [
-                    'sub_active'  => 'system',
-                    'sub_route'   => 'admin.settings.show',
-                    'route_param' => ['setting' => 'system'],
-                    'sub_title'   => 'labels.menu_system',
-                    'permission'  => 'setting.system.view',
-                ],
+                // 'system' removed from Home Page — lives under Settings instead
                 'hero_section' => [
                     'sub_active'  => 'hero_section',
                     'sub_route'   => 'admin.hero-section.show',
@@ -259,6 +253,11 @@ return [
                     'sub_active' => 'reports',
                     'sub_route'  => 'admin.reports.customers',
                     'sub_title'  => 'Customers Report',
+                ],
+                'payment_monitor' => [
+                    'sub_active' => 'payment_monitor',
+                    'sub_route'  => 'admin.reports.payments',
+                    'sub_title'  => 'labels.payment_monitor',
                 ],
             ],
         ],        

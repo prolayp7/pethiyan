@@ -25,7 +25,12 @@ const nextConfig: NextConfig = {
 
   // ── Images ─────────────────────────────────────────────────────────────────
   images: {
+    // In development all images come from localhost (private IP) which Next.js
+    // optimizer refuses to fetch. Disable optimization in dev; production keeps
+    // full optimization via the remotePatterns below.
+    unoptimized: process.env.NODE_ENV === "development",
     formats: ["image/avif", "image/webp"],
+    qualities: [75, 80, 85],
     // 30-day cache for optimized images — safe because Next.js uses content-addressed URLs
     minimumCacheTTL: 2592000,
     remotePatterns: [
@@ -99,64 +104,75 @@ export default withPWA({
   dest: "public",
   disable: process.env.NODE_ENV !== "production",
   register: true,
-  cacheOnFrontEndNav: true,
-  aggressiveFrontEndNavCaching: true,
+  // Do NOT cache page HTML navigations — admin changes (menus, settings,
+  // categories) must reflect immediately on the next page load.
+  // Static assets (JS, CSS, images, fonts) are still cached below.
+  cacheOnFrontEndNav: false,
+  aggressiveFrontEndNavCaching: false,
   reloadOnOnline: true,
-  // Custom Workbox runtime caching rules
   workboxOptions: {
     skipWaiting: true,
-    // ── Product API ── NetworkFirst: always try network, fall back to cache
-    // Keeps data fresh while still working offline
+    // ── Dynamic API data ── NetworkFirst: always try network first so admin
+    // changes (menus, products, categories) show immediately. Cache is only
+    // used as a fallback when the user is offline.
     runtimeCaching: [
+      {
+        urlPattern: /\/api\/menus\//,
+        handler: "NetworkFirst" as const,
+        options: {
+          cacheName: "menus-api",
+          networkTimeoutSeconds: 5,
+          expiration: { maxEntries: 10, maxAgeSeconds: 60 },
+          cacheableResponse: { statuses: [0, 200] },
+        },
+      },
+      {
+        urlPattern: /\/api\/settings\//,
+        handler: "NetworkFirst" as const,
+        options: {
+          cacheName: "settings-api",
+          networkTimeoutSeconds: 5,
+          expiration: { maxEntries: 10, maxAgeSeconds: 60 },
+          cacheableResponse: { statuses: [0, 200] },
+        },
+      },
+      {
+        urlPattern: /\/api\/hero-section/,
+        handler: "NetworkFirst" as const,
+        options: {
+          cacheName: "hero-api",
+          networkTimeoutSeconds: 5,
+          expiration: { maxEntries: 5, maxAgeSeconds: 300 },
+          cacheableResponse: { statuses: [0, 200] },
+        },
+      },
       {
         urlPattern: /\/api\/products(\/|$|\?)/,
         handler: "NetworkFirst" as const,
         options: {
           cacheName: "products-api",
           networkTimeoutSeconds: 5,
-          expiration: {
-            maxEntries: 20,
-            maxAgeSeconds: 300, // 5 min — matches ISR revalidate
-          },
+          expiration: { maxEntries: 50, maxAgeSeconds: 300 },
           cacheableResponse: { statuses: [0, 200] },
         },
       },
-      // ── Categories API ── StaleWhileRevalidate: instant load, bg refresh
       {
         urlPattern: /\/api\/categories(\/|$|\?)/,
-        handler: "StaleWhileRevalidate" as const,
+        handler: "NetworkFirst" as const,
         options: {
           cacheName: "categories-api",
-          expiration: {
-            maxEntries: 5,
-            maxAgeSeconds: 3600, // 1 hour — categories rarely change
-          },
+          networkTimeoutSeconds: 5,
+          expiration: { maxEntries: 20, maxAgeSeconds: 300 },
           cacheableResponse: { statuses: [0, 200] },
         },
       },
-      // ── Shop & product pages ── StaleWhileRevalidate: instant, refresh bg
-      {
-        urlPattern: /^\/(shop|products)(\/|$|\?)/,
-        handler: "StaleWhileRevalidate" as const,
-        options: {
-          cacheName: "shop-pages",
-          expiration: {
-            maxEntries: 50,
-            maxAgeSeconds: 300,
-          },
-          cacheableResponse: { statuses: [0, 200] },
-        },
-      },
-      // ── Product images ── CacheFirst: images rarely change, serve from cache
+      // ── Product images ── CacheFirst: images are content-addressed, safe to cache
       {
         urlPattern: /\.(png|jpg|jpeg|webp|avif|gif|svg)$/i,
         handler: "CacheFirst" as const,
         options: {
           cacheName: "product-images",
-          expiration: {
-            maxEntries: 200,
-            maxAgeSeconds: 86400, // 1 day
-          },
+          expiration: { maxEntries: 200, maxAgeSeconds: 86400 },
           cacheableResponse: { statuses: [0, 200] },
         },
       },
@@ -166,10 +182,7 @@ export default withPWA({
         handler: "CacheFirst" as const,
         options: {
           cacheName: "google-fonts",
-          expiration: {
-            maxEntries: 10,
-            maxAgeSeconds: 31536000, // 1 year
-          },
+          expiration: { maxEntries: 10, maxAgeSeconds: 31536000 },
           cacheableResponse: { statuses: [0, 200] },
         },
       },

@@ -15,6 +15,7 @@ use App\Enums\SettingTypeEnum;
 use App\Events\Order\OrderDelivered;
 use App\Events\Order\OrderPlaced;
 use App\Events\Order\OrderStatusUpdated;
+use App\Mail\AdminOrderManagementUpdatedMail;
 use App\Http\Resources\User\OrderItemReturnResource;
 use App\Http\Resources\User\OrderResource;
 use App\Http\Resources\User\ReviewResource;
@@ -24,6 +25,7 @@ use App\Models\DeliveryBoyAssignment;
 use App\Models\DeliveryBoyCashTransaction;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\OrderPaymentTransaction;
 use App\Models\OrderItemReturn;
 use App\Models\OrderPromoLine;
 use App\Models\Promo;
@@ -53,6 +55,7 @@ class OrderService
     protected SellerStatementService $sellerStatementService;
     protected WalletService $walletService;
     protected GstService $gstService;
+    protected EmailService $emailService;
 
     public function __construct(
         StockService           $stockService,
@@ -61,7 +64,8 @@ class OrderService
         PaymentService         $paymentService,
         SellerStatementService $sellerStatementService,
         WalletService          $walletService,
-        GstService             $gstService
+        GstService             $gstService,
+        EmailService           $emailService
     )
     {
         $this->settingService = $settingService;
@@ -71,6 +75,7 @@ class OrderService
         $this->sellerStatementService = $sellerStatementService;
         $this->walletService = $walletService;
         $this->gstService = $gstService;
+        $this->emailService = $emailService;
     }
 
     /**
@@ -499,6 +504,7 @@ class OrderService
             'status' => ($data['payment_type'] === PaymentTypeEnum::COD()) ? OrderStatusEnum::AWAITING_STORE_RESPONSE() : OrderStatusEnum::PENDING(),
             // Billing info
             'billing_name' => $user->name,
+            'billing_company_name' => $data['address']['company_name'] ?? $user->company_name,
             'billing_address_1' => $data['address']['address_line1'],
             'billing_address_2' => $data['address']['address_line2'],
             'billing_landmark' => $data['address']['landmark'] ?? '',
@@ -514,6 +520,7 @@ class OrderService
 
             // Shipping info (same as billing)
             'shipping_name' => $user->name,
+            'shipping_company_name' => $data['address']['company_name'] ?? $user->company_name,
             'shipping_address_1' => $data['address']['address_line1'],
             'shipping_address_2' => $data['address']['address_line2'],
             'shipping_landmark' => $data['address']['landmark'] ?? '',
@@ -1187,6 +1194,173 @@ class OrderService
     function getOrderItemsStatuses(int $orderId): array
     {
         return OrderItem::where('order_id', $orderId)->pluck('status')->toArray();
+    }
+
+    public function updateOrderByAdmin(Order $order, array $data, ?int $adminUserId = null): array
+    {
+        DB::beginTransaction();
+
+        try {
+            $isCodOrder = strtolower((string)$order->payment_method) === PaymentTypeEnum::COD();
+            $currentStatus = (string) $order->status;
+            $currentPaymentStatus = (string)$order->payment_status;
+            $currentAdminNote = (string)($order->admin_note ?? '');
+            $currentTrackingCode = (string)($order->tracking_code ?? '');
+            $incomingAdminNote = trim((string)($data['admin_note'] ?? ''));
+            $incomingTrackingCode = trim((string)($data['tracking_code'] ?? ''));
+            $newPaymentStatus = $currentPaymentStatus;
+            $statusChanged = $data['status'] !== $currentStatus;
+
+            if ($isCodOrder && !empty($data['payment_status'])) {
+                $newPaymentStatus = $data['payment_status'];
+            }
+
+            $paymentStatusChanged = $newPaymentStatus !== $currentPaymentStatus;
+
+            if (!$isCodOrder && !empty($data['payment_status']) && $data['payment_status'] !== $currentPaymentStatus) {
+                DB::rollBack();
+
+                return [
+                    'success' => false,
+                    'message' => __('messages.online_payment_status_managed_by_gateway'),
+                    'data' => [],
+                ];
+            }
+
+            $order->update([
+                'status' => $data['status'],
+                'payment_status' => $newPaymentStatus,
+                'admin_note' => $incomingAdminNote !== '' ? $incomingAdminNote : null,
+                'tracking_code' => $incomingTrackingCode !== '' ? $incomingTrackingCode : null,
+            ]);
+
+            $this->syncOrderItemsStatusForAdmin($order, $data['status']);
+
+            if ($isCodOrder && ($newPaymentStatus !== $currentPaymentStatus || $incomingAdminNote !== $currentAdminNote || $incomingTrackingCode !== $currentTrackingCode)) {
+                $codTransactionId = OrderPaymentTransaction::generateCodTransactionId($order);
+                $existingTransaction = OrderPaymentTransaction::where('order_id', $order->id)
+                    ->where('payment_method', $order->payment_method)
+                    ->latest('id')
+                    ->first();
+
+                $transactionPayload = [
+                    'order_id' => $order->id,
+                    'user_id' => $order->user_id,
+                    'transaction_id' => $codTransactionId,
+                    'amount' => $order->final_total,
+                    'currency' => $order->currency_code,
+                    'payment_method' => $order->payment_method,
+                    'payment_status' => $newPaymentStatus,
+                    'message' => $incomingAdminNote !== ''
+                        ? $incomingAdminNote
+                        : __('labels.cod_payment_status_updated_by_admin'),
+                    'payment_details' => [
+                        'source' => 'admin_manual_update',
+                        'admin_user_id' => $adminUserId,
+                        'updated_at' => now()->toDateTimeString(),
+                    ],
+                ];
+
+                if ($existingTransaction) {
+                    $existingTransaction->update($transactionPayload);
+                } else {
+                    OrderPaymentTransaction::create([
+                        'uuid' => (string) Str::uuid(),
+                        ...$transactionPayload,
+                    ]);
+                }
+            }
+
+            if ($statusChanged || $paymentStatusChanged) {
+                $order->loadMissing('user');
+
+                DB::afterCommit(function () use ($order, $currentStatus, $currentPaymentStatus) {
+                    $customer = $order->user;
+
+                    if (!$customer?->email) {
+                        return;
+                    }
+
+                    $this->emailService->send(
+                        new AdminOrderManagementUpdatedMail($order, $currentStatus, $currentPaymentStatus),
+                        $customer->email,
+                        $customer->name
+                    );
+                });
+            }
+
+            DB::commit();
+
+            return [
+                'success' => true,
+                'message' => __('messages.order_status_updated_successfully'),
+                'data' => [],
+            ];
+        } catch (Exception $e) {
+            DB::rollBack();
+            Log::error('Error updating order by admin', [
+                'order_id' => $order->id,
+                'admin_user_id' => $adminUserId,
+                'error' => $e->getMessage(),
+            ]);
+
+            return [
+                'success' => false,
+                'message' => __('messages.order_status_update_failed'),
+                'data' => ['error' => $e->getMessage()],
+            ];
+        }
+    }
+
+    private function syncOrderItemsStatusForAdmin(Order $order, string $orderStatus): void
+    {
+        $mappedItemStatus = $this->mapAdminOrderStatusToOrderItemStatus($orderStatus);
+
+        if ($mappedItemStatus === null) {
+            return;
+        }
+
+        $terminalStatuses = [
+            OrderItemStatusEnum::REJECTED(),
+            OrderItemStatusEnum::REFUNDED(),
+            OrderItemStatusEnum::RETURNED(),
+            OrderItemStatusEnum::CANCELLED(),
+            OrderItemStatusEnum::FAILED(),
+        ];
+
+        $order->loadMissing('items');
+
+        foreach ($order->items as $orderItem) {
+            if ($orderItem->status === $mappedItemStatus) {
+                continue;
+            }
+
+            if (in_array($orderItem->status, $terminalStatuses, true) && $mappedItemStatus !== $orderItem->status) {
+                continue;
+            }
+
+            $orderItem->update(['status' => $mappedItemStatus]);
+        }
+    }
+
+    private function mapAdminOrderStatusToOrderItemStatus(string $orderStatus): ?string
+    {
+        return match ($orderStatus) {
+            OrderStatusEnum::PENDING() => OrderItemStatusEnum::PENDING(),
+            OrderStatusEnum::AWAITING_STORE_RESPONSE() => OrderItemStatusEnum::AWAITING_STORE_RESPONSE(),
+            OrderStatusEnum::PARTIALLY_ACCEPTED(),
+            OrderStatusEnum::ACCEPTED_BY_SELLER() => OrderItemStatusEnum::ACCEPTED(),
+            OrderStatusEnum::PREPARING(),
+            OrderStatusEnum::READY_FOR_PICKUP() => OrderItemStatusEnum::PREPARING(),
+            OrderStatusEnum::ASSIGNED(),
+            OrderStatusEnum::OUT_FOR_DELIVERY(),
+            OrderStatusEnum::COLLECTED() => OrderItemStatusEnum::COLLECTED(),
+            OrderStatusEnum::DELIVERED() => OrderItemStatusEnum::DELIVERED(),
+            OrderStatusEnum::REJECTED_BY_SELLER() => OrderItemStatusEnum::REJECTED(),
+            OrderStatusEnum::CANCELLED() => OrderItemStatusEnum::CANCELLED(),
+            OrderStatusEnum::FAILED() => OrderItemStatusEnum::FAILED(),
+            default => null,
+        };
     }
 
     private

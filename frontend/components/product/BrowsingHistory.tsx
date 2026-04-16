@@ -21,12 +21,14 @@ function normalizeImg(src?: string | null): string | null {
   return `${base}/storage/${t}`;
 }
 
-function getPrice(product: RealApiProduct): { price: number; special: number | null } {
-  const pricing = product.variants?.[0]?.store_pricing?.[0];
-  if (!pricing) return { price: 0, special: null };
+function getPrice(product: RealApiProduct): { price: number; special: number | null; variantTitle: string | null } {
+  const variant = product.variants?.find((v) => v.is_default) ?? product.variants?.[0];
+  const pricing = variant?.store_pricing?.[0];
+  if (!pricing) return { price: 0, special: null, variantTitle: null };
   const price = Number(pricing.price) || 0;
   const special = pricing.special_price ? Number(pricing.special_price) : null;
-  return { price, special };
+  const variantTitle = variant?.title && variant.title !== product.title ? variant.title : null;
+  return { price, special, variantTitle };
 }
 
 async function fetchBySlug(slugs: string[]): Promise<RealApiProduct[]> {
@@ -51,9 +53,10 @@ async function fetchBySlug(slugs: string[]): Promise<RealApiProduct[]> {
 
 function HistoryCard({ product }: { product: RealApiProduct }) {
   const img = normalizeImg(product.images?.main_image);
-  const { price, special } = getPrice(product);
+  const { price, special, variantTitle } = getPrice(product);
   const symbol = "₹";
   const hasDiscount = special !== null && special < price;
+  const fmt = (n: number) => n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   return (
     <Link
@@ -71,6 +74,7 @@ function HistoryCard({ product }: { product: RealApiProduct }) {
             sizes="176px"
             loading="lazy"
             quality={80}
+            unoptimized={/^https?:\/\//i.test(img)}
           />
         ) : (
           <div className="absolute inset-0 bg-linear-to-br from-(--color-primary)/10 to-(--color-primary-light)" />
@@ -87,14 +91,17 @@ function HistoryCard({ product }: { product: RealApiProduct }) {
         <p className="text-xs font-semibold text-(--color-secondary) line-clamp-2 leading-tight group-hover:text-(--color-primary) transition-colors">
           {product.title}
         </p>
+        {variantTitle && (
+          <p className="text-[10px] text-gray-400 truncate">{variantTitle}</p>
+        )}
         {price > 0 && (
           <div className="flex items-baseline gap-1.5 mt-0.5">
             <span className="text-sm font-extrabold text-(--color-primary)">
-              {symbol}{(special ?? price).toLocaleString("en-IN")}
+              {symbol}{fmt(special ?? price)}
             </span>
             {hasDiscount && (
               <span className="text-[10px] text-gray-400 line-through">
-                {symbol}{price.toLocaleString("en-IN")}
+                {symbol}{fmt(price)}
               </span>
             )}
           </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
-import { serverCartAdd, serverCartUpdateQty, serverCartRemove, serverCartClear } from "@/lib/api";
+import { getProduct, serverCartAdd, serverCartUpdateQty, serverCartRemove, serverCartClear } from "@/lib/api";
 import { CART_COUNT_COOKIE, writeCountCookie } from "@/lib/count-preferences";
 
 export interface CartItem {
@@ -48,6 +48,7 @@ export function CartProvider({
   const [items, setItems] = useState<CartItem[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [hydrated, setHydrated] = useState(false);
+  const weightBackfillAttemptedRef = useRef(new Set<string>());
 
   // Keep a ref always in sync with current items so callbacks can read
   // current state without stale closures
@@ -87,6 +88,72 @@ export function CartProvider({
     if (!hydrated) return;
     writeCountCookie(CART_COUNT_COOKIE, liveItemCount);
   }, [hydrated, liveItemCount]);
+
+  useEffect(() => {
+    if (!hydrated || items.length === 0) return;
+
+    const candidates = items.filter((item) => {
+      const missingWeight = item.weight == null || item.weight <= 0;
+      return missingWeight && !!item.slug && !!item.variantId && !weightBackfillAttemptedRef.current.has(item.id);
+    });
+
+    if (candidates.length === 0) return;
+
+    candidates.forEach((item) => weightBackfillAttemptedRef.current.add(item.id));
+
+    let cancelled = false;
+
+    void (async () => {
+      const productCache = new Map<string, Awaited<ReturnType<typeof getProduct>>>();
+      const resolved = await Promise.all(
+        candidates.map(async (item) => {
+          const slug = item.slug;
+          const variantId = item.variantId;
+          if (!slug || !variantId) return null;
+
+          let product = productCache.get(slug);
+          if (product === undefined) {
+            product = await getProduct(slug);
+            productCache.set(slug, product);
+          }
+
+          const variant = product?.variants.find((entry) => entry.id === variantId);
+          if (variant?.weight == null || variant.weight <= 0) return null;
+
+          return {
+            id: item.id,
+            weight: variant.weight,
+            weightUnit: variant.weight_unit ?? item.weightUnit,
+          };
+        })
+      );
+
+      if (cancelled) return;
+
+      const updates = new Map(
+        resolved
+          .filter((entry): entry is { id: string; weight: number; weightUnit?: string } => Boolean(entry))
+          .map((entry) => [entry.id, entry])
+      );
+
+      if (updates.size === 0) return;
+
+      setItems((current) => {
+        let changed = false;
+        const next = current.map((item) => {
+          const update = updates.get(item.id);
+          if (!update) return item;
+          changed = true;
+          return { ...item, weight: update.weight, weightUnit: update.weightUnit };
+        });
+        return changed ? next : current;
+      });
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [hydrated, items]);
 
   const openCart  = useCallback(() => setIsOpen(true),  []);
   const closeCart = useCallback(() => setIsOpen(false), []);

@@ -7,7 +7,7 @@ import {
 import OfferMarquee from "./OfferMarquee";
 import FooterNavigationGrid from "./FooterNavigationGrid";
 import FooterBottomLegalBar from "./FooterBottomLegalBar";
-import FooterSeoContent from "./FooterSeoContent";
+import FooterSeoWrapper from "./FooterSeoWrapper";
 
 /* ─── Static data ────────────────────────────────────────────── */
 
@@ -68,7 +68,12 @@ const socialLinks = [
 
 /* ─── Component ──────────────────────────────────────────────── */
 
-export default function Footer() {
+interface FooterProps {
+  footerSeoEnabled?: boolean;
+  footerSeoHomepageOnly?: boolean;
+}
+
+export default function Footer({ footerSeoEnabled = true, footerSeoHomepageOnly = false }: FooterProps) {
   return (
     <footer
       className="bg-[#050810] text-white overflow-x-hidden pb-20 lg:pb-0"
@@ -81,12 +86,9 @@ export default function Footer() {
       <OfferMarquee />
 
        {/* ══════════════════════════════════════════════════════════
-          SECTION 4 — BOTTOM LEGAL BAR
-          Row 1: Compliance badges · Registration text · Legal links
-          Row 2: Payment method chips — centred
-          Row 3: Social icons — centred
+          FOOTER SEO CONTENT — conditionally rendered per admin settings
       ══════════════════════════════════════════════════════════ */}
-      <FooterSeoContent />
+      <FooterSeoWrapper enabled={footerSeoEnabled} homepageOnly={footerSeoHomepageOnly} />
 
       {/* ══════════════════════════════════════════════════════════
           SECTION 2 — NAVIGATION GRID
