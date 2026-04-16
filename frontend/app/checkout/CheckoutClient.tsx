@@ -59,6 +59,16 @@ function fmtWeight(weightG: number): string {
     : `${weightG} g`;
 }
 
+function formatItemTotalWeight(weight?: number, weightUnit?: string, quantity = 1): string | null {
+  if (weight == null || weight <= 0) return null;
+
+  const unit = (weightUnit ?? "g").toLowerCase();
+  const unitG = unit === "kg" ? weight * 1000 : weight;
+  const totalG = unitG * quantity;
+
+  return `Total weight: ${fmtWeight(totalG)} (${fmtWeight(unitG)} x ${quantity})`;
+}
+
 function shouldBypassOptimizer(src?: string | null): boolean {
   if (!src) return false;
   return /^https?:\/\//i.test(src);
@@ -268,7 +278,10 @@ function OrderSummary({ subtotal, discount, shippingCharge, couponResult, curren
 
       {/* Items preview */}
       <div className="space-y-2.5 mb-4 max-h-48 overflow-y-auto">
-        {items.map((item, i) => (
+        {items.map((item, i) => {
+          const weightSummary = formatItemTotalWeight(item.weight, item.weightUnit, item.quantity);
+
+          return (
           <div key={i} className="flex items-center gap-3">
             <div className="relative shrink-0 w-10 h-10 mt-1.5 mr-1.5">
               <div className="w-10 h-10 rounded-lg overflow-hidden border border-gray-100 bg-gray-50 relative">
@@ -292,22 +305,15 @@ function OrderSummary({ subtotal, discount, shippingCharge, couponResult, curren
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-xs font-medium text-(--color-secondary) line-clamp-1">{item.name}</p>
-              {item.weight != null && item.weight > 0 && (() => {
-                const unit = (item.weightUnit ?? "g").toLowerCase();
-                const unitG = unit === "kg" ? item.weight * 1000 : item.weight;
-                const totalG = unitG * item.quantity;
-                return (
-                  <p className="text-[10px] text-gray-400 mt-0.5">
-                    {fmtWeight(unitG)} × {item.quantity} = <span className="font-medium text-gray-500">{fmtWeight(totalG)}</span>
-                  </p>
-                );
-              })()}
+              {weightSummary && (
+                <p className="text-[10px] text-gray-400 mt-0.5">{weightSummary}</p>
+              )}
             </div>
             <p className="text-xs font-bold text-(--color-secondary) shrink-0">
               {fmt(item.price * item.quantity)}
             </p>
           </div>
-        ))}
+        );})}
       </div>
 
       {/* Coupon badge */}

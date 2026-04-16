@@ -156,6 +156,8 @@ export default function ShopProductCard({ product }: { product: RealApiProduct }
       minQty,
       storeId: defaultPricing.store_id,
       currencySymbol: product.currency?.symbol || "₹",
+      weight: defaultVariant.weight ?? undefined,
+      weightUnit: defaultVariant.weight_unit ?? undefined,
     });
     openCart();
   };
