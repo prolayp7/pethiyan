@@ -119,6 +119,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::prefix('categories')->namespace('Categories')->name('categories.')->group(function () {
             Route::get('/', [CategoryController::class, 'index'])->name('index');
             Route::post('/', [CategoryController::class, 'store'])->name('store');
+            Route::post('/reorder', [CategoryController::class, 'reorder'])->name('reorder');
             Route::get('/{id}/edit', [CategoryController::class, 'show'])->name('edit');
             Route::post('/{id}', [CategoryController::class, 'update'])->name('update');
             Route::delete('/{id}', [CategoryController::class, 'destroy'])->name('delete');
@@ -340,11 +341,29 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/orders',    [ReportController::class, 'orders'])->name('orders');
             Route::get('/products',  [ReportController::class, 'products'])->name('products');
             Route::get('/customers', [ReportController::class, 'customers'])->name('customers');
+            Route::get('/payments',  [ReportController::class, 'payments'])->name('payments');
             // Data endpoints
             Route::get('/sales/data',     [ReportController::class, 'salesData'])->name('sales.data');
+            Route::get('/sales/export',   [ReportController::class, 'exportSales'])->name('sales.export');
             Route::get('/orders/data',    [ReportController::class, 'ordersData'])->name('orders.data');
+            Route::get('/orders/export',  [ReportController::class, 'exportOrders'])->name('orders.export');
             Route::get('/products/data',  [ReportController::class, 'productsData'])->name('products.data');
+            Route::get('/products/export',[ReportController::class, 'exportProducts'])->name('products.export');
             Route::get('/customers/data', [ReportController::class, 'customersData'])->name('customers.data');
+            Route::get('/customers/export',[ReportController::class, 'exportCustomers'])->name('customers.export');
+            Route::get('/promos',         [ReportController::class, 'promos'])->name('promos');
+            Route::get('/promos/data',    [ReportController::class, 'promosData'])->name('promos.data');
+            Route::get('/payments/summary', [ReportController::class, 'paymentsSummary'])->name('payments.summary');
+            Route::get('/payments/transactions/datatable', [ReportController::class, 'paymentTransactionsDatatable'])->name('payments.transactions.datatable');
+            Route::get('/payments/refunds/datatable', [ReportController::class, 'paymentRefundsDatatable'])->name('payments.refunds.datatable');
+            Route::get('/payments/disputes/datatable', [ReportController::class, 'paymentDisputesDatatable'])->name('payments.disputes.datatable');
+            Route::get('/payments/settlements/datatable', [ReportController::class, 'paymentSettlementsDatatable'])->name('payments.settlements.datatable');
+            Route::get('/payments/webhook-logs/datatable', [ReportController::class, 'paymentWebhookLogsDatatable'])->name('payments.webhook-logs.datatable');
+            Route::get('/payments/transactions/export', [ReportController::class, 'exportTransactions'])->name('payments.transactions.export');
+            Route::get('/payments/refunds/export', [ReportController::class, 'exportRefunds'])->name('payments.refunds.export');
+            Route::get('/payments/disputes/export', [ReportController::class, 'exportDisputes'])->name('payments.disputes.export');
+            Route::get('/payments/settlements/export', [ReportController::class, 'exportSettlements'])->name('payments.settlements.export');
+            Route::get('/payments/webhook-logs/export', [ReportController::class, 'exportWebhookLogs'])->name('payments.webhook-logs.export');
         });
 
         // Hero Section
@@ -472,6 +491,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/datatable', [OrderController::class, 'getOrders'])->name('datatable');
             Route::get('invoice', [OrderController::class, 'orderInvoice']);
             Route::get('/{id}/invoice/download', [OrderController::class, 'downloadInvoice'])->name('invoice.download');
+            Route::get('/{id}/shipping-address/download', [OrderController::class, 'downloadShippingAddress'])->name('shipping-address.download');
+            Route::post('/{id}/manage', [OrderController::class, 'updateAdminOrder'])->name('manage');
             Route::get('/{id}', [OrderController::class, 'show'])->name('show');
             Route::post('/{id}/{status}', [OrderController::class, 'updateStatus'])->name('update_status');
         });
@@ -487,6 +508,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/import/failed-report/{reportId}', [ProductImportController::class, 'downloadFailedReport'])->name('import.failed-report');
             Route::get('/datatable', [ProductController::class, 'getProducts'])->name('datatable');
             Route::get('/search', [ProductController::class, 'search'])->name('search');
+            Route::post('/{id}/duplicate', [ProductController::class, 'duplicate'])->name('duplicate');
             Route::get('/{id}/edit', [ProductController::class, 'edit'])->name('edit');
             Route::get('/{id}/pricing', [ProductController::class, 'getProductPricing'])->name('pricing');
             Route::post('/{id}', [ProductController::class, 'update'])->name('update');
@@ -624,6 +646,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::get('/',          [MenuController::class, 'itemsIndex'])->name('index');
                 Route::get('/datatable', [MenuController::class, 'itemsDatatable'])->name('datatable');
                 Route::post('/',         [MenuController::class, 'storeItem'])->name('store');
+                Route::post('/reorder',  [MenuController::class, 'reorderItems'])->name('reorder');
                 Route::get('/{item}',    [MenuController::class, 'showItem'])->name('show');
                 Route::post('/{item}',   [MenuController::class, 'updateItem'])->name('update');
                 Route::delete('/{item}', [MenuController::class, 'destroyItem'])->name('destroy');
@@ -635,6 +658,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
                     // Panels
                     Route::post('/panels',             [MenuController::class, 'storePanel'])->name('panels.store');
+                    Route::post('/panels/reorder',     [MenuController::class, 'reorderPanels'])->name('panels.reorder');
                     Route::get('/panels/{panel}',      [MenuController::class, 'showPanel'])->name('panels.show');
                     Route::post('/panels/{panel}',     [MenuController::class, 'updatePanel'])->name('panels.update');
                     Route::delete('/panels/{panel}',   [MenuController::class, 'destroyPanel'])->name('panels.destroy');
@@ -642,12 +666,14 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
                     // Columns
                     Route::post('/panels/{panel}/columns',           [MenuController::class, 'storeColumn'])->name('columns.store');
+                    Route::post('/panels/{panel}/columns/reorder',   [MenuController::class, 'reorderColumns'])->name('columns.reorder');
                     Route::get('/panels/{panel}/columns/{column}',   [MenuController::class, 'showColumn'])->name('columns.show');
                     Route::post('/panels/{panel}/columns/{column}',  [MenuController::class, 'updateColumn'])->name('columns.update');
                     Route::delete('/panels/{panel}/columns/{column}',[MenuController::class, 'destroyColumn'])->name('columns.destroy');
 
                     // Links
                     Route::post('/panels/{panel}/columns/{column}/links',          [MenuController::class, 'storeLink'])->name('links.store');
+                    Route::post('/panels/{panel}/columns/{column}/links/reorder',  [MenuController::class, 'reorderLinks'])->name('links.reorder');
                     Route::get('/panels/{panel}/columns/{column}/links/{link}',    [MenuController::class, 'showLink'])->name('links.show');
                     Route::post('/panels/{panel}/columns/{column}/links/{link}',   [MenuController::class, 'updateLink'])->name('links.update');
                     Route::delete('/panels/{panel}/columns/{column}/links/{link}', [MenuController::class, 'destroyLink'])->name('links.destroy');

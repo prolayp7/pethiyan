@@ -102,11 +102,14 @@ export default function FeaturedProductCard({ p }: { p: FallbackProduct }) {
     if (!p.inStock) return;
     addItem({
       id: p.id,
+      productId: Number.isFinite(numericProductId) ? numericProductId : undefined,
       name: p.name,
       price: p.price,
       image: p.image ?? null,
       slug: p.href.replace("/products/", ""),
       minQty: p.minQty,
+      variantId: p.defaultVariantId,
+      storeId: p.defaultStoreId,
     });
     openCart();
   };

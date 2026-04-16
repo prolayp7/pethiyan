@@ -178,11 +178,13 @@ class CustomerController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => [
-                    'id'     => $customer->id,
-                    'name'   => $customer->name,
-                    'email'  => $customer->email,
+                    'id' => $customer->id,
+                    'name' => $customer->name,
+                    'email' => $customer->email,
                     'mobile' => $customer->mobile,
+                    'company_name' => $customer->company_name,
                     'status' => (bool) $customer->status,
+                    'gstin' => $customer->gstin,
                 ],
             ]);
         }
@@ -204,19 +206,23 @@ class CustomerController extends Controller
         }
 
         $validated = $request->validate([
-            'name'     => 'required|string|max:255',
-            'email'    => 'required|email|max:255|unique:users,email',
-            'mobile'   => 'nullable|string|max:20',
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|max:255|unique:users,email',
+            'mobile' => 'nullable|string|max:20',
+            'company_name' => 'nullable|string|max:255',
             'password' => ['required', Password::min(8)],
-            'status'   => 'nullable|boolean',
+            'status' => 'nullable|boolean',
+            'gstin' => ['nullable', 'string', 'size:15', 'regex:/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/'],
         ]);
 
         $customer = User::create([
-            'name'         => $validated['name'],
-            'email'        => $validated['email'],
-            'mobile'       => $validated['mobile'] ?? null,
-            'password'     => Hash::make($validated['password']),
-            'status'       => $validated['status'] ?? true,
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'mobile' => $validated['mobile'] ?? null,
+            'company_name' => $validated['company_name'] ?? null,
+            'password' => Hash::make($validated['password']),
+            'status' => $validated['status'] ?? true,
+            'gstin' => $validated['gstin'] ?? null,
             'access_panel' => null,
         ]);
 
@@ -241,18 +247,22 @@ class CustomerController extends Controller
         $customer = $this->customerQuery()->findOrFail($id);
 
         $validated = $request->validate([
-            'name'     => 'required|string|max:255',
-            'email'    => 'required|email|max:255|unique:users,email,' . $id,
-            'mobile'   => 'nullable|string|max:20',
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|max:255|unique:users,email,' . $id,
+            'mobile' => 'nullable|string|max:20',
+            'company_name' => 'nullable|string|max:255',
             'password' => ['nullable', Password::min(8)],
-            'status'   => 'nullable|boolean',
+            'status' => 'nullable|boolean',
+            'gstin' => ['nullable', 'string', 'size:15', 'regex:/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/'],
         ]);
 
         $data = [
-            'name'   => $validated['name'],
-            'email'  => $validated['email'],
+            'name' => $validated['name'],
+            'email' => $validated['email'],
             'mobile' => $validated['mobile'] ?? $customer->mobile,
+            'company_name' => array_key_exists('company_name', $validated) ? ($validated['company_name'] ?? null) : $customer->company_name,
             'status' => $validated['status'] ?? $customer->status,
+            'gstin' => array_key_exists('gstin', $validated) ? ($validated['gstin'] ?? null) : $customer->gstin,
         ];
 
         if (!empty($validated['password'])) {
@@ -327,9 +337,17 @@ class CustomerController extends Controller
 
         $data = $addresses->map(function ($addr) use ($customerId, $editPermission, $deletePermission) {
             return [
-                'id'           => $addr->id,
-                'address_type' => ucfirst($addr->address_type ?? 'other'),
-                'full_address' => implode(', ', array_filter([
+                'id'            => $addr->id,
+                'address_type'  => strtolower($addr->address_type ?? 'other'),
+                'address_line1' => $addr->address_line1 ?? '',
+                'address_line2' => $addr->address_line2 ?? '',
+                'city'          => $addr->city          ?? '',
+                'state'         => $addr->state         ?? '',
+                'zipcode'       => $addr->zipcode       ?? '',
+                'country'       => $addr->country       ?? '',
+                'mobile'        => $addr->mobile        ?? '',
+                'landmark'      => $addr->landmark      ?? '',
+                'full_address'  => implode(', ', array_filter([
                     $addr->address_line1,
                     $addr->address_line2,
                     $addr->city,
@@ -337,8 +355,7 @@ class CustomerController extends Controller
                     $addr->zipcode,
                     $addr->country,
                 ])),
-                'mobile'       => e($addr->mobile ?? ''),
-                'action'       => view('admin.customers.partials.address-actions', [
+                'action'        => view('admin.customers.partials.address-actions', [
                     'address'         => $addr,
                     'customerId'      => $customerId,
                     'editPermission'  => $editPermission,

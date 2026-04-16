@@ -114,11 +114,11 @@ export default function CategoryGrid({ categories = [] }: CategoryGridProps) {
                   href={`/category/${cat.slug}`}
                   className="group relative bg-white rounded-2xl overflow-hidden border border-(--color-border) hover:border-(--color-primary)/40 hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
                 >
-                  {cat.image ? (
-                    /* Category has an image from API — show it */
+                  {(cat.banner ?? cat.image) ? (
+                    /* Category has a banner/image from API — show it */
                     <div className="relative aspect-4/3 overflow-hidden">
                       <Image
-                        src={cat.image}
+                        src={(cat.banner ?? cat.image)!}
                         alt={cat.name}
                         fill
                         className="object-cover group-hover:scale-105 transition-transform duration-500"

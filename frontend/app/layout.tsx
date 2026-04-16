@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { cookies } from "next/headers";
+
+export const dynamic = "force-dynamic";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { CartProvider } from "@/context/CartContext";
@@ -197,7 +199,10 @@ export default async function RootLayout({
               </main>
 
               {/* Footer */}
-              <Footer />
+              <Footer
+                footerSeoEnabled={webSettings?.footerSeoEnabled ?? true}
+                footerSeoHomepageOnly={webSettings?.footerSeoHomepageOnly ?? false}
+              />
 
               {/* Mobile Bottom Navigation */}
               <MobileBottomNav />

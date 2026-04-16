@@ -1,4 +1,7 @@
-@php use App\Enums\Order\OrderItemStatusEnum; @endphp
+@php
+    use App\Enums\Order\OrderItemStatusEnum;
+    use App\Enums\Payment\PaymentTypeEnum;
+@endphp
 @extends('layouts.admin.app', ['page' => $menuAdmin['orders']['active'] ?? ""])
 @section('title', __('labels.order_details'))
 
@@ -88,7 +91,7 @@
                                 <div class="datagrid">
                                     <div class="datagrid-item">
                                         <div class="datagrid-title">{{ __('labels.order_number') }}</div>
-                                        <div class="datagrid-content">{{ $order['uuid'] }}</div>
+                                        <div class="datagrid-content">{{ $order['order_number'] }}</div>
                                     </div>
                                     <div class="datagrid-item">
                                         <div class="datagrid-title">{{ __('labels.order_date') }}</div>
@@ -99,7 +102,7 @@
                                         <div class="datagrid-title">{{ __('labels.status') }}</div>
                                         <div class="datagrid-content text-capitalize">
                                             <span class="badge {{ $order['status'] }}">
-                                                {{ Str::ucfirst(Str::replace("_", " ", $order['status']))}}
+                                                {{ $currentOrderStatusLabel }}
                                             </span>
                                         </div>
                                     </div>
@@ -124,6 +127,60 @@
                                 </div>
                             </div>
                         </div>
+                        @if($canManageOrder)
+                            <div class="card mt-3">
+                                <div class="card-header">
+                                    <h3 class="card-title">{{ __('labels.order_management') }}</h3>
+                                </div>
+                                <div class="card-body">
+                                    @if(!$isCodOrder)
+                                        <div class="alert alert-info">
+                                            {{ __('messages.online_payment_status_managed_by_gateway') }}
+                                        </div>
+                                    @endif
+
+                                    <form method="POST" action="{{ route('admin.orders.manage', $order['id']) }}">
+                                        @csrf
+                                        <div class="mb-3">
+                                            <label class="form-label">{{ __('labels.status') }}</label>
+                                            <select name="status" class="form-select text-capitalize">
+                                                @foreach($orderStatusOptions as $statusValue => $statusLabel)
+                                                    <option value="{{ $statusValue }}" {{ old('status', $order['status']) === $statusValue ? 'selected' : '' }}>
+                                                        {{ $statusLabel }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label class="form-label">{{ __('labels.payment_status') }}</label>
+                                            <select name="payment_status" class="form-select text-capitalize" {{ $isCodOrder ? '' : 'disabled' }}>
+                                                @foreach($paymentStatusOptions as $paymentStatusOption)
+                                                    <option value="{{ $paymentStatusOption }}" {{ old('payment_status', $order['payment_status']) === $paymentStatusOption ? 'selected' : '' }}>
+                                                        {{ Str::headline($paymentStatusOption) }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
+                                            @if(!$isCodOrder)
+                                                <input type="hidden" name="payment_status" value="{{ $order['payment_status'] }}">
+                                            @endif
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label class="form-label">Tracking Code</label>
+                                            <textarea name="tracking_code" rows="3" class="form-control" placeholder="Add tracking code if available">{{ old('tracking_code', $order['tracking_code'] ?? '') }}</textarea>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label class="form-label">{{ __('labels.admin_note') }}</label>
+                                            <textarea name="admin_note" rows="4" class="form-control" placeholder="{{ __('labels.admin_note_placeholder') }}">{{ old('admin_note', $order['admin_note'] ?? '') }}</textarea>
+                                        </div>
+
+                                        <button type="submit" class="btn btn-primary">{{ __('labels.save_changes') }}</button>
+                                    </form>
+                                </div>
+                            </div>
+                        @endif
                         @if(!empty($order['order_note']))
                             <div class="card mt-3">
                                 <div class="card-header">
@@ -165,6 +222,10 @@
                                         <div class="datagrid-title">{{ __('labels.phone') }}</div>
                                         <div class="datagrid-content">{{ $order['billing_phone'] }}</div>
                                     </div>
+                                    <div class="datagrid-item">
+                                        <div class="datagrid-title">GSTIN</div>
+                                        <div class="datagrid-content">{{ $order['customer_gstin'] ?: 'N/A' }}</div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -173,6 +234,11 @@
                         <div class="card mt-3">
                             <div class="card-header">
                                 <h3 class="card-title">{{ __('labels.shipping_address') }}</h3>
+                                <div class="card-actions">
+                                    <a href="{{ route('admin.orders.shipping-address.download', $order['id']) }}" class="btn btn-outline-primary btn-sm">
+                                        Download Printable Address
+                                    </a>
+                                </div>
                             </div>
                             <div class="card-body">
                                 <address>
@@ -191,6 +257,128 @@
                                 </address>
                             </div>
                         </div>
+
+                        <div class="card mt-3">
+                            <div class="card-header">
+                                <h3 class="card-title">{{ __('labels.payment_activity') }}</h3>
+                            </div>
+                            <div class="card-body">
+                                @if(!empty($order['payment_transactions']))
+                                    @php $latestTransaction = $order['payment_transactions'][0]; @endphp
+                                    <div class="datagrid mb-3">
+                                        <div class="datagrid-item">
+                                            <div class="datagrid-title">{{ __('labels.transaction_id') }}</div>
+                                            <div class="datagrid-content">{{ $latestTransaction['display_transaction_id'] ?? $latestTransaction['transaction_id'] }}</div>
+                                        </div>
+                                        <div class="datagrid-item">
+                                            <div class="datagrid-title">{{ __('labels.payment_method') }}</div>
+                                            <div class="datagrid-content text-capitalize">{{ Str::headline($latestTransaction['payment_method']) }}</div>
+                                        </div>
+                                        <div class="datagrid-item">
+                                            <div class="datagrid-title">{{ __('labels.payment_status') }}</div>
+                                            <div class="datagrid-content text-capitalize">{{ Str::replace('_', ' ', $latestTransaction['payment_status']) }}</div>
+                                        </div>
+                                        <div class="datagrid-item">
+                                            <div class="datagrid-title">{{ __('labels.updated_at') }}</div>
+                                            <div class="datagrid-content">{{ $latestTransaction['updated_at'] }}</div>
+                                        </div>
+                                        @if(!empty($latestTransaction['gateway_event']))
+                                            <div class="datagrid-item">
+                                                <div class="datagrid-title">{{ __('labels.gateway_event') }}</div>
+                                                <div class="datagrid-content">{{ $latestTransaction['gateway_event'] }}</div>
+                                            </div>
+                                        @endif
+                                    </div>
+                                    <div>
+                                        <div class="datagrid-title">{{ __('labels.latest_gateway_message') }}</div>
+                                        <div class="datagrid-content mt-1">
+                                            <textarea class="form-control" rows="3" readonly disabled>{{ $latestTransaction['message'] ?? __('labels.no_payment_message_available') }}</textarea>
+                                        </div>
+                                    </div>
+                                    @if(!empty($latestTransaction['failure_description']) || !empty($latestTransaction['failure_reason']) || !empty($latestTransaction['failure_code']) || !empty($latestTransaction['failure_source']) || !empty($latestTransaction['failure_step']))
+                                        <div class="mt-3">
+                                            <div class="datagrid-title">{{ __('labels.gateway_failure_details') }}</div>
+                                            <div class="datagrid mt-2">
+                                                @if(!empty($latestTransaction['failure_description']))
+                                                    <div class="datagrid-item">
+                                                        <div class="datagrid-title">{{ __('labels.failure_description') }}</div>
+                                                        <div class="datagrid-content">{{ $latestTransaction['failure_description'] }}</div>
+                                                    </div>
+                                                @endif
+                                                @if(!empty($latestTransaction['failure_reason']))
+                                                    <div class="datagrid-item">
+                                                        <div class="datagrid-title">{{ __('labels.failure_reason') }}</div>
+                                                        <div class="datagrid-content">{{ $latestTransaction['failure_reason'] }}</div>
+                                                    </div>
+                                                @endif
+                                                @if(!empty($latestTransaction['failure_code']))
+                                                    <div class="datagrid-item">
+                                                        <div class="datagrid-title">{{ __('labels.failure_code') }}</div>
+                                                        <div class="datagrid-content">{{ $latestTransaction['failure_code'] }}</div>
+                                                    </div>
+                                                @endif
+                                                @if(!empty($latestTransaction['failure_source']))
+                                                    <div class="datagrid-item">
+                                                        <div class="datagrid-title">{{ __('labels.failure_source') }}</div>
+                                                        <div class="datagrid-content">{{ $latestTransaction['failure_source'] }}</div>
+                                                    </div>
+                                                @endif
+                                                @if(!empty($latestTransaction['failure_step']))
+                                                    <div class="datagrid-item">
+                                                        <div class="datagrid-title">{{ __('labels.failure_step') }}</div>
+                                                        <div class="datagrid-content">{{ $latestTransaction['failure_step'] }}</div>
+                                                    </div>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    @endif
+                                    @if(!empty($latestTransaction['latest_settlement']))
+                                        <div class="mt-3">
+                                            <div class="datagrid-title">{{ __('labels.latest_settlement') }}</div>
+                                            <div class="datagrid mt-2">
+                                                <div class="datagrid-item">
+                                                    <div class="datagrid-title">{{ __('labels.settlement_status') }}</div>
+                                                    <div class="datagrid-content text-capitalize">{{ Str::headline($latestTransaction['latest_settlement']['status']) }}</div>
+                                                </div>
+                                                @if(!empty($latestTransaction['latest_settlement']['event_name']))
+                                                    <div class="datagrid-item">
+                                                        <div class="datagrid-title">{{ __('labels.gateway_event') }}</div>
+                                                        <div class="datagrid-content">{{ $latestTransaction['latest_settlement']['event_name'] }}</div>
+                                                    </div>
+                                                @endif
+                                                @if(!empty($latestTransaction['latest_settlement']['settlement_reference']))
+                                                    <div class="datagrid-item">
+                                                        <div class="datagrid-title">{{ __('labels.settlement_reference') }}</div>
+                                                        <div class="datagrid-content">{{ $latestTransaction['latest_settlement']['settlement_reference'] }}</div>
+                                                    </div>
+                                                @endif
+                                                @if(!empty($latestTransaction['latest_settlement']['utr']))
+                                                    <div class="datagrid-item">
+                                                        <div class="datagrid-title">{{ __('labels.settlement_utr') }}</div>
+                                                        <div class="datagrid-content">{{ $latestTransaction['latest_settlement']['utr'] }}</div>
+                                                    </div>
+                                                @endif
+                                                @if(!empty($latestTransaction['latest_settlement']['settled_at']))
+                                                    <div class="datagrid-item">
+                                                        <div class="datagrid-title">{{ __('labels.settled_at') }}</div>
+                                                        <div class="datagrid-content">{{ $latestTransaction['latest_settlement']['settled_at'] }}</div>
+                                                    </div>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    @endif
+                                @else
+                                    <div class="alert alert-info mb-0">
+                                        @if(strtolower((string) $order['payment_method']) === PaymentTypeEnum::COD())
+                                            {{ __('labels.cod_payment_waiting_for_admin_update') }}
+                                        @else
+                                            {{ __('labels.online_payment_waiting_for_gateway_update') }}
+                                        @endif
+                                    </div>
+                                @endif
+                            </div>
+                        </div>
+
                     </div>
                     <!-- Order Items Card -->
                     <div class="col-12 mt-3">
@@ -249,35 +437,38 @@
                                         </tbody>
                                         <tfoot>
                                         <tr>
-                                            <td colspan="5" class="text-end"><strong>{{ __('labels.total') }}:</strong>
+                                            <td colspan="5" class="text-end"><strong>Total Quantity:</strong>
                                             </td>
                                             <td><strong>{{ collect($order['items'])->sum('quantity')  }}</strong></td>
-                                            <td>
-                                                <strong>{{$systemSettings['currencySymbol'] . number_format($order['subtotal'], 2) }}</strong>
-                                            </td>
+                                            <td></td>
                                         </tr>
 
                                         <tr>
-                                            <td colspan="6" class="text-end"><b>{{ __('labels.shipping_handling') }}
-                                                    :</b></td>
+                                            <td colspan="6" class="text-end"><b>{{ __('labels.subtotal') }}:</b></td>
+                                            <td>{{ $systemSettings['currencySymbol'] }}{{ number_format($order['subtotal'], 2) }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td colspan="6" class="text-end"><b>Shipping Cost:</b></td>
                                             <td>{{ $systemSettings['currencySymbol'] }}{{ number_format($order['delivery_charge'], 2) }}</td>
                                         </tr>
                                         <tr>
-                                            <td colspan="6" class="text-end"><b>{{ __('labels.handling_charges') }}:</b>
-                                            </td>
-                                            <td>{{ $systemSettings['currencySymbol'] }}{{ number_format($order['handling_charges'] ?? 0, 2) }}</td>
+                                            <td colspan="6" class="text-end"><b>GST:</b></td>
+                                            <td>{{ $systemSettings['currencySymbol'] }}{{ number_format($order['total_gst'] ?? 0, 2) }}</td>
                                         </tr>
-                                        <tr>
-                                            <td colspan="6" class="text-end">
-                                                <b>{{ __('labels.per_store_drop_off_fee') }}:</b></td>
-                                            <td>{{ $systemSettings['currencySymbol'] }}{{ number_format($order['per_store_drop_off_fee'] ?? 0, 2) }}</td>
-                                        </tr>
-                                        <tr>
-                                            <td colspan="6" class="text-end"><b>{{ __('labels.grand_total') }}:</b></td>
-                                            <td>
-                                                <b>{{ $systemSettings['currencySymbol'] }}{{ number_format($order['subtotal'] + $order['delivery_charge'] + ($order['handling_charges'] ?? 0) + ($order['per_store_drop_off_fee'] ?? 0), 2) }}</b>
-                                            </td>
-                                        </tr>
+                                        @if(($order['handling_charges'] ?? 0) > 0)
+                                            <tr>
+                                                <td colspan="6" class="text-end"><b>{{ __('labels.handling_charges') }}:</b>
+                                                </td>
+                                                <td>{{ $systemSettings['currencySymbol'] }}{{ number_format($order['handling_charges'], 2) }}</td>
+                                            </tr>
+                                        @endif
+                                        @if(($order['per_store_drop_off_fee'] ?? 0) > 0)
+                                            <tr>
+                                                <td colspan="6" class="text-end">
+                                                    <b>{{ __('labels.per_store_drop_off_fee') }}:</b></td>
+                                                <td>{{ $systemSettings['currencySymbol'] }}{{ number_format($order['per_store_drop_off_fee'], 2) }}</td>
+                                            </tr>
+                                        @endif
                                         @if($order['wallet_balance'] > 0)
                                             <tr>
                                                 <td colspan="6" class="text-end"><b>{{ __('labels.wallet_used') }}:</b>
@@ -321,10 +512,10 @@
                                             </tr>
                                         @endif
                                         <tr>
-                                            <td colspan="6" class="text-end"><b>{{ __('labels.total_payable') }}:</b>
+                                            <td colspan="6" class="text-end"><b>{{ __('labels.total') }}:</b>
                                             </td>
                                             <td>
-                                                <b>{{ $systemSettings['currencySymbol'] }}{{ $order['total_payable'] }}</b>
+                                                <b>{{ $systemSettings['currencySymbol'] }}{{ number_format($order['final_total'] ?? $order['total_payable'], 2) }}</b>
                                             </td>
                                         </tr>
                                         </tfoot>

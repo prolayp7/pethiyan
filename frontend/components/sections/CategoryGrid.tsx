@@ -107,6 +107,7 @@ function CategoryCard({ href, name, desc, image, Icon }: CardProps) {
                   sizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, 33vw"
                   loading="lazy"
                   quality={80}
+                  unoptimized={/^https?:\/\//i.test(image)}
                 />
               </motion.div>
             ) : (
@@ -192,8 +193,21 @@ interface CategoryGridProps {
   categories?: ApiCategory[];
 }
 
+function sortCategoriesByAdminOrder(categories: ApiCategory[]): ApiCategory[] {
+  return [...categories].sort((left, right) => {
+    const leftOrder = typeof left.sort_order === "number" ? left.sort_order : Number.MAX_SAFE_INTEGER;
+    const rightOrder = typeof right.sort_order === "number" ? right.sort_order : Number.MAX_SAFE_INTEGER;
+
+    if (leftOrder !== rightOrder) {
+      return leftOrder - rightOrder;
+    }
+
+    return left.name.localeCompare(right.name);
+  });
+}
+
 export default function CategoryGrid({ categories = [] }: CategoryGridProps) {
-  const apiParents = categories.filter((c) => !c.parent_id).slice(0, 6);
+  const apiParents = sortCategoriesByAdminOrder(categories.filter((c) => !c.parent_id)).slice(0, 6);
   const hasApiData = apiParents.length > 0;
 
   const count = hasApiData ? apiParents.length : staticCategories.length;
@@ -209,8 +223,8 @@ export default function CategoryGrid({ categories = [] }: CategoryGridProps) {
         href: `/category/${cat.slug}`,
         name: cat.name,
         desc: cat.description ?? null,
-        image: cat.image ?? null,
-        Icon: cat.image ? undefined : fallbackIcons[i % fallbackIcons.length],
+        image: cat.banner ?? cat.image ?? null,
+        Icon: (cat.banner ?? cat.image) ? undefined : fallbackIcons[i % fallbackIcons.length],
       }))
     : staticCategories.map(({ icon: Icon, title, href, desc }) => ({
         key: title,

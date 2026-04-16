@@ -17,6 +17,8 @@ use Illuminate\Support\Facades\Log;
  */
 class Order extends Model
 {
+    protected $appends = ['order_number', 'invoice_number'];
+
     protected $fillable = [
         'uuid',
         'user_id',
@@ -46,6 +48,7 @@ class Order extends Model
         'final_total',
         'status',
         'billing_name',
+        'billing_company_name',
         'billing_address_1',
         'billing_address_2',
         'billing_landmark',
@@ -59,6 +62,7 @@ class Order extends Model
         'billing_country',
         'billing_country_code',
         'shipping_name',
+        'shipping_company_name',
         'shipping_address_1',
         'shipping_address_2',
         'shipping_landmark',
@@ -72,6 +76,8 @@ class Order extends Model
         'shipping_country',
         'shipping_country_code',
         'order_note',
+        'admin_note',
+        'tracking_code',
         // GST fields
         'customer_state',
         'customer_state_code',
@@ -85,6 +91,8 @@ class Order extends Model
 
     protected $casts = [
 //        'status' => OrderStatusEnum::class,
+        'billing_company_name' => 'string',
+        'shipping_company_name' => 'string',
     ];
 
     public function user(): BelongsTo
@@ -140,6 +148,23 @@ class Order extends Model
     public function promoLine(): HasOne
     {
         return $this->hasOne(OrderPromoLine::class);
+    }
+
+    public function getOrderNumberAttribute(): string
+    {
+        return $this->formatDocumentNumber('PET');
+    }
+
+    public function getInvoiceNumberAttribute(): string
+    {
+        return $this->formatDocumentNumber('INV');
+    }
+
+    private function formatDocumentNumber(string $prefix): string
+    {
+        $date = $this->created_at?->format('Ymd') ?? now()->format('Ymd');
+
+        return $prefix . $date . str_pad((string) $this->id, 5, '0', STR_PAD_LEFT);
     }
 
     /**

@@ -24,7 +24,7 @@ const INDIAN_STATES = [
 ];
 
 const BLANK = {
-  name: "", phone: "", address_line1: "", address_line2: "",
+  name: "", phone: "", company_name: "", address_line1: "", address_line2: "",
   city: "", state: "", pincode: "",
 };
 
@@ -66,6 +66,11 @@ function AddressForm({
             onChange={(e) => onChange({ ...value, phone: e.target.value.replace(/\D/g, "").slice(0, 10) })}
             inputMode="numeric" />
         </div>
+      </div>
+
+      <div>
+        <label className="text-xs font-semibold text-gray-500 mb-1 block">Company Name</label>
+        <input className={cls} placeholder="Company / Business name (optional)" value={value.company_name} onChange={set("company_name")} />
       </div>
 
       <div>
@@ -143,6 +148,7 @@ function AddressCard({
               </span>
             )}
           </div>
+          {address.company_name && <p className="text-sm text-gray-600">{address.company_name}</p>}
           <p className="text-sm text-gray-600">{address.address_line1}</p>
           {address.address_line2 && <p className="text-sm text-gray-600">{address.address_line2}</p>}
           <p className="text-sm text-gray-600">{address.city}, {address.state} — {address.pincode}</p>
@@ -216,6 +222,7 @@ export default function AddressesPage() {
     setSaving(true);
     const saved = await createAddress({
       name: formData.name, phone: formData.phone,
+      company_name: formData.company_name,
       address_line1: formData.address_line1, address_line2: formData.address_line2,
       city: formData.city, state: formData.state, pincode: formData.pincode,
     });
@@ -237,6 +244,7 @@ export default function AddressesPage() {
     setSaving(true);
     const updated = await updateAddress(editId, {
       name: formData.name, phone: formData.phone,
+      company_name: formData.company_name,
       address_line1: formData.address_line1, address_line2: formData.address_line2,
       city: formData.city, state: formData.state, pincode: formData.pincode,
     });
@@ -286,9 +294,42 @@ export default function AddressesPage() {
     setShowAddForm(false);
     setFormData({
       name: addr.name, phone: addr.phone,
+      company_name: addr.company_name ?? "",
       address_line1: addr.address_line1, address_line2: addr.address_line2 ?? "",
       city: addr.city, state: addr.state, pincode: addr.pincode,
     });
+  *** Add File: /var/www/lcommerce/admin/database/migrations/2026_04_16_140000_add_company_name_to_addresses_and_orders_tables.php
+  <?php
+
+  use Illuminate\Database\Migrations\Migration;
+  use Illuminate\Database\Schema\Blueprint;
+  use Illuminate\Support\Facades\Schema;
+
+  return new class extends Migration
+  {
+    public function up(): void
+    {
+      Schema::table('addresses', function (Blueprint $table) {
+        $table->string('company_name')->nullable()->after('user_id');
+      });
+
+      Schema::table('orders', function (Blueprint $table) {
+        $table->string('billing_company_name')->nullable()->after('billing_name');
+        $table->string('shipping_company_name')->nullable()->after('shipping_name');
+      });
+    }
+
+    public function down(): void
+    {
+      Schema::table('orders', function (Blueprint $table) {
+        $table->dropColumn(['billing_company_name', 'shipping_company_name']);
+      });
+
+      Schema::table('addresses', function (Blueprint $table) {
+        $table->dropColumn('company_name');
+      });
+    }
+  };
   }, []);
 
   const cancelForm = useCallback(() => {

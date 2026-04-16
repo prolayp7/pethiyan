@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -8,7 +9,8 @@ import {
   getProductsByCategory,
 } from "@/lib/api";
 import Container from "@/components/layout/Container";
-import CategoryClientLayout from "./CategoryClientLayout";
+import OtherCategories from "./OtherCategories";
+import CategoryProductsFetcher from "./CategoryProductsFetcher";
 import {
   breadcrumbSchema,
   collectionPageSchema,
@@ -68,6 +70,29 @@ export async function generateMetadata({
   };
 }
 
+// ─── Product grid skeleton (shown only while products stream in) ──────────────
+
+function ProductGridSkeleton() {
+  return (
+    <Container>
+      <div className="py-8">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="bg-white rounded-2xl overflow-hidden border border-gray-100">
+              <div className="aspect-square bg-gray-200 animate-pulse" />
+              <div className="p-3 space-y-2">
+                <div className="h-3 bg-gray-200 rounded-full animate-pulse" />
+                <div className="h-3 w-3/4 bg-gray-200 rounded-full animate-pulse" />
+                <div className="h-5 w-20 bg-gray-200 rounded-full animate-pulse mt-2" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </Container>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default async function CategoryPage({
@@ -77,13 +102,21 @@ export default async function CategoryPage({
 }) {
   const { slug } = await params;
 
-  const [category, products, categories] = await Promise.all([
+  // Only fetch category shell data — products stream in independently via Suspense
+  const [category, categories] = await Promise.all([
     getCategory(slug),
-    getProductsByCategory(slug),
     getCategories(),
   ]);
 
   if (!category) notFound();
+
+  // ── JSON-LD (for SEO we still need products at build/request time for static pages) ──
+  // For the schema we fetch products here only to build structured data; the UI
+  // uses the streamed CategoryProductsFetcher so the shell renders immediately.
+  let productsForSchema: Awaited<ReturnType<typeof getProductsByCategory>> = [];
+  try {
+    productsForSchema = await getProductsByCategory(slug);
+  } catch { /* non-critical */ }
 
   const bcSchema = breadcrumbSchema([
     { label: "Home", href: "/" },
@@ -97,7 +130,7 @@ export default async function CategoryPage({
   const autoSchemas =
     customSchemas.length > 0
       ? []
-      : [collectionPageSchema(category, products), bcSchema];
+      : [collectionPageSchema(category, productsForSchema), bcSchema];
 
   return (
     <div className="min-h-screen bg-(--background)">
@@ -108,11 +141,10 @@ export default async function CategoryPage({
         <script {...jsonLd(schema as Record<string, unknown>)} key={`category-custom-schema-${index}`} />
       ))}
 
-      {/* Page header with inline breadcrumb */}
+      {/* ── Page header — renders instantly, never skeletons ── */}
       <div className="bg-white border-b border-(--color-border) py-5">
         <Container>
           <div className="flex items-center justify-between gap-4">
-            {/* Left: icon + title + subtitle */}
             <div className="flex items-center gap-3">
               <span
                 className="flex items-center justify-center h-10 w-10 rounded-xl shrink-0"
@@ -127,7 +159,6 @@ export default async function CategoryPage({
                 </p>
               </div>
             </div>
-            {/* Right: breadcrumb */}
             <nav className="hidden sm:flex items-center gap-1.5 text-sm text-gray-500 shrink-0" aria-label="Breadcrumb">
               <Link href="/" className="flex items-center gap-1 hover:text-(--color-primary) transition-colors">
                 <Home className="h-3.5 w-3.5" aria-hidden="true" />
@@ -142,11 +173,16 @@ export default async function CategoryPage({
         </Container>
       </div>
 
-      <CategoryClientLayout
+      {/* ── Other categories strip — renders instantly ── */}
+      <OtherCategories
         currentCategory={category}
         categories={categories}
-        products={products}
       />
+
+      {/* ── Product grid — streams in; only this area skeletons ── */}
+      <Suspense fallback={<ProductGridSkeleton />}>
+        <CategoryProductsFetcher slug={slug} />
+      </Suspense>
 
       {/* Mobile bottom padding */}
       <div className="h-16 lg:hidden" aria-hidden="true" />

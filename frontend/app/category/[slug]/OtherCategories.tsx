@@ -9,7 +9,6 @@ import type { ApiCategory } from "@/lib/api";
 interface OtherCategoriesProps {
   currentCategory: ApiCategory;
   categories: ApiCategory[];
-  sortDropdown?: React.ReactNode;
 }
 
 function sortRelatedCategories(currentCategory: ApiCategory, categories: ApiCategory[]) {
@@ -24,7 +23,6 @@ function sortRelatedCategories(currentCategory: ApiCategory, categories: ApiCate
 export default function OtherCategories({
   currentCategory,
   categories,
-  sortDropdown,
 }: OtherCategoriesProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -127,12 +125,6 @@ export default function OtherCategories({
               </button>
             </div>
 
-            {/* Sort dropdown */}
-            {sortDropdown && (
-              <div className="shrink-0 ml-auto">
-                {sortDropdown}
-              </div>
-            )}
           </div>
         </div>
       </Container>

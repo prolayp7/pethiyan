@@ -14,21 +14,30 @@ export default function ProfilePage() {
 
   const [name,    setName]    = useState(user?.name ?? "");
   const [email,   setEmail]   = useState(user?.email ?? "");
+  const [gstin,   setGstin]   = useState(user?.gstin ?? "");
   const [saving,  setSaving]  = useState(false);
   const [success, setSuccess] = useState(false);
   const [error,   setError]   = useState("");
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
-  const isDirty = name !== (user?.name ?? "") || email !== (user?.email ?? "");
+  const isDirty = name !== (user?.name ?? "") || email !== (user?.email ?? "") || gstin !== (user?.gstin ?? "");
 
   async function handleSave() {
     if (!name.trim()) { setError("Name cannot be empty."); return; }
     setError("");
     setSaving(true);
-    const result = await updateProfile({ name: name.trim(), email: email.trim() || undefined });
+    const result = await updateProfile({
+      name: name.trim(),
+      email: email.trim() || undefined,
+      gstin: gstin.trim() || undefined
+    });
     setSaving(false);
     if (result.success) {
-      updateUser({ name: name.trim(), email: email.trim() || null });
+      updateUser({
+        name: name.trim(),
+        email: email.trim() || null,
+        gstin: gstin.trim() || null
+      });
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
     } else {
@@ -112,6 +121,25 @@ export default function ProfilePage() {
             />
           </div>
           <p className="text-[11px] text-gray-400 mt-1">Used for order confirmation emails and GST invoices.</p>
+        </div>
+
+        {/* GSTIN */}
+        <div>
+          <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block">
+            GSTIN <span className="text-gray-400 font-normal">(optional)</span>
+          </label>
+          <div className="relative">
+            <CheckCircle2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <input
+              type="text"
+              value={gstin}
+              onChange={(e) => { setGstin(e.target.value.toUpperCase()); setError(""); }}
+              placeholder="e.g. 07AAAAA0000A1Z5"
+              maxLength={15}
+              className={`${inputCls} pl-10`}
+            />
+          </div>
+          <p className="text-[11px] text-gray-400 mt-1">Add GSTIN to get GST-enabled invoices.</p>
         </div>
 
         {/* Error */}

@@ -24,6 +24,8 @@ class OrderResource extends JsonResource
             return [
                 'id' => $this->id,
                 'uuid' => $this->order->uuid,
+                'order_number' => $this->order->order_number,
+                'invoice_number' => $this->order->invoice_number,
                 'email' => $this->order->email,
                 'status' => $this->order->status,
                 'payment_method' => $this->order->payment_method,
@@ -33,6 +35,7 @@ class OrderResource extends JsonResource
                 // Customer information
                 'billing_name' => $this->order->billing_name,
                 'billing_phone' => $this->order->billing_phone,
+                'customer_gstin' => $this->order->user?->gstin,
 
                 // Shipping information
                 'shipping_name' => $this->order->shipping_name,
@@ -44,6 +47,7 @@ class OrderResource extends JsonResource
                 'shipping_zip' => $this->order->shipping_zip,
                 'shipping_country' => $this->order->shipping_country,
                 'shipping_phone' => $this->order->shipping_phone,
+                'tracking_code' => $this->order->tracking_code,
                 'order_note' => $this->order->order_note,
                 'promo_line' => new PromoLineResource($this->whenLoaded('promoLine')),
 
@@ -94,6 +98,8 @@ class OrderResource extends JsonResource
             return [
                 'id' => $this->id,
                 'uuid' => $this->uuid,
+                'order_number' => $this->order_number,
+                'invoice_number' => $this->invoice_number,
                 'email' => $this->email,
                 'status' => $this->status,
                 'payment_method' => $this->payment_method,
@@ -105,12 +111,14 @@ class OrderResource extends JsonResource
                 'delivery_charge' => $this->delivery_charge,
                 'handling_charges' => $this->handling_charges,
                 'per_store_drop_off_fee' => $this->per_store_drop_off_fee,
+                'total_gst' => $this->total_gst,
                 'total_payable' => $this->total_payable,
                 'final_total' => $this->final_total,
 
                 // Customer information
                 'billing_name' => $this->billing_name,
                 'billing_phone' => $this->billing_phone,
+                'customer_gstin' => $this->user?->gstin,
 
                 // Shipping information
                 'shipping_name' => $this->shipping_name,
@@ -122,8 +130,48 @@ class OrderResource extends JsonResource
                 'shipping_zip' => $this->shipping_zip,
                 'shipping_country' => $this->shipping_country,
                 'shipping_phone' => $this->shipping_phone,
+                'tracking_code' => $this->tracking_code,
                 'order_note' => $this['order_note'],
+                'admin_note' => $this->admin_note,
                 'promo_line' => new PromoLineResource($this->whenLoaded('promoLine')),
+                'payment_transactions' => $this->whenLoaded('paymentTransactions', function () {
+                    return $this->paymentTransactions
+                        ->sortByDesc('updated_at')
+                        ->values()
+                        ->map(function ($transaction) {
+                            $latestSettlement = $transaction->relationLoaded('settlements')
+                                ? $transaction->settlements->sortByDesc('updated_at')->first()
+                                : null;
+
+                            return [
+                                'id' => $transaction->id,
+                                'transaction_id' => $transaction->transaction_id,
+                                'display_transaction_id' => $transaction->display_transaction_id,
+                                'payment_method' => $transaction->payment_method,
+                                'payment_status' => $transaction->payment_status,
+                                'message' => $transaction->message,
+                                'amount' => $transaction->amount,
+                                'currency' => $transaction->currency,
+                                'gateway_event' => data_get($transaction->payment_details, 'event'),
+                                'failure_code' => data_get($transaction->payment_details, 'failure.error_code'),
+                                'failure_description' => data_get($transaction->payment_details, 'failure.error_description'),
+                                'failure_reason' => data_get($transaction->payment_details, 'failure.error_reason'),
+                                'failure_source' => data_get($transaction->payment_details, 'failure.error_source'),
+                                'failure_step' => data_get($transaction->payment_details, 'failure.error_step'),
+                                'payment_details' => is_array($transaction->payment_details) ? $transaction->payment_details : [],
+                                'latest_settlement' => $latestSettlement ? [
+                                    'status' => $latestSettlement->status,
+                                    'event_name' => $latestSettlement->event_name,
+                                    'settlement_reference' => $latestSettlement->settlement_reference,
+                                    'utr' => $latestSettlement->utr,
+                                    'settled_at' => $latestSettlement->settled_at?->format('M d, Y h:i A'),
+                                    'updated_at' => $latestSettlement->updated_at?->format('M d, Y h:i A'),
+                                ] : null,
+                                'updated_at' => $transaction->updated_at?->format('M d, Y h:i A'),
+                            ];
+                        })
+                        ->all();
+                }),
 
                 // Items
                 'items' => $this->whenLoaded('items', function () {

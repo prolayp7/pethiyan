@@ -5,22 +5,21 @@ export const API_BASE =
 const LS_TOKEN_KEY = "auth_token";
 const AUTH_SESSION_MARKER = "__http_only_session__";
 
-function getApiErrorMessage(payload: {
-  message?: string;
-  data?: {
-    error?: string;
-    errors?: Record<string, string[]>;
-  };
-} | null | undefined): string | undefined {
+function getApiErrorMessage(payload: any): string | undefined {
   if (!payload) return undefined;
 
-  if (payload.data?.error) return payload.data.error;
+  // 1. Check for explicit error string
+  if (payload.data?.error) return String(payload.data.error);
+  if (payload.error) return String(payload.error);
 
-  const firstValidationError = payload.data?.errors
-    ? Object.values(payload.data.errors).flat().find(Boolean)
-    : undefined;
+  // 2. Check for validation errors (Laravel default or custom)
+  const errors = payload.errors || payload.data?.errors;
+  if (errors && typeof errors === "object") {
+    const firstError = Object.values(errors).flat().find(Boolean);
+    if (firstError) return String(firstError);
+  }
 
-  if (firstValidationError) return firstValidationError;
+  // 3. Fallback to message
   return payload.message;
 }
 
@@ -28,6 +27,7 @@ function getApiErrorMessage(payload: {
 
 export interface ApiCategory {
   id: number;
+  sort_order?: number;
   name: string;   // mapped from title for backwards compat
   title: string;
   slug: string;
@@ -136,6 +136,7 @@ export interface ApiAddress {
   id: number;
   name: string;
   phone: string;
+  company_name?: string;
   address_line1: string;
   address_line2?: string;
   city: string;
@@ -302,6 +303,8 @@ export interface ApiWebSettings {
   metaKeywords: string;
   googleSiteVerification: string;
   bingSiteVerification: string;
+  footerSeoEnabled: boolean;
+  footerSeoHomepageOnly: boolean;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -375,7 +378,7 @@ async function apiAuth<T>(
       credentials: "include",
       ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
     });
-    if (!res.ok) return null;
+    // Always parse JSON — error responses (4xx/5xx) carry a message body we need to show
     return res.json() as Promise<T>;
   } catch {
     return null;
@@ -542,7 +545,7 @@ export async function getProducts(params?: Record<string, string>): Promise<Real
   try {
     const res = await fetch(`${API_BASE}/api/products${query}`, {
       headers: { Accept: "application/json" },
-      next: { revalidate: 60, tags: ["products"] },
+      next: { revalidate: 60 },
     } as RequestInit);
     if (!res.ok) return [];
     const json = await res.json();
@@ -559,11 +562,9 @@ export async function getProducts(params?: Record<string, string>): Promise<Real
 
 export async function getFeaturedProducts(): Promise<RealApiProduct[]> {
   try {
-    // Use fetch directly so Next.js ISR cache + tags work on the server.
-    // In the browser the `next` option is ignored and data is fetched fresh.
     const res = await fetch(`${API_BASE}/api/products/featured`, {
       headers: { Accept: "application/json" },
-      next: { revalidate: 60, tags: ["featured-products"] },
+      next: { revalidate: 60 },
     } as RequestInit);
     if (!res.ok) return [];
     const json = await res.json();
@@ -580,7 +581,7 @@ export async function getNewArrivals(days = 30, limit = 40): Promise<RealApiProd
       `${API_BASE}/api/products/new-arrivals?days=${days}&limit=${limit}`,
       {
         headers: { Accept: "application/json" },
-        next: { revalidate: 60, tags: ["new-arrivals"] },
+        next: { revalidate: 60 },
       } as RequestInit
     );
     if (!res.ok) return [];
@@ -667,7 +668,14 @@ function normaliseCats(raw: unknown[]): ApiCategory[] {
   return raw.map((c: unknown) => {
     const cat = c as Record<string, unknown>;
     const title = (cat.title ?? cat.name ?? "") as string;
-    return { ...cat, title, name: title } as ApiCategory;
+    const sortOrder = Number(cat.sort_order);
+
+    return {
+      ...cat,
+      title,
+      name: title,
+      sort_order: Number.isFinite(sortOrder) ? sortOrder : undefined,
+    } as ApiCategory;
   });
 }
 
@@ -688,7 +696,7 @@ export async function getCategories(params?: Record<string, string>): Promise<Ap
   try {
     const res = await fetch(`${API_BASE}/api/categories${query}`, {
       headers: { Accept: "application/json" },
-      next: { revalidate: 300, tags: ["categories"] },
+      next: { revalidate: 30 },
     } as RequestInit);
     if (!res.ok) return [];
     return extractCatArray(await res.json());
@@ -701,7 +709,7 @@ export async function getSubCategories(): Promise<ApiCategory[]> {
   try {
     const res = await fetch(`${API_BASE}/api/categories/sub-categories`, {
       headers: { Accept: "application/json" },
-      next: { revalidate: 300, tags: ["categories"] },
+      next: { revalidate: 30 },
     } as RequestInit);
     if (!res.ok) return [];
     return extractCatArray(await res.json());
@@ -897,14 +905,18 @@ export async function getProfile(): Promise<import("@/context/AuthContext").Auth
 }
 
 export async function updateProfile(
-  data: Partial<{ name: string; email: string }>
+  data: Partial<{ name: string; email: string; gstin: string }>
 ): Promise<{ success: boolean; message?: string }> {
   const res = await apiAuth<{ success: boolean; message?: string }>(
     "/api/user/profile",
     "POST",
     data
   );
-  return res ?? { success: false };
+  if (!res) return { success: false, message: "Request failed" };
+  return {
+    success: res.success ?? false,
+    message: getApiErrorMessage(res as any) ?? res.message,
+  };
 }
 
 export async function logoutUserSession(): Promise<void> {
@@ -923,6 +935,7 @@ export async function getAddresses(): Promise<ApiAddress[]> {
     id: Number(addr.id),
     name: String(addr.name ?? ""),
     phone: String(addr.phone ?? addr.mobile ?? ""),
+    company_name: String(addr.company_name ?? ""),
     address_line1: String(addr.address_line1 ?? ""),
     address_line2: (addr.address_line2 as string | undefined) ?? "",
     city: String(addr.city ?? ""),
@@ -971,6 +984,7 @@ export async function createAddressDetailed(
   // Backend expects mobile/zipcode/country/country_code.
   const payload = {
     name: data.name,
+    company_name: data.company_name,
     address_line1: data.address_line1,
     address_line2: data.address_line2,
     city: data.city,
@@ -1007,6 +1021,7 @@ export async function createAddressDetailed(
           id: Number(raw.id),
           name: String(raw.name ?? ""),
           phone: String(raw.phone ?? raw.mobile ?? ""),
+          company_name: String(raw.company_name ?? ""),
           address_line1: String(raw.address_line1 ?? ""),
           address_line2: (raw.address_line2 as string | undefined) ?? "",
           city: String(raw.city ?? ""),
@@ -1037,6 +1052,7 @@ export async function updateAddress(
 ): Promise<ApiAddress | null> {
   const payload = {
     ...(data.name !== undefined ? { name: data.name } : {}),
+    ...(data.company_name !== undefined ? { company_name: data.company_name } : {}),
     ...(data.address_line1 !== undefined ? { address_line1: data.address_line1 } : {}),
     ...(data.address_line2 !== undefined ? { address_line2: data.address_line2 } : {}),
     ...(data.city !== undefined ? { city: data.city } : {}),
@@ -1054,6 +1070,7 @@ export async function updateAddress(
       id: Number(raw.id),
       name: String(raw.name ?? ""),
       phone: String(raw.phone ?? raw.mobile ?? ""),
+      company_name: String(raw.company_name ?? ""),
       address_line1: String(raw.address_line1 ?? ""),
       address_line2: (raw.address_line2 as string | undefined) ?? "",
       city: String(raw.city ?? ""),
@@ -1143,12 +1160,38 @@ export async function applyCoupon(
   code: string,
   cartTotal: number
 ): Promise<ApiCouponResult> {
-  const res = await apiFetch<ApiCouponResult>("/api/coupons/apply", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ code, cart_total: cartTotal }),
-  });
-  return res ?? { valid: false, code, discount_type: "fixed", discount_value: 0, discount_amount: 0, message: "Invalid coupon" };
+  const INVALID: ApiCouponResult = { valid: false, code, discount_type: "fixed", discount_value: 0, discount_amount: 0, message: "Invalid coupon" };
+  type ValidateRaw = {
+    success: boolean;
+    message: string;
+    data: {
+      promo_code: string;
+      discount: number;
+      promo_details: { discount_type: string; discount_amount: string | number } | null;
+    };
+  };
+  const params = new URLSearchParams({ promo_code: code, cart_amount: String(cartTotal) });
+  const raw = await apiAuth<ValidateRaw>(`/api/user/promos/validate?${params}`);
+  if (!raw) return { ...INVALID, message: "Could not reach server" };
+  if (!raw.success) return { ...INVALID, message: raw.message };
+
+  // Map backend discount_type to frontend union
+  const typeMap: Record<string, ApiCouponResult["discount_type"]> = {
+    percent: "percentage",
+    flat: "fixed",
+    free_shipping: "free_shipping",
+  };
+  const discountType = typeMap[raw.data?.promo_details?.discount_type ?? ""] ?? "fixed";
+  const discountValue = Number(raw.data?.promo_details?.discount_amount ?? 0);
+
+  return {
+    valid: true,
+    code,
+    discount_type: discountType,
+    discount_value: discountValue,
+    discount_amount: raw.data?.discount ?? 0,
+    message: raw.message,
+  };
 }
 
 export async function getPromoPopup(): Promise<ApiPromoPopupData | null> {
@@ -1301,7 +1344,7 @@ export async function getSystemSettings(): Promise<ApiSystemSettings | null> {
   // Use fetch directly (not apiFetch) so Next.js ISR caching works server-side.
   const res = await fetch(`${API_BASE}/api/settings/system`, {
     headers: { Accept: "application/json" },
-    next: { revalidate: 3600, tags: ["site-settings"] },
+    cache: "no-store",
   } as RequestInit).then((r) => r.json()).catch(() => null) as {
     success?: boolean;
     data?: { value?: Record<string, unknown> } | Record<string, unknown>;
@@ -1330,7 +1373,7 @@ export async function getSystemSettings(): Promise<ApiSystemSettings | null> {
 export async function getWebSettings(): Promise<ApiWebSettings | null> {
   const res = await fetch(`${API_BASE}/api/settings/web`, {
     headers: { Accept: "application/json" },
-    next: { revalidate: 3600, tags: ["web-settings"] },
+    cache: "no-store",
   } as RequestInit).then((r) => r.json()).catch(() => null) as {
     success?: boolean;
     data?: { value?: Record<string, unknown> } | Record<string, unknown>;
@@ -1342,6 +1385,7 @@ export async function getWebSettings(): Promise<ApiWebSettings | null> {
   if (!s) return null;
 
   const str = (key: string) => (typeof s[key] === "string" ? (s[key] as string).trim() : "");
+  const bool = (key: string, fallback: boolean) => (key in s ? Boolean(s[key]) : fallback);
 
   return {
     googleAnalyticsId:   str("googleAnalyticsId"),
@@ -1352,6 +1396,8 @@ export async function getWebSettings(): Promise<ApiWebSettings | null> {
     metaKeywords:        str("metaKeywords"),
     googleSiteVerification: str("googleSiteVerification"),
     bingSiteVerification:   str("bingSiteVerification"),
+    footerSeoEnabled:       bool("footerSeoEnabled", true),
+    footerSeoHomepageOnly:  bool("footerSeoHomepageOnly", false),
   };
 }
 
@@ -1366,7 +1412,7 @@ export interface ApiSeoAdvancedSettings {
 export async function getSeoAdvancedSettings(): Promise<ApiSeoAdvancedSettings | null> {
   const res = await fetch(`${API_BASE}/api/settings/seo-advanced`, {
     headers: { Accept: "application/json" },
-    next: { revalidate: 3600, tags: ["seo-advanced-settings"] },
+    next: { revalidate: 600 },
   } as RequestInit).then((r) => r.json()).catch(() => null) as {
     success?: boolean;
     data?: Record<string, unknown>;
@@ -1812,7 +1858,7 @@ export async function getHeroSection(): Promise<ApiHeroSection | null> {
   try {
     const res = await fetch(`${API_BASE}/api/hero-section`, {
       headers: { Accept: "application/json" },
-      next: { tags: ["hero-section"], revalidate: 3600 },
+      next: { revalidate: 300 },
     });
     if (!res.ok) return null;
     return res.json() as Promise<ApiHeroSection>;
@@ -1845,7 +1891,7 @@ export async function getVideoStorySection(): Promise<ApiVideoStorySection | nul
   try {
     const res = await fetch(`${API_BASE}/api/video-story-section`, {
       headers: { Accept: "application/json" },
-      next: { tags: ["video-story-section"], revalidate: 3600 },
+      next: { revalidate: 300 },
     });
     if (!res.ok) return null;
     return res.json() as Promise<ApiVideoStorySection>;
@@ -1923,7 +1969,7 @@ export async function getHeaderMenu(): Promise<ApiHeaderMenu | null> {
   try {
     const res = await fetch(`${API_BASE}/api/menus/header_main`, {
       headers: { Accept: "application/json" },
-      next: { tags: ["header-menu"], revalidate: 3600 },
+      cache: "no-store",
     });
     if (!res.ok) return null;
     const json = await res.json();
@@ -1948,7 +1994,7 @@ export async function getNewsletterSection(): Promise<ApiNewsletterSection | nul
   try {
     const res = await fetch(`${API_BASE}/api/newsletter-section`, {
       headers: { Accept: "application/json" },
-      next: { tags: ["newsletter-section"], revalidate: 3600 },
+      next: { revalidate: 300 },
     });
     if (!res.ok) return null;
     return res.json() as Promise<ApiNewsletterSection>;
@@ -1967,7 +2013,7 @@ export async function getProductsByCategory(categorySlug: string): Promise<RealA
       `${API_BASE}/api/products?categories=${encodeURIComponent(categorySlug)}&per_page=100&include_child_categories=1`,
       {
         headers: { Accept: "application/json" },
-        next: { revalidate: 300, tags: ["products", `category-${categorySlug}`] },
+        next: { revalidate: 60 },
       } as RequestInit
     );
     if (!res.ok) return [];
@@ -2079,5 +2125,75 @@ export async function trackSearch(
     });
   } catch {
     // fire-and-forget — never block the UI on tracking
+  }
+}
+
+// ─── Your Items: Saved for Later (wishlist) ───────────────────────────────────
+
+/**
+ * Returns wishlist products as RealApiProduct[] for the "Saved for Later" tab.
+ * Extracts slugs from wishlist items then fetches full product data.
+ */
+export async function getSavedForLaterProducts(): Promise<RealApiProduct[]> {
+  const token = getToken();
+  if (!token) return [];
+
+  try {
+    const res = await fetch(`${API_BASE}/api/user/wishlists`, {
+      headers: { Accept: "application/json", ...getAuthHeaders(token) },
+      cache: "no-store",
+      credentials: "include",
+    });
+    if (!res.ok) return [];
+    const body = (await res.json()) as {
+      success?: boolean;
+      data?: { data?: Array<{ items?: Array<{ product?: { slug?: string } | null }> }> } | Array<{ items?: Array<{ product?: { slug?: string } | null }> }>;
+    };
+    if (!body.success || !body.data) return [];
+
+    const wishlistRows = Array.isArray(body.data) ? body.data : (body.data.data ?? []);
+    const slugs = wishlistRows
+      .flatMap((w) => w.items ?? [])
+      .map((item) => item.product?.slug)
+      .filter((s): s is string => Boolean(s));
+
+    if (slugs.length === 0) return [];
+
+    const params = new URLSearchParams({ slugs: [...new Set(slugs)].join(","), per_page: "40" });
+    const prodRes = await fetch(`${API_BASE}/api/products?${params}`, {
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+    });
+    if (!prodRes.ok) return [];
+    const prodJson = (await prodRes.json()) as { data?: { data?: RealApiProduct[] } | RealApiProduct[] };
+    const raw = (prodJson.data as { data?: RealApiProduct[] })?.data ?? (prodJson.data as RealApiProduct[]) ?? [];
+    return Array.isArray(raw) ? raw : [];
+  } catch {
+    return [];
+  }
+}
+
+// ─── Your Items: Buy it Again (delivered orders) ──────────────────────────────
+
+/**
+ * Returns products from the user's past delivered orders as RealApiProduct[].
+ * Backed by GET /api/buy-again (requires auth).
+ */
+export async function getBuyAgainProducts(): Promise<RealApiProduct[]> {
+  const token = getToken();
+  if (!token) return [];
+
+  try {
+    const res = await fetch(`${API_BASE}/api/buy-again`, {
+      headers: { Accept: "application/json", ...getAuthHeaders(token) },
+      cache: "no-store",
+      credentials: "include",
+    });
+    if (!res.ok) return [];
+    const body = (await res.json()) as { success?: boolean; data?: { data?: RealApiProduct[] } };
+    if (!body.success || !body.data?.data) return [];
+    return Array.isArray(body.data.data) ? body.data.data : [];
+  } catch {
+    return [];
   }
 }

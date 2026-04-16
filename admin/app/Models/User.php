@@ -33,6 +33,7 @@ class User extends Authenticatable implements HasMedia
         'name',
         'email',
         'mobile',
+        'company_name',
         'referral_code',
         'friends_code',
         'reward_points',
@@ -43,6 +44,7 @@ class User extends Authenticatable implements HasMedia
         'iso_2',
         'country',
         'mobile_verified_at',
+        'gstin',
     ];
 
     protected function casts(): array
@@ -51,6 +53,7 @@ class User extends Authenticatable implements HasMedia
             'id' => 'integer',
             'name' => 'string',
             'mobile' => 'string',
+            'company_name' => 'string',
             'referral_code' => 'string',
             'friends_code' => 'string',
             'reward_points' => 'integer',
@@ -62,6 +65,7 @@ class User extends Authenticatable implements HasMedia
             'access_panel' => GuardNameEnum::class,
             'iso_2' => 'string',
             'country' => 'string',
+            'gstin' => 'string',
         ];
     }
 
