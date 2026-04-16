@@ -193,8 +193,21 @@ interface CategoryGridProps {
   categories?: ApiCategory[];
 }
 
+function sortCategoriesByAdminOrder(categories: ApiCategory[]): ApiCategory[] {
+  return [...categories].sort((left, right) => {
+    const leftOrder = typeof left.sort_order === "number" ? left.sort_order : Number.MAX_SAFE_INTEGER;
+    const rightOrder = typeof right.sort_order === "number" ? right.sort_order : Number.MAX_SAFE_INTEGER;
+
+    if (leftOrder !== rightOrder) {
+      return leftOrder - rightOrder;
+    }
+
+    return left.name.localeCompare(right.name);
+  });
+}
+
 export default function CategoryGrid({ categories = [] }: CategoryGridProps) {
-  const apiParents = categories.filter((c) => !c.parent_id).slice(0, 6);
+  const apiParents = sortCategoriesByAdminOrder(categories.filter((c) => !c.parent_id)).slice(0, 6);
   const hasApiData = apiParents.length > 0;
 
   const count = hasApiData ? apiParents.length : staticCategories.length;

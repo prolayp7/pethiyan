@@ -27,6 +27,7 @@ function getApiErrorMessage(payload: any): string | undefined {
 
 export interface ApiCategory {
   id: number;
+  sort_order?: number;
   name: string;   // mapped from title for backwards compat
   title: string;
   slug: string;
@@ -667,7 +668,14 @@ function normaliseCats(raw: unknown[]): ApiCategory[] {
   return raw.map((c: unknown) => {
     const cat = c as Record<string, unknown>;
     const title = (cat.title ?? cat.name ?? "") as string;
-    return { ...cat, title, name: title } as ApiCategory;
+    const sortOrder = Number(cat.sort_order);
+
+    return {
+      ...cat,
+      title,
+      name: title,
+      sort_order: Number.isFinite(sortOrder) ? sortOrder : undefined,
+    } as ApiCategory;
   });
 }
 
