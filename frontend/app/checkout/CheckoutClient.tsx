@@ -101,7 +101,7 @@ type Step = 1 | 2 | 3;
 type PaymentMethod = "razorpay" | "easepay" | "cod";
 
 const BLANK_ADDRESS = {
-  name: "", phone: "", address_line1: "", address_line2: "",
+  name: "", phone: "", company_name: "", address_line1: "", address_line2: "",
   city: "", state: "", pincode: "",
 };
 
@@ -203,6 +203,11 @@ function AddressForm({ value, onChange, onSave, onCancel, saving, errorMessage, 
             onChange={(e) => onChange({ ...value, phone: e.target.value.replace(/\D/g, "").slice(0, 10) })}
             inputMode="numeric" />
         </div>
+      </div>
+
+      <div>
+        <label className="text-xs font-semibold text-gray-500 mb-1 block">Company Name</label>
+        <input className={inputCls} placeholder="Company / Business name (optional)" value={value.company_name} onChange={set("company_name")} />
       </div>
 
       <div>
@@ -482,6 +487,7 @@ export default function CheckoutClient() {
     setNewAddress({
       name: addr.name,
       phone: addr.phone,
+      company_name: addr.company_name ?? "",
       address_line1: addr.address_line1,
       address_line2: addr.address_line2 ?? "",
       city: addr.city,
@@ -503,6 +509,7 @@ export default function CheckoutClient() {
       const updated = await updateAddress(editingAddressId, {
         name: newAddress.name,
         phone: newAddress.phone,
+        company_name: newAddress.company_name,
         address_line1: newAddress.address_line1,
         address_line2: newAddress.address_line2,
         city: newAddress.city,
@@ -528,6 +535,7 @@ export default function CheckoutClient() {
     const result = await createAddressDetailed({
       name: newAddress.name,
       phone: newAddress.phone,
+      company_name: newAddress.company_name,
       address_line1: newAddress.address_line1,
       address_line2: newAddress.address_line2,
       city: newAddress.city,
@@ -891,6 +899,9 @@ export default function CheckoutClient() {
                                   </span>
                                 )}
                               </div>
+                              {addr.company_name && (
+                                <p className="text-sm text-gray-500 mt-0.5">{addr.company_name}</p>
+                              )}
                               <p className="text-sm text-gray-500 mt-0.5">
                                 {addr.address_line1}
                                 {addr.address_line2 ? `, ${addr.address_line2}` : ""}
@@ -969,6 +980,7 @@ export default function CheckoutClient() {
                 {selectedAddress && (
                   <div className="mb-4 p-3 rounded-xl bg-gray-50 border border-gray-100 text-xs text-gray-600">
                     <span className="font-semibold text-(--color-secondary)">{selectedAddress.name}</span>
+                    {selectedAddress.company_name ? <><span>{" · "}</span>{selectedAddress.company_name}</> : null}
                     {" · "}{selectedAddress.address_line1}, {selectedAddress.city}, {selectedAddress.pincode}
                   </div>
                 )}

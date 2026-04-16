@@ -135,6 +135,7 @@ export interface ApiAddress {
   id: number;
   name: string;
   phone: string;
+  company_name?: string;
   address_line1: string;
   address_line2?: string;
   city: string;
@@ -926,6 +927,7 @@ export async function getAddresses(): Promise<ApiAddress[]> {
     id: Number(addr.id),
     name: String(addr.name ?? ""),
     phone: String(addr.phone ?? addr.mobile ?? ""),
+    company_name: String(addr.company_name ?? ""),
     address_line1: String(addr.address_line1 ?? ""),
     address_line2: (addr.address_line2 as string | undefined) ?? "",
     city: String(addr.city ?? ""),
@@ -974,6 +976,7 @@ export async function createAddressDetailed(
   // Backend expects mobile/zipcode/country/country_code.
   const payload = {
     name: data.name,
+    company_name: data.company_name,
     address_line1: data.address_line1,
     address_line2: data.address_line2,
     city: data.city,
@@ -1010,6 +1013,7 @@ export async function createAddressDetailed(
           id: Number(raw.id),
           name: String(raw.name ?? ""),
           phone: String(raw.phone ?? raw.mobile ?? ""),
+          company_name: String(raw.company_name ?? ""),
           address_line1: String(raw.address_line1 ?? ""),
           address_line2: (raw.address_line2 as string | undefined) ?? "",
           city: String(raw.city ?? ""),
@@ -1040,6 +1044,7 @@ export async function updateAddress(
 ): Promise<ApiAddress | null> {
   const payload = {
     ...(data.name !== undefined ? { name: data.name } : {}),
+    ...(data.company_name !== undefined ? { company_name: data.company_name } : {}),
     ...(data.address_line1 !== undefined ? { address_line1: data.address_line1 } : {}),
     ...(data.address_line2 !== undefined ? { address_line2: data.address_line2 } : {}),
     ...(data.city !== undefined ? { city: data.city } : {}),
@@ -1057,6 +1062,7 @@ export async function updateAddress(
       id: Number(raw.id),
       name: String(raw.name ?? ""),
       phone: String(raw.phone ?? raw.mobile ?? ""),
+      company_name: String(raw.company_name ?? ""),
       address_line1: String(raw.address_line1 ?? ""),
       address_line2: (raw.address_line2 as string | undefined) ?? "",
       city: String(raw.city ?? ""),
