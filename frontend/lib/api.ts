@@ -5,15 +5,22 @@ export const API_BASE =
 const LS_TOKEN_KEY = "auth_token";
 const AUTH_SESSION_MARKER = "__http_only_session__";
 
-function getApiErrorMessage(payload: any): string | undefined {
+function getApiErrorMessage(payload: unknown): string | undefined {
   if (!payload) return undefined;
 
+  const record = typeof payload === "object" ? (payload as Record<string, unknown>) : null;
+  if (!record) return undefined;
+
   // 1. Check for explicit error string
-  if (payload.data?.error) return String(payload.data.error);
-  if (payload.error) return String(payload.error);
+  const data = typeof record.data === "object" && record.data !== null
+    ? (record.data as Record<string, unknown>)
+    : null;
+
+  if (data?.error) return String(data.error);
+  if (record.error) return String(record.error);
 
   // 2. Check for validation errors (Laravel default or custom)
-  const errors = payload.errors || payload.data?.errors;
+  const errors = record.errors ?? data?.errors;
   if (errors && typeof errors === "object") {
     const firstError = Object.values(errors).flat().find(Boolean);
     if (firstError) return String(firstError);
@@ -151,6 +158,10 @@ export interface ApiAddressMutationResult {
   message?: string;
   errors?: Record<string, string[]>;
 }
+
+type ApiAddressInput = Omit<ApiAddress, "id" | "is_default"> & {
+  gstin?: string;
+};
 
 export interface ApiOrder {
   id: number;
@@ -303,8 +314,53 @@ export interface ApiWebSettings {
   metaKeywords: string;
   googleSiteVerification: string;
   bingSiteVerification: string;
-  footerSeoEnabled: boolean;
-  footerSeoHomepageOnly: boolean;
+}
+
+export interface ApiFooterLink {
+  id?: number;
+  label: string;
+  href: string;
+  target?: string;
+}
+
+export interface ApiFooterMenu {
+  id: number;
+  name: string;
+  slug: string;
+  title: string;
+  links: ApiFooterLink[];
+}
+
+export interface ApiFooterSocialLink {
+  platform: string;
+  label: string;
+  url: string;
+}
+
+export interface ApiFooterData {
+  brand: {
+    appName: string;
+    logo: string | null;
+    footerLogo: string | null;
+    address: string;
+    supportEmail: string;
+    supportNumber: string;
+    socialLinks: ApiFooterSocialLink[];
+  };
+  menus: {
+    navigation: ApiFooterMenu[];
+    legal: ApiFooterMenu | null;
+  };
+  footerSeo: {
+    enabled: boolean;
+    homepageOnly: boolean;
+    title: string;
+    introHtml: string;
+    sections: Array<{
+      title: string;
+      content: string;
+    }>;
+  };
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -905,7 +961,7 @@ export async function getProfile(): Promise<import("@/context/AuthContext").Auth
 }
 
 export async function updateProfile(
-  data: Partial<{ name: string; email: string; gstin: string }>
+  data: Partial<{ name: string; email: string; company_name: string; gstin: string }>
 ): Promise<{ success: boolean; message?: string }> {
   const res = await apiAuth<{ success: boolean; message?: string }>(
     "/api/user/profile",
@@ -915,7 +971,7 @@ export async function updateProfile(
   if (!res) return { success: false, message: "Request failed" };
   return {
     success: res.success ?? false,
-    message: getApiErrorMessage(res as any) ?? res.message,
+    message: getApiErrorMessage(res) ?? res.message,
   };
 }
 
@@ -970,14 +1026,14 @@ export async function getAddresses(): Promise<ApiAddress[]> {
 }
 
 export async function createAddress(
-  data: Omit<ApiAddress, "id" | "is_default">
+  data: ApiAddressInput
 ): Promise<ApiAddress | null> {
   const result = await createAddressDetailed(data);
   return result.success ? result.address ?? null : null;
 }
 
 export async function createAddressDetailed(
-  data: Omit<ApiAddress, "id" | "is_default">
+  data: ApiAddressInput
 ): Promise<ApiAddressMutationResult> {
   const token = getToken();
 
@@ -991,6 +1047,7 @@ export async function createAddressDetailed(
     state: data.state,
     zipcode: data.pincode,
     mobile: data.phone,
+    gstin: data.gstin,
     country: "India",
     country_code: "IN",
     address_type: "home",
@@ -1050,6 +1107,14 @@ export async function updateAddress(
   id: number,
   data: Partial<Omit<ApiAddress, "id">>
 ): Promise<ApiAddress | null> {
+  const result = await updateAddressDetailed(id, data);
+  return result.success ? result.address ?? null : null;
+}
+
+export async function updateAddressDetailed(
+  id: number,
+  data: Partial<ApiAddressInput>
+): Promise<ApiAddressMutationResult> {
   const payload = {
     ...(data.name !== undefined ? { name: data.name } : {}),
     ...(data.company_name !== undefined ? { company_name: data.company_name } : {}),
@@ -1059,27 +1124,61 @@ export async function updateAddress(
     ...(data.state !== undefined ? { state: data.state } : {}),
     ...(data.pincode !== undefined ? { zipcode: data.pincode } : {}),
     ...(data.phone !== undefined ? { mobile: data.phone } : {}),
+    ...(data.gstin !== undefined ? { gstin: data.gstin } : {}),
     ...(data.is_default !== undefined ? { is_default: data.is_default } : {}),
+    address_type: "home",
     country: "India",
     country_code: "IN",
   };
-  const res = await apiAuth<ApiResponse<Record<string, unknown>>>(`/api/addresses/${id}`, "PUT", payload);
-  if (res && "data" in res && res.data) {
-    const raw = res.data;
+
+  try {
+    const res = await fetch(`${API_BASE}/api/addresses/${id}`, {
+      method: "PUT",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        ...getAuthHeaders(getToken()),
+      },
+      cache: "no-store",
+      credentials: "include",
+      body: JSON.stringify(payload),
+    });
+
+    const json = (await res.json().catch(() => null)) as
+      | { success?: boolean; message?: string; data?: Record<string, unknown> | Record<string, string[]> }
+      | null;
+
+    if (res.ok && json?.data && !Array.isArray(json.data)) {
+      const raw = json.data as Record<string, unknown>;
+      return {
+        success: true,
+        address: {
+          id: Number(raw.id),
+          name: String(raw.name ?? ""),
+          phone: String(raw.phone ?? raw.mobile ?? ""),
+          company_name: String(raw.company_name ?? ""),
+          address_line1: String(raw.address_line1 ?? ""),
+          address_line2: (raw.address_line2 as string | undefined) ?? "",
+          city: String(raw.city ?? ""),
+          state: String(raw.state ?? ""),
+          pincode: String(raw.pincode ?? raw.zipcode ?? ""),
+          is_default: Boolean(raw.is_default),
+        },
+        message: json.message,
+      };
+    }
+
     return {
-      id: Number(raw.id),
-      name: String(raw.name ?? ""),
-      phone: String(raw.phone ?? raw.mobile ?? ""),
-      company_name: String(raw.company_name ?? ""),
-      address_line1: String(raw.address_line1 ?? ""),
-      address_line2: (raw.address_line2 as string | undefined) ?? "",
-      city: String(raw.city ?? ""),
-      state: String(raw.state ?? ""),
-      pincode: String(raw.pincode ?? raw.zipcode ?? ""),
-      is_default: Boolean(raw.is_default),
+      success: false,
+      message: json?.message ?? "Failed to update address.",
+      errors:
+        json?.data && !Array.isArray(json.data)
+          ? (json.data as Record<string, string[]>)
+          : undefined,
     };
+  } catch {
+    return { success: false, message: "Request failed. Please try again." };
   }
-  return null;
 }
 
 export async function deleteAddress(id: number): Promise<boolean> {
@@ -1385,7 +1484,6 @@ export async function getWebSettings(): Promise<ApiWebSettings | null> {
   if (!s) return null;
 
   const str = (key: string) => (typeof s[key] === "string" ? (s[key] as string).trim() : "");
-  const bool = (key: string, fallback: boolean) => (key in s ? Boolean(s[key]) : fallback);
 
   return {
     googleAnalyticsId:   str("googleAnalyticsId"),
@@ -1396,8 +1494,125 @@ export async function getWebSettings(): Promise<ApiWebSettings | null> {
     metaKeywords:        str("metaKeywords"),
     googleSiteVerification: str("googleSiteVerification"),
     bingSiteVerification:   str("bingSiteVerification"),
-    footerSeoEnabled:       bool("footerSeoEnabled", true),
-    footerSeoHomepageOnly:  bool("footerSeoHomepageOnly", false),
+  };
+}
+
+export async function getFooterData(): Promise<ApiFooterData | null> {
+  const res = await fetch(`${API_BASE}/api/settings/footer`, {
+    headers: { Accept: "application/json" },
+    cache: "no-store",
+  } as RequestInit).then((r) => r.json()).catch(() => null) as {
+    success?: boolean;
+    data?: Record<string, unknown>;
+  } | null;
+
+  if (!res?.success || !res.data) return null;
+
+  const data = res.data as Record<string, unknown>;
+  const brand = (data.brand ?? {}) as Record<string, unknown>;
+  const menus = (data.menus ?? {}) as Record<string, unknown>;
+  const footerSeo = (data.footerSeo ?? {}) as Record<string, unknown>;
+
+  const boolValue = (value: unknown, fallback: boolean) => {
+    if (typeof value === "boolean") return value;
+    if (typeof value === "number") return value !== 0;
+    if (typeof value === "string") {
+      const normalized = value.trim().toLowerCase();
+      if (["1", "true", "yes", "on"].includes(normalized)) return true;
+      if (["0", "false", "no", "off", ""].includes(normalized)) return false;
+    }
+    return value == null ? fallback : Boolean(value);
+  };
+
+  const mapLinks = (value: unknown): ApiFooterLink[] =>
+    Array.isArray(value)
+      ? value
+          .map((entry) => {
+            const item = entry as Record<string, unknown>;
+            const label = typeof item.label === "string" ? item.label.trim() : "";
+            const href = typeof item.href === "string" ? item.href.trim() : "";
+
+            if (!label || !href) return null;
+
+            return {
+              id: typeof item.id === "number" ? item.id : undefined,
+              label,
+              href,
+              target: typeof item.target === "string" ? item.target : undefined,
+            } satisfies ApiFooterLink;
+          })
+          .filter((item): item is ApiFooterLink => Boolean(item))
+      : [];
+
+  const mapMenu = (value: unknown): ApiFooterMenu | null => {
+    if (!value || typeof value !== "object") return null;
+
+    const item = value as Record<string, unknown>;
+    const title = typeof item.title === "string" ? item.title.trim() : "";
+    const name = typeof item.name === "string" ? item.name.trim() : title;
+    const slug = typeof item.slug === "string" ? item.slug.trim() : "";
+
+    if (!name || !slug) return null;
+
+    return {
+      id: typeof item.id === "number" ? item.id : 0,
+      name,
+      slug,
+      title: title || name,
+      links: mapLinks(item.links),
+    };
+  };
+
+  return {
+    brand: {
+      appName: typeof brand.appName === "string" && brand.appName.trim() ? brand.appName.trim() : "Pethiyan",
+      logo: normalizeMediaUrl(typeof brand.logo === "string" ? brand.logo : null),
+      footerLogo: normalizeMediaUrl(typeof brand.footerLogo === "string" ? brand.footerLogo : null),
+      address: typeof brand.address === "string" ? brand.address.trim() : "",
+      supportEmail: typeof brand.supportEmail === "string" ? brand.supportEmail.trim() : "",
+      supportNumber: typeof brand.supportNumber === "string" ? brand.supportNumber.trim() : "",
+      socialLinks: Array.isArray(brand.socialLinks)
+        ? brand.socialLinks
+            .map((entry) => {
+              const item = entry as Record<string, unknown>;
+              const url = typeof item.url === "string" ? item.url.trim() : "";
+              if (!url) return null;
+
+              return {
+                platform: typeof item.platform === "string" ? item.platform : "",
+                label: typeof item.label === "string" && item.label.trim() ? item.label.trim() : "Social",
+                url,
+              } satisfies ApiFooterSocialLink;
+            })
+            .filter((item): item is ApiFooterSocialLink => Boolean(item))
+        : [],
+    },
+    menus: {
+      navigation: Array.isArray(menus.navigation)
+        ? menus.navigation
+            .map((entry) => mapMenu(entry))
+            .filter((item): item is ApiFooterMenu => Boolean(item))
+        : [],
+      legal: mapMenu(menus.legal),
+    },
+    footerSeo: {
+      enabled: boolValue(footerSeo.enabled, true),
+      homepageOnly: boolValue(footerSeo.homepageOnly, false),
+      title: typeof footerSeo.title === "string" ? footerSeo.title.trim() : "",
+      introHtml: typeof footerSeo.introHtml === "string" ? footerSeo.introHtml.trim() : "",
+      sections: Array.isArray(footerSeo.sections)
+        ? footerSeo.sections
+            .map((entry) => {
+              const item = entry as Record<string, unknown>;
+              const title = typeof item.title === "string" ? item.title.trim() : "";
+              const content = typeof item.content === "string" ? item.content.trim() : "";
+              if (!title && !content) return null;
+
+              return { title, content };
+            })
+            .filter((item): item is { title: string; content: string } => Boolean(item))
+        : [],
+    },
   };
 }
 

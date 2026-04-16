@@ -11,11 +11,12 @@ interface OtherCategoriesProps {
   categories: ApiCategory[];
 }
 
-function sortRelatedCategories(currentCategory: ApiCategory, categories: ApiCategory[]) {
+function sortCategoriesByAdminOrder(categories: ApiCategory[]) {
   return [...categories].sort((a, b) => {
-    const aSameParent = a.parent_id === currentCategory.parent_id ? 1 : 0;
-    const bSameParent = b.parent_id === currentCategory.parent_id ? 1 : 0;
-    if (aSameParent !== bSameParent) return bSameParent - aSameParent;
+    const aOrder = typeof a.sort_order === "number" ? a.sort_order : Number.MAX_SAFE_INTEGER;
+    const bOrder = typeof b.sort_order === "number" ? b.sort_order : Number.MAX_SAFE_INTEGER;
+
+    if (aOrder !== bOrder) return aOrder - bOrder;
     return a.name.localeCompare(b.name);
   });
 }
@@ -54,8 +55,7 @@ export default function OtherCategories({
     el.scrollBy({ left: dir === "left" ? -200 : 200, behavior: "smooth" });
   };
 
-  const otherCategories = sortRelatedCategories(
-    currentCategory,
+  const otherCategories = sortCategoriesByAdminOrder(
     categories.filter((c) => c.slug !== currentCategory.slug),
   ).slice(0, 10);
 

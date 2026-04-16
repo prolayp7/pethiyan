@@ -13,7 +13,7 @@ import { useAuth } from "@/context/AuthContext";
 import LoginModal from "@/components/auth/LoginModal";
 import {
   getAddresses, getShippingRates, applyCoupon,
-  createAddressDetailed, updateAddress,
+  createAddressDetailed, updateAddressDetailed,
   createRazorpayOrder, verifyRazorpayPayment, createEasepayOrder, getPaymentSettings, syncCartToServer, createCheckout,
   type ApiAddress, type ApiShippingRate, type ApiCouponResult,
 } from "@/lib/api";
@@ -102,8 +102,39 @@ type PaymentMethod = "razorpay" | "easepay" | "cod";
 
 const BLANK_ADDRESS = {
   name: "", phone: "", company_name: "", address_line1: "", address_line2: "",
-  city: "", state: "", pincode: "",
+  city: "", state: "", pincode: "", gstin: "",
 };
+
+const COMPANY_NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9\s.,&()'/-]*$/;
+const GSTIN_PATTERN = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
+
+function normalizeCompanyName(value: string): string {
+  return value.replace(/\s+/g, " ").trim();
+}
+
+function normalizeGstin(value: string): string {
+  return value.replace(/[^0-9A-Za-z]/g, "").toUpperCase().slice(0, 15);
+}
+
+function validateBusinessFields(value: typeof BLANK_ADDRESS): Record<string, string[]> {
+  const errors: Record<string, string[]> = {};
+  const companyName = normalizeCompanyName(value.company_name);
+  const gstin = normalizeGstin(value.gstin);
+
+  if (companyName && !COMPANY_NAME_PATTERN.test(companyName)) {
+    errors.company_name = ["Company name contains invalid characters."];
+  }
+
+  if (gstin) {
+    if (gstin.length !== 15) {
+      errors.gstin = ["GSTIN must be exactly 15 characters long."];
+    } else if (!GSTIN_PATTERN.test(gstin)) {
+      errors.gstin = ["GSTIN format is invalid. Use a value like 07AAAAA0000A1Z5."];
+    }
+  }
+
+  return errors;
+}
 
 // ─── Step indicator ───────────────────────────────────────────────────────────
 
@@ -175,6 +206,11 @@ function AddressForm({ value, onChange, onSave, onCancel, saving, errorMessage, 
 
   const inputCls =
     "w-full px-3 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm outline-none focus:border-(--color-primary) focus:bg-white transition-colors";
+  const getInputCls = (field: keyof typeof BLANK_ADDRESS) => `${inputCls} ${fieldErrors?.[field]?.length ? "border-red-300 bg-red-50 focus:border-red-400" : ""}`;
+  const renderFieldError = (field: keyof typeof BLANK_ADDRESS) => {
+    const message = fieldErrors?.[field]?.[0];
+    return message ? <p className="mt-1 text-xs text-red-600">{message}</p> : null;
+  };
 
   return (
     <div className="space-y-3 mt-4 p-5 rounded-2xl border border-gray-200 bg-gray-50">
@@ -195,49 +231,70 @@ function AddressForm({ value, onChange, onSave, onCancel, saving, errorMessage, 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label className="text-xs font-semibold text-gray-500 mb-1 block">Full Name *</label>
-          <input className={inputCls} placeholder="e.g. Rahul Sharma" value={value.name} onChange={set("name")} />
+          <input className={getInputCls("name")} placeholder="e.g. Rahul Sharma" value={value.name} onChange={set("name")} />
+          {renderFieldError("name")}
         </div>
         <div>
           <label className="text-xs font-semibold text-gray-500 mb-1 block">Mobile Number *</label>
-          <input className={inputCls} placeholder="10-digit mobile" value={value.phone}
+          <input className={getInputCls("phone")} placeholder="10-digit mobile" value={value.phone}
             onChange={(e) => onChange({ ...value, phone: e.target.value.replace(/\D/g, "").slice(0, 10) })}
             inputMode="numeric" />
+          {renderFieldError("phone")}
         </div>
       </div>
 
       <div>
         <label className="text-xs font-semibold text-gray-500 mb-1 block">Company Name</label>
-        <input className={inputCls} placeholder="Company / Business name (optional)" value={value.company_name} onChange={set("company_name")} />
+        <input className={getInputCls("company_name")} placeholder="Company / Business name (optional)" value={value.company_name} onChange={set("company_name")} />
+        {renderFieldError("company_name")}
+      </div>
+
+      <div>
+        <label className="text-xs font-semibold text-gray-500 mb-1 block">GSTIN</label>
+        <input
+          className={getInputCls("gstin")}
+          placeholder="e.g. 07AAAAA0000A1Z5"
+          value={value.gstin}
+          onChange={(e) => onChange({ ...value, gstin: normalizeGstin(e.target.value) })}
+          maxLength={15}
+          autoCapitalize="characters"
+        />
+        {renderFieldError("gstin")}
       </div>
 
       <div>
         <label className="text-xs font-semibold text-gray-500 mb-1 block">Address Line 1 *</label>
-        <input className={inputCls} placeholder="Flat / House No., Building, Street" value={value.address_line1} onChange={set("address_line1")} />
+        <input className={getInputCls("address_line1")} placeholder="Flat / House No., Building, Street" value={value.address_line1} onChange={set("address_line1")} />
+        {renderFieldError("address_line1")}
       </div>
       <div>
         <label className="text-xs font-semibold text-gray-500 mb-1 block">Address Line 2</label>
-        <input className={inputCls} placeholder="Area, Colony, Locality (optional)" value={value.address_line2} onChange={set("address_line2")} />
+        <input className={getInputCls("address_line2")} placeholder="Area, Colony, Locality (optional)" value={value.address_line2} onChange={set("address_line2")} />
+        {renderFieldError("address_line2")}
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div>
           <label className="text-xs font-semibold text-gray-500 mb-1 block">City *</label>
-          <input className={inputCls} placeholder="City" value={value.city} onChange={set("city")} />
+          <input className={getInputCls("city")} placeholder="City" value={value.city} onChange={set("city")} />
+          {renderFieldError("city")}
         </div>
         <div>
           <label className="text-xs font-semibold text-gray-500 mb-1 block">State *</label>
-          <select className={inputCls} value={value.state} onChange={set("state")}>
+          <select className={getInputCls("state")} value={value.state} onChange={set("state")} title="State">
             <option value="">Select state</option>
             {INDIAN_STATES.map((s) => (
               <option key={s} value={s}>{s}</option>
             ))}
           </select>
+          {renderFieldError("state")}
         </div>
         <div>
           <label className="text-xs font-semibold text-gray-500 mb-1 block">Pincode *</label>
-          <input className={inputCls} placeholder="6-digit PIN" value={value.pincode}
+          <input className={getInputCls("pincode")} placeholder="6-digit PIN" value={value.pincode}
             onChange={(e) => onChange({ ...value, pincode: e.target.value.replace(/\D/g, "").slice(0, 6) })}
             inputMode="numeric" />
+          {renderFieldError("pincode")}
         </div>
       </div>
 
@@ -356,7 +413,7 @@ function OrderSummary({ subtotal, discount, shippingCharge, couponResult, curren
 
 export default function CheckoutClient() {
   const router = useRouter();
-  const { user, isLoading: authLoading, isLoggedIn } = useAuth();
+  const { user, updateUser, isLoading: authLoading, isLoggedIn } = useAuth();
   const { items, total, clearCart, removeItem } = useCart();
   const currencySymbol = items[0]?.currencySymbol ?? "₹";
   const fmt = makeFmt(currencySymbol);
@@ -400,7 +457,7 @@ export default function CheckoutClient() {
 
   useEffect(() => {
     setLastPincode(readLastPincodeFromCookie());
-  }, []);
+  }, [user?.company_name, user?.gstin]);
 
   // Restore coupon applied on the cart page
   useEffect(() => {
@@ -414,7 +471,7 @@ export default function CheckoutClient() {
         }
       }
     } catch {}
-  }, []);
+  }, [user?.company_name, user?.gstin]);
 
   // Fire begin_checkout once when the page mounts with a non-empty cart
   useEffect(() => {
@@ -449,12 +506,16 @@ export default function CheckoutClient() {
 
   useEffect(() => {
     if (!showAddressForm) return;
-    if (!lastPincode) return;
 
     setNewAddress((current) => (
-      current.pincode ? current : { ...current, pincode: lastPincode }
+      {
+        ...current,
+        pincode: current.pincode || lastPincode,
+        company_name: current.company_name || user?.company_name || "",
+        gstin: current.gstin || user?.gstin || "",
+      }
     ));
-  }, [showAddressForm, lastPincode]);
+  }, [showAddressForm, lastPincode, user?.company_name, user?.gstin]);
 
   useEffect(() => {
     getPaymentSettings()
@@ -487,46 +548,65 @@ export default function CheckoutClient() {
     setNewAddress({
       name: addr.name,
       phone: addr.phone,
-      company_name: addr.company_name ?? "",
+      company_name: addr.company_name ?? user?.company_name ?? "",
       address_line1: addr.address_line1,
       address_line2: addr.address_line2 ?? "",
       city: addr.city,
       state: addr.state,
       pincode: addr.pincode,
+      gstin: user?.gstin ?? "",
     });
     setAddressSaveError("");
     setAddressFieldErrors({});
     setShowAddressForm(true);
-  }, []);
+  }, [user?.company_name, user?.gstin]);
 
   const handleSaveAddress = useCallback(async () => {
     setAddressSaveError("");
+    const businessFieldErrors = validateBusinessFields(newAddress);
+    if (Object.keys(businessFieldErrors).length > 0) {
+      setAddressFieldErrors(businessFieldErrors);
+      setAddressSaveError("Please fix the highlighted fields.");
+      return;
+    }
+
     setAddressFieldErrors({});
     setSavingAddress(true);
 
+    const normalizedCompanyName = normalizeCompanyName(newAddress.company_name);
+    const normalizedGstin = normalizeGstin(newAddress.gstin);
+
     if (editingAddressId !== null) {
       // ── Update existing address ──
-      const updated = await updateAddress(editingAddressId, {
+      const result = await updateAddressDetailed(editingAddressId, {
         name: newAddress.name,
         phone: newAddress.phone,
-        company_name: newAddress.company_name,
+        company_name: normalizedCompanyName,
         address_line1: newAddress.address_line1,
         address_line2: newAddress.address_line2,
         city: newAddress.city,
         state: newAddress.state,
         pincode: newAddress.pincode,
+        gstin: normalizedGstin,
       });
       setSavingAddress(false);
-      if (updated) {
-        setAddresses((prev) => prev.map((a) => (a.id === editingAddressId ? updated : a)));
-        writeLastPincodeCookie(updated.pincode);
-        setLastPincode(updated.pincode);
-        setSelectedAddressId(updated.id);
+      if (result.success && result.address) {
+        setAddresses((prev) => prev.map((a) => (a.id === editingAddressId ? result.address! : a)));
+        writeLastPincodeCookie(result.address.pincode);
+        setLastPincode(result.address.pincode);
+        setSelectedAddressId(result.address.id);
+        updateUser({
+          company_name: normalizedCompanyName || null,
+          gstin: normalizedGstin || null,
+        });
         setShowAddressForm(false);
         setEditingAddressId(null);
         setNewAddress(BLANK_ADDRESS);
+        setAddressSaveError("");
+        setAddressFieldErrors({});
       } else {
-        setAddressSaveError("Failed to update address. Please try again.");
+        setAddressSaveError(result.message ?? "Failed to update address. Please try again.");
+        setAddressFieldErrors(result.errors ?? {});
       }
       return;
     }
@@ -535,17 +615,22 @@ export default function CheckoutClient() {
     const result = await createAddressDetailed({
       name: newAddress.name,
       phone: newAddress.phone,
-      company_name: newAddress.company_name,
+      company_name: normalizedCompanyName,
       address_line1: newAddress.address_line1,
       address_line2: newAddress.address_line2,
       city: newAddress.city,
       state: newAddress.state,
       pincode: newAddress.pincode,
+      gstin: normalizedGstin,
     });
     setSavingAddress(false);
     if (result.success && result.address) {
       setAddresses((prev) => [...prev, result.address as ApiAddress]);
       setSelectedAddressId(result.address.id);
+      updateUser({
+        company_name: normalizedCompanyName || null,
+        gstin: normalizedGstin || null,
+      });
       writeLastPincodeCookie(result.address.pincode);
       setLastPincode(result.address.pincode);
       setShowAddressForm(false);
@@ -556,7 +641,7 @@ export default function CheckoutClient() {
       setAddressSaveError(result.message ?? "Failed to save address.");
       setAddressFieldErrors(result.errors ?? {});
     }
-  }, [newAddress, editingAddressId]);
+  }, [newAddress, editingAddressId, updateUser]);
 
   const handleContinueToShipping = useCallback(async () => {
     if (!selectedAddress) return;

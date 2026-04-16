@@ -1,25 +1,48 @@
 import Link from "next/link";
 import Image from "next/image";
-import { MapPin, Phone, Mail, type LucideIcon } from "lucide-react";
-import { getSystemSettings } from "@/lib/api";
+import { Facebook, Globe, Instagram, Linkedin, Mail, MapPin, MessageCircle, Phone, Send, Twitter, type LucideIcon, Youtube } from "lucide-react";
 import FooterUserLinks from "./FooterUserLinks";
 
 type NavLink = { label: string; href: string };
 type NavColumn = { title: string; links: NavLink[] };
-type SocialLink = { label: string; icon: LucideIcon; href: string };
+type SocialLink = { label: string; href: string; platform?: string };
+
+type FooterBrand = {
+  appName: string;
+  logo: string | null;
+  footerLogo: string | null;
+  address: string;
+  supportEmail: string;
+  supportNumber: string;
+};
 
 type FooterNavigationGridProps = {
+  brand?: FooterBrand | null;
   navColumns: NavColumn[];
   socialLinks: SocialLink[];
 };
 
-export default async function FooterNavigationGrid({
+const SOCIAL_ICON_MAP: Record<string, LucideIcon> = {
+  facebook: Facebook,
+  instagram: Instagram,
+  youtube: Youtube,
+  linkedin: Linkedin,
+  twitter: Twitter,
+  x: Twitter,
+  whatsapp: MessageCircle,
+  telegram: Send,
+};
+
+export default function FooterNavigationGrid({
+  brand,
   navColumns,
   socialLinks,
 }: FooterNavigationGridProps) {
-  const system = await getSystemSettings();
-  const appName = system?.appName || "Pethiyan";
-  const logoSrc = system?.logo || "/pethiyan-logo.png";
+  const appName = brand?.appName || "Pethiyan";
+  const logoSrc = brand?.footerLogo || brand?.logo || "/pethiyan-logo.png";
+  const contactAddress = brand?.address?.trim() || "";
+  const contactPhone = brand?.supportNumber?.trim() || "";
+  const contactEmail = brand?.supportEmail?.trim() || "";
 
   return (
     <div className="relative bg-white border-t border-gray-200">
@@ -31,7 +54,7 @@ export default async function FooterNavigationGrid({
           {/* Column 1 — Logo + Business Contact */}
           <div className="pb-8 md:pb-0 md:pr-10">
             <Link href="/" aria-label={`${appName} home`} className="inline-flex mb-6">
-              <div className="relative w-40 h-[52px]">
+              <div className="relative w-40 h-13">
                 <Image
                   src={logoSrc}
                   alt={appName}
@@ -45,27 +68,35 @@ export default async function FooterNavigationGrid({
               Business Contact
             </h3>
             <div className="space-y-4">
-              <div className="flex items-start gap-3">
-                <MapPin className="w-[15px] h-[15px] mt-0.5 shrink-0 text-gray-400" />
-                <span className="text-sm leading-snug text-gray-500">
-                  123 Example St, Sydney, NSW 2000, Australia
-                </span>
-              </div>
-              <div className="flex items-center gap-3">
-                <Phone className="w-[15px] h-[15px] shrink-0 text-gray-400" />
-                <span className="text-sm text-gray-500">+61 2 1234 5678</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <Mail className="w-[15px] h-[15px] shrink-0 text-gray-400" />
-                <span className="text-sm text-gray-500">support@pethiyan.com</span>
-              </div>
+              {contactAddress && (
+                <div className="flex items-start gap-3">
+                  <MapPin className="w-3.75 h-3.75 mt-0.5 shrink-0 text-gray-400" />
+                  <span className="text-sm leading-snug text-gray-500">
+                    {contactAddress}
+                  </span>
+                </div>
+              )}
+              {contactPhone && (
+                <div className="flex items-center gap-3">
+                  <Phone className="w-3.75 h-3.75 shrink-0 text-gray-400" />
+                  <span className="text-sm text-gray-500">{contactPhone}</span>
+                </div>
+              )}
+              {contactEmail && (
+                <div className="flex items-center gap-3">
+                  <Mail className="w-3.75 h-3.75 shrink-0 text-gray-400" />
+                  <span className="text-sm text-gray-500">{contactEmail}</span>
+                </div>
+              )}
             </div>
-            <Link
-              href="/contact"
-              className="inline-flex items-center gap-1 mt-6 text-sm font-medium text-gray-700 underline underline-offset-4 transition-colors hover:text-gray-900"
-            >
-              Get Direction <span aria-hidden="true" className="text-xs">↗</span>
-            </Link>
+            {(contactAddress || contactPhone || contactEmail) && (
+              <Link
+                href="/contact"
+                className="inline-flex items-center gap-1 mt-6 text-sm font-medium text-gray-700 underline underline-offset-4 transition-colors hover:text-gray-900"
+              >
+                Get Direction <span aria-hidden="true" className="text-xs">↗</span>
+              </Link>
+            )}
           </div>
 
           {/* Nav columns */}
@@ -102,16 +133,22 @@ export default async function FooterNavigationGrid({
 
           {/* Social icons */}
           <div className="flex items-center gap-2.5">
-            {socialLinks.map(({ label, icon: Icon, href }) => (
+            {socialLinks.map(({ label, href, platform }) => {
+              const Icon = SOCIAL_ICON_MAP[(platform ?? label).toLowerCase()] ?? Globe;
+
+              return (
               <a
                 key={label}
                 href={href}
+                target="_blank"
+                rel="noreferrer"
                 aria-label={label}
                 className="w-8 h-8 rounded-full flex items-center justify-center bg-gray-900 text-white transition-all duration-200 hover:bg-gray-700"
               >
                 <Icon className="h-3.5 w-3.5" aria-hidden="true" />
               </a>
-            ))}
+              );
+            })}
           </div>
 
           {/* Payment Partners */}
@@ -121,7 +158,7 @@ export default async function FooterNavigationGrid({
             </span>
             {/* keep both logos together so they never split across wrapped rows */}
             <div className="flex items-center gap-2">
-              <div className="h-8 w-24 overflow-hidden rounded border border-gray-200 bg-white p-1.5 md:h-9 md:w-[116px] md:p-2">
+              <div className="h-8 w-24 overflow-hidden rounded border border-gray-200 bg-white p-1.5 md:h-9 md:w-29 md:p-2">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src="/images/logos/razorpay.png"
@@ -129,7 +166,7 @@ export default async function FooterNavigationGrid({
                   className="h-full w-full object-contain"
                 />
               </div>
-              <div className="h-8 w-24 overflow-hidden rounded border border-gray-200 bg-white p-1.5 md:h-9 md:w-[116px] md:p-2">
+              <div className="h-8 w-24 overflow-hidden rounded border border-gray-200 bg-white p-1.5 md:h-9 md:w-29 md:p-2">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src="/images/logos/Easebuzz_Logo.jpg"
