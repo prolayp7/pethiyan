@@ -342,6 +342,21 @@ export interface ApiFooterHighlightTickerItem {
   text: string;
 }
 
+export interface ApiFeaturedProductsSection {
+  enabled: boolean;
+  eyebrow: string;
+  heading: string;
+  subheading: string;
+  productCount: number;
+  viewAllLink: string;
+  categories: Array<{
+    id: number;
+    title: string;
+    slug: string;
+  }>;
+  products: RealApiProduct[];
+}
+
 export interface ApiFooterData {
   brand: {
     appName: string;
@@ -633,6 +648,45 @@ export async function getFeaturedProducts(): Promise<RealApiProduct[]> {
     return [];
   } catch {
     return [];
+  }
+}
+
+export async function getFeaturedProductsSection(): Promise<ApiFeaturedProductsSection | null> {
+  try {
+    const res = await fetch(`${API_BASE}/api/settings/featured-products-section`, {
+      headers: { Accept: "application/json" },
+      next: { revalidate: 60, tags: ["featured-products"] },
+    } as RequestInit);
+
+    if (!res.ok) return null;
+
+    const json = await res.json();
+    const data = (json?.data ?? null) as Record<string, unknown> | null;
+    if (!data) return null;
+
+    return {
+      enabled: typeof data.enabled === "boolean" ? data.enabled : Boolean(data.enabled),
+      eyebrow: typeof data.eyebrow === "string" ? data.eyebrow.trim() : "",
+      heading: typeof data.heading === "string" ? data.heading.trim() : "",
+      subheading: typeof data.subheading === "string" ? data.subheading.trim() : "",
+      productCount: typeof data.productCount === "number" ? data.productCount : Number(data.productCount ?? 0),
+      viewAllLink: typeof data.viewAllLink === "string" ? data.viewAllLink.trim() : "/shop",
+      categories: Array.isArray(data.categories)
+        ? data.categories
+            .map((entry) => {
+              const item = entry as Record<string, unknown>;
+              const id = Number(item.id ?? 0);
+              const title = typeof item.title === "string" ? item.title.trim() : "";
+              const slug = typeof item.slug === "string" ? item.slug.trim() : "";
+              if (!id || !title || !slug) return null;
+              return { id, title, slug };
+            })
+            .filter((item): item is { id: number; title: string; slug: string } => Boolean(item))
+        : [],
+      products: Array.isArray(data.products) ? (data.products as RealApiProduct[]) : [],
+    };
+  } catch {
+    return null;
   }
 }
 

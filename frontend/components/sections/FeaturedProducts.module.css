@@ -1,0 +1,16 @@
+.eyebrow {
+  color: #4ea85f;
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.headingGradient {
+  background: linear-gradient(135deg, #1a4f83 0%, #2b6e92 48%, #2d8b6a 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}

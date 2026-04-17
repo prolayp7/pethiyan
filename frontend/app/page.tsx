@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getCategories, getHeroSection, getFeaturedProducts, getVideoStorySection } from "@/lib/api";
+import { getCategories, getFeaturedProductsSection, getHeroSection, getVideoStorySection } from "@/lib/api";
 import HeroSection10 from "@/components/hero/HeroSection10";
 import CategoryGrid from "@/components/sections/CategoryGrid";
 import VideoCarouselGrid from "@/components/sections/VideoCarouselGrid";
@@ -37,8 +37,8 @@ function withTimeout<T>(p: Promise<T>, fallback: T, ms = 5000): Promise<T> {
 export default async function HomePage() {
   // Fetch data in parallel — both calls are independent
   // withTimeout ensures a slow/unreachable backend never hangs the page
-  const [featuredProducts, categories, heroData, videoStorySection] = await Promise.all([
-    withTimeout(getFeaturedProducts(), []),
+  const [featuredProductsSection, categories, heroData, videoStorySection] = await Promise.all([
+    withTimeout(getFeaturedProductsSection(), null),
     withTimeout(getCategories(), []),
     withTimeout(getHeroSection(), null),
     withTimeout(getVideoStorySection(), null),
@@ -53,7 +53,7 @@ export default async function HomePage() {
       />
       {/* <TrustBadges /> */}
       <CategoryGrid categories={categories} />
-      <FeaturedProducts apiProducts={featuredProducts} />
+      <FeaturedProducts section={featuredProductsSection} />
       <YourItems />
       <RecentlyViewedProducts
         title="Pick Up Where You Left Off"
