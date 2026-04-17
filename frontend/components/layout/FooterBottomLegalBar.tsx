@@ -1,5 +1,10 @@
-export default function FooterBottomLegalBar() {
+interface FooterBottomLegalBarProps {
+  copyrightText?: string;
+}
+
+export default function FooterBottomLegalBar({ copyrightText }: FooterBottomLegalBarProps) {
   const paymentMethods = ["Visa", "Rupay", "Paytm", "PhonePay", "GPay", "NetBanking"];
+  const resolvedCopyrightText = copyrightText?.trim() ?? "";
 
   return (
     <div className="border-t border-white/5">
@@ -14,9 +19,11 @@ export default function FooterBottomLegalBar() {
         <div className="flex flex-col items-start gap-3 md:flex-row md:items-center md:justify-between">
 
           {/* Copyright */}
-          <p className="text-[12px] font-medium text-white/50">
-            © {new Date().getFullYear()} Pethiyan Packaging Pvt. Ltd. All rights reserved.
-          </p>
+          {resolvedCopyrightText ? (
+            <p className="text-[12px] font-medium text-white/50">
+              {resolvedCopyrightText}
+            </p>
+          ) : null}
 
           {/* Payment method chips */}
           <div className="flex flex-wrap items-center gap-2">

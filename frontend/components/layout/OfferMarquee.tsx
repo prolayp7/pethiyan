@@ -1,33 +1,36 @@
-/* ─────────────────────────────────────────────────────────────
-   OfferMarquee.tsx  —  Scrolling promotional offer strip
-   Server Component · reuses animate-ticker from globals.css
-───────────────────────────────────────────────────────────── */
+"use client";
 
-const offerItems = [
-  { prefix: "Free Shipping", text: "on orders over $500" },
-  { prefix: "Custom Packaging", text: "ready in 7 business days" },
-  { prefix: "Bulk Discounts", text: "up to 30% off on wholesale orders" },
-  { prefix: "Eco-Friendly", text: "materials across all product lines" },
-  { prefix: "New Arrivals", text: "biodegradable standup pouches" },
-  { prefix: "Design Support", text: "free artwork review with every order" },
-];
+import { usePathname } from "next/navigation";
+import type { ApiFooterHighlightTickerItem } from "@/lib/api";
 
-export default function OfferMarquee() {
+interface OfferMarqueeProps {
+  homepageOnly?: boolean;
+  items?: ApiFooterHighlightTickerItem[];
+}
+
+export default function OfferMarquee({ homepageOnly = true, items = [] }: OfferMarqueeProps) {
+  const pathname = usePathname();
+
+  if (homepageOnly && pathname !== "/") {
+    return null;
+  }
+
+  if (items.length === 0) {
+    return null;
+  }
+
   return (
     <div
-      className="relative overflow-hidden border-b"
-      style={{ borderColor: "rgba(255,255,255,0.05)" }}
+      className="relative overflow-hidden border-b border-white/5"
     >
       {/* Left fade mask */}
       <div
-        className="absolute inset-y-0 left-0 w-16 z-10 pointer-events-none"
-        style={{ background: "linear-gradient(to right, #050810 0%, transparent 100%)" }}
+        className="absolute inset-y-0 left-0 z-10 w-16 pointer-events-none bg-[linear-gradient(to_right,#050810_0%,transparent_100%)]"
         aria-hidden="true"
       />
       {/* Right fade mask */}
       <div
-        className="absolute inset-y-0 right-0 w-16 z-10 pointer-events-none"
-        style={{ background: "linear-gradient(to left, #050810 0%, transparent 100%)" }}
+        className="absolute inset-y-0 right-0 z-10 w-16 pointer-events-none bg-[linear-gradient(to_left,#050810_0%,transparent_100%)]"
         aria-hidden="true"
       />
 
@@ -37,17 +40,16 @@ export default function OfferMarquee() {
         aria-label="Promotional offers"
       >
         {/* Original set */}
-        {offerItems.map((item, i) => (
+        {items.map((item, i) => (
           <span key={i} className="inline-flex items-center gap-4 shrink-0">
             <span className="text-[10px] font-semibold tracking-[0.22em] uppercase">
-              {item.prefix && (
-                <span style={{ color: "#4caf50" }}>{item.prefix} </span>
+              {item.highlight && (
+                <span className="text-[#4caf50]">{item.highlight} </span>
               )}
-              <span style={{ color: "rgba(255,255,255,0.45)" }}>{item.text}</span>
+              <span className="text-white/45">{item.text}</span>
             </span>
             <span
-              className="w-1 h-1 rounded-full shrink-0"
-              style={{ background: "rgba(76,175,80,0.4)" }}
+              className="h-1 w-1 shrink-0 rounded-full bg-[#4caf5066]"
               aria-hidden="true"
             />
           </span>
@@ -55,17 +57,16 @@ export default function OfferMarquee() {
 
         {/* Duplicate set — seamless loop */}
         <span aria-hidden="true" className="contents">
-          {offerItems.map((item, i) => (
+          {items.map((item, i) => (
             <span key={`dup-${i}`} className="inline-flex items-center gap-4 shrink-0">
               <span className="text-[10px] font-semibold tracking-[0.22em] uppercase">
-                {item.prefix && (
-                  <span style={{ color: "#4caf50" }}>{item.prefix} </span>
+                {item.highlight && (
+                  <span className="text-[#4caf50]">{item.highlight} </span>
                 )}
-                <span style={{ color: "rgba(255,255,255,0.45)" }}>{item.text}</span>
+                <span className="text-white/45">{item.text}</span>
               </span>
               <span
-                className="w-1 h-1 rounded-full shrink-0"
-                style={{ background: "rgba(76,175,80,0.4)" }}
+                className="h-1 w-1 shrink-0 rounded-full bg-[#4caf5066]"
                 aria-hidden="true"
               />
             </span>

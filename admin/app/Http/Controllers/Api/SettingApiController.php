@@ -18,6 +18,8 @@ class SettingApiController extends Controller
 {
     use AuthorizesRequests;
 
+    private const HIGHLIGHT_TICKER_SETTING_KEY = 'highlight_ticker_section';
+
     protected SettingService $settingService;
 
     public function __construct(SettingService $settingService)
@@ -148,9 +150,13 @@ class SettingApiController extends Controller
 
         $system = $this->settingService->getSettingByVariable(SettingTypeEnum::SYSTEM());
         $web = $this->settingService->getSettingByVariable(SettingTypeEnum::WEB());
+        $highlightTickerSetting = Setting::query()->where('variable', self::HIGHLIGHT_TICKER_SETTING_KEY)->first();
 
         $systemValue = $system ? ($system->toArray(request())['value'] ?? []) : [];
         $webValue = $web ? ($web->toArray(request())['value'] ?? []) : [];
+        $highlightTickerValue = is_array($highlightTickerSetting?->value)
+            ? $highlightTickerSetting->value
+            : (json_decode((string) $highlightTickerSetting?->value, true) ?: []);
 
         $footerMenus = Menu::query()
             ->where('is_active', true)
@@ -188,12 +194,20 @@ class SettingApiController extends Controller
             ->values()
             ->all();
 
-        $footerSeoSections = collect(json_decode((string) ($webValue['footerSeoSectionsJson'] ?? '[]'), true) ?: [])
-            ->map(fn ($section) => [
-                'title' => trim((string) ($section['title'] ?? '')),
-                'content' => trim((string) ($section['content'] ?? '')),
+        $defaultHighlightTickerItems = [
+            ['highlight' => '+PACKAGING', 'text' => 'READY IN 7 BUSINESS DAYS'],
+            ['highlight' => '+BULK DISCOUNTS', 'text' => 'UP TO 30% OFF ON WHOLESALE ORDERS'],
+            ['highlight' => '+ECO-FRIENDLY', 'text' => 'MATERIALS ACROSS ALL PRODUCT LINES'],
+            ['highlight' => '+NEW ARRIVALS', 'text' => 'BIODEGRADABLE STANDUP POUCHES'],
+            ['highlight' => '+DESIGN SUPPORT', 'text' => 'FREE ARTWORK REVIEW WITH EVERY ORDER'],
+        ];
+
+        $highlightTickerItems = collect($highlightTickerValue['items'] ?? $defaultHighlightTickerItems)
+            ->map(fn ($item) => [
+                'highlight' => trim((string) ($item['highlight'] ?? '')),
+                'text' => trim((string) ($item['text'] ?? '')),
             ])
-            ->filter(fn ($section) => $section['title'] !== '' || $section['content'] !== '')
+            ->filter(fn ($item) => $item['highlight'] !== '' || $item['text'] !== '')
             ->values()
             ->all();
 
@@ -205,6 +219,7 @@ class SettingApiController extends Controller
                     'appName' => $systemValue['appName'] ?? config('app.name'),
                     'logo' => $systemValue['logo'] ?? '',
                     'footerLogo' => $webValue['siteFooterLogo'] ?: ($systemValue['logo'] ?? ''),
+                    'copyrightText' => trim((string) ($webValue['siteCopyright'] ?: ($systemValue['copyrightDetails'] ?? ''))),
                     'address' => $webValue['address'] ?: ($systemValue['companyAddress'] ?? ''),
                     'supportEmail' => $webValue['supportEmail'] ?: ($systemValue['sellerSupportEmail'] ?? ''),
                     'supportNumber' => $webValue['supportNumber'] ?: ($systemValue['sellerSupportNumber'] ?? ''),
@@ -217,9 +232,11 @@ class SettingApiController extends Controller
                 'footerSeo' => [
                     'enabled' => (bool) ($webValue['footerSeoEnabled'] ?? true),
                     'homepageOnly' => (bool) ($webValue['footerSeoHomepageOnly'] ?? false),
-                    'title' => (string) ($webValue['footerSeoTitle'] ?? ''),
                     'introHtml' => (string) ($webValue['footerSeoIntro'] ?? ''),
-                    'sections' => $footerSeoSections,
+                ],
+                'highlightTicker' => [
+                    'homepageOnly' => (bool) ($highlightTickerValue['is_active'] ?? true),
+                    'items' => $highlightTickerItems,
                 ],
             ]
         );

@@ -337,11 +337,17 @@ export interface ApiFooterSocialLink {
   url: string;
 }
 
+export interface ApiFooterHighlightTickerItem {
+  highlight: string;
+  text: string;
+}
+
 export interface ApiFooterData {
   brand: {
     appName: string;
     logo: string | null;
     footerLogo: string | null;
+    copyrightText: string;
     address: string;
     supportEmail: string;
     supportNumber: string;
@@ -354,12 +360,11 @@ export interface ApiFooterData {
   footerSeo: {
     enabled: boolean;
     homepageOnly: boolean;
-    title: string;
     introHtml: string;
-    sections: Array<{
-      title: string;
-      content: string;
-    }>;
+  };
+  highlightTicker: {
+    homepageOnly: boolean;
+    items: ApiFooterHighlightTickerItem[];
   };
 }
 
@@ -1512,6 +1517,7 @@ export async function getFooterData(): Promise<ApiFooterData | null> {
   const brand = (data.brand ?? {}) as Record<string, unknown>;
   const menus = (data.menus ?? {}) as Record<string, unknown>;
   const footerSeo = (data.footerSeo ?? {}) as Record<string, unknown>;
+  const highlightTicker = (data.highlightTicker ?? {}) as Record<string, unknown>;
 
   const boolValue = (value: unknown, fallback: boolean) => {
     if (typeof value === "boolean") return value;
@@ -1568,6 +1574,7 @@ export async function getFooterData(): Promise<ApiFooterData | null> {
       appName: typeof brand.appName === "string" && brand.appName.trim() ? brand.appName.trim() : "Pethiyan",
       logo: normalizeMediaUrl(typeof brand.logo === "string" ? brand.logo : null),
       footerLogo: normalizeMediaUrl(typeof brand.footerLogo === "string" ? brand.footerLogo : null),
+      copyrightText: typeof brand.copyrightText === "string" ? brand.copyrightText.trim() : "",
       address: typeof brand.address === "string" ? brand.address.trim() : "",
       supportEmail: typeof brand.supportEmail === "string" ? brand.supportEmail.trim() : "",
       supportNumber: typeof brand.supportNumber === "string" ? brand.supportNumber.trim() : "",
@@ -1598,19 +1605,22 @@ export async function getFooterData(): Promise<ApiFooterData | null> {
     footerSeo: {
       enabled: boolValue(footerSeo.enabled, true),
       homepageOnly: boolValue(footerSeo.homepageOnly, false),
-      title: typeof footerSeo.title === "string" ? footerSeo.title.trim() : "",
       introHtml: typeof footerSeo.introHtml === "string" ? footerSeo.introHtml.trim() : "",
-      sections: Array.isArray(footerSeo.sections)
-        ? footerSeo.sections
+    },
+    highlightTicker: {
+      homepageOnly: boolValue(highlightTicker.homepageOnly, true),
+      items: Array.isArray(highlightTicker.items)
+        ? highlightTicker.items
             .map((entry) => {
               const item = entry as Record<string, unknown>;
-              const title = typeof item.title === "string" ? item.title.trim() : "";
-              const content = typeof item.content === "string" ? item.content.trim() : "";
-              if (!title && !content) return null;
+              const highlight = typeof item.highlight === "string" ? item.highlight.trim() : "";
+              const text = typeof item.text === "string" ? item.text.trim() : "";
 
-              return { title, content };
+              if (!highlight && !text) return null;
+
+              return { highlight, text } satisfies ApiFooterHighlightTickerItem;
             })
-            .filter((item): item is { title: string; content: string } => Boolean(item))
+            .filter((item): item is ApiFooterHighlightTickerItem => Boolean(item))
         : [],
     },
   };

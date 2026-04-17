@@ -40,7 +40,10 @@ export default async function Footer() {
       {/* ══════════════════════════════════════════════════════════
           MARQUEE — SCROLLING OFFER STRIP
       ══════════════════════════════════════════════════════════ */}
-      <OfferMarquee />
+      <OfferMarquee
+        homepageOnly={footerData?.highlightTicker.homepageOnly ?? true}
+        items={footerData?.highlightTicker.items ?? []}
+      />
 
        {/* ══════════════════════════════════════════════════════════
           FOOTER SEO CONTENT — conditionally rendered per admin settings
@@ -48,9 +51,7 @@ export default async function Footer() {
       <FooterSeoWrapper
         enabled={footerData?.footerSeo.enabled ?? true}
         homepageOnly={footerData?.footerSeo.homepageOnly ?? false}
-        title={footerData?.footerSeo.title}
         introHtml={footerData?.footerSeo.introHtml}
-        sections={footerData?.footerSeo.sections}
       />
 
       {/* ══════════════════════════════════════════════════════════
@@ -65,7 +66,7 @@ export default async function Footer() {
 
      
 
-      <FooterBottomLegalBar />
+      <FooterBottomLegalBar copyrightText={footerData?.brand.copyrightText} />
 
     </footer>
   );
