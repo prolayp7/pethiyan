@@ -18,7 +18,8 @@ interface FeaturedProductsProps {
 
 export default function FeaturedProducts({ section }: FeaturedProductsProps) {
   const mobileSliderRef = useRef<HTMLDivElement | null>(null);
-  const products = section?.products ?? [];
+  const productLimit = Math.max(1, section?.productCount ?? 8);
+  const products = (section?.products ?? []).slice(0, productLimit);
 
   if (!section?.enabled) return null;
 

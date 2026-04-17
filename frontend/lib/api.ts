@@ -2159,6 +2159,7 @@ export interface ApiVideoStorySection {
     eyebrow: string;
     heading: string;
     subheading: string;
+    placement: HomeSectionPlacement;
     autoplayEnabled: boolean;
     autoplayDelay: number;
     transitionDuration: number;
@@ -2173,7 +2174,37 @@ export async function getVideoStorySection(): Promise<ApiVideoStorySection | nul
       next: { revalidate: 300 },
     });
     if (!res.ok) return null;
-    return res.json() as Promise<ApiVideoStorySection>;
+    const json = (await res.json()) as Record<string, unknown>;
+    const settings = (json.settings ?? null) as Record<string, unknown> | null;
+
+    return {
+      videos: Array.isArray(json.videos)
+        ? json.videos
+            .map((entry) => {
+              const item = entry as Record<string, unknown>;
+              const id = Number(item.id ?? 0);
+              const title = typeof item.title === "string" ? item.title.trim() : "";
+              const videoUrl = typeof item.videoUrl === "string" ? item.videoUrl.trim() : "";
+
+              if (!id || !title || !videoUrl) return null;
+
+              return { id, title, videoUrl } satisfies ApiVideoStoryItem;
+            })
+            .filter((item): item is ApiVideoStoryItem => Boolean(item))
+        : [],
+      settings: {
+        isActive: typeof settings?.isActive === "boolean" ? settings.isActive : Boolean(settings?.isActive),
+        eyebrow: typeof settings?.eyebrow === "string" ? settings.eyebrow.trim() : "",
+        heading: typeof settings?.heading === "string" ? settings.heading.trim() : "",
+        subheading: typeof settings?.subheading === "string" ? settings.subheading.trim() : "",
+        placement: normalizeHomeSectionPlacement(settings?.placement, "after_recently_viewed"),
+        autoplayEnabled: typeof settings?.autoplayEnabled === "boolean" ? settings.autoplayEnabled : Boolean(settings?.autoplayEnabled),
+        autoplayDelay: Math.max(1500, Number(settings?.autoplayDelay ?? 4500) || 4500),
+        transitionDuration: Math.max(0, Number(settings?.transitionDuration ?? 420) || 420),
+        animationStyle:
+          settings?.animationStyle === "fade" || settings?.animationStyle === "none" ? settings.animationStyle : "slide",
+      },
+    };
   } catch {
     return null;
   }
@@ -2267,16 +2298,196 @@ export interface ApiNewsletterSection {
   perks: string[];
   form_title: string;
   form_subtitle: string;
+  placement: HomeSectionPlacement;
+}
+
+export const HOME_SECTION_PLACEMENTS = [
+  "after_hero",
+  "after_categories",
+  "after_featured_products",
+  "after_your_items",
+  "after_recently_viewed",
+  "after_video_stories",
+  "after_why_choose_us",
+  "after_promo_banner",
+  "after_social_proof",
+  "after_newsletter",
+] as const;
+
+export type HomeSectionPlacement = (typeof HOME_SECTION_PLACEMENTS)[number];
+
+function normalizeHomeSectionPlacement(value: unknown, fallback: HomeSectionPlacement): HomeSectionPlacement {
+  return typeof value === "string" && HOME_SECTION_PLACEMENTS.includes(value as HomeSectionPlacement)
+    ? (value as HomeSectionPlacement)
+    : fallback;
+}
+
+export interface ApiWhyChooseUsSection {
+  enabled: boolean;
+  eyebrow: string;
+  heading: string;
+  subheading: string;
+  placement: HomeSectionPlacement;
+  features: string[];
+}
+
+export interface ApiPromoBannerSection {
+  enabled: boolean;
+  badgeText: string;
+  heading: string;
+  subheading: string;
+  placement: HomeSectionPlacement;
+  offerPrimary: string;
+  offerSecondary: string;
+  buttonLabel: string;
+  buttonLink: string;
+}
+
+export interface ApiSocialProofTestimonial {
+  id: number;
+  name: string;
+  title: string;
+  quote: string;
+  stars: number;
+  imageUrl: string | null;
+}
+
+export interface ApiSocialProofSection {
+  enabled: boolean;
+  eyebrow: string;
+  heading: string;
+  subheading: string;
+  placement: HomeSectionPlacement;
+  testimonials: ApiSocialProofTestimonial[];
 }
 
 export async function getNewsletterSection(): Promise<ApiNewsletterSection | null> {
   try {
     const res = await fetch(`${API_BASE}/api/newsletter-section`, {
       headers: { Accept: "application/json" },
-      next: { revalidate: 300 },
+      next: { revalidate: 300, tags: ["newsletter-section"] },
     });
     if (!res.ok) return null;
-    return res.json() as Promise<ApiNewsletterSection>;
+    const json = (await res.json()) as Record<string, unknown>;
+
+    return {
+      is_active: typeof json.is_active === "boolean" ? json.is_active : Boolean(json.is_active),
+      badge_text: typeof json.badge_text === "string" ? json.badge_text.trim() : "",
+      heading: typeof json.heading === "string" ? json.heading.trim() : "",
+      heading_highlight: typeof json.heading_highlight === "string" ? json.heading_highlight.trim() : "",
+      subheading: typeof json.subheading === "string" ? json.subheading.trim() : "",
+      perks: Array.isArray(json.perks)
+        ? json.perks.map((item) => (typeof item === "string" ? item.trim() : "")).filter((item) => item.length > 0)
+        : [],
+      form_title: typeof json.form_title === "string" ? json.form_title.trim() : "",
+      form_subtitle: typeof json.form_subtitle === "string" ? json.form_subtitle.trim() : "",
+      placement: normalizeHomeSectionPlacement(json.placement, "after_social_proof"),
+    };
+  } catch {
+    return null;
+  }
+}
+
+export async function getWhyChooseUsSection(): Promise<ApiWhyChooseUsSection | null> {
+  try {
+    const res = await fetch(`${API_BASE}/api/settings/why-choose-us-section`, {
+      headers: { Accept: "application/json" },
+      next: { revalidate: 300, tags: ["why-choose-us"] },
+    } as RequestInit);
+
+    if (!res.ok) return null;
+
+    const json = await res.json();
+    const data = (json?.data ?? null) as Record<string, unknown> | null;
+    if (!data) return null;
+
+    return {
+      enabled: typeof data.enabled === "boolean" ? data.enabled : Boolean(data.enabled),
+      eyebrow: typeof data.eyebrow === "string" ? data.eyebrow.trim() : "",
+      heading: typeof data.heading === "string" ? data.heading.trim() : "",
+      subheading: typeof data.subheading === "string" ? data.subheading.trim() : "",
+      placement: normalizeHomeSectionPlacement(data.placement, "after_video_stories"),
+      features: Array.isArray(data.features)
+        ? data.features
+            .map((item) => (typeof item === "string" ? item.trim() : ""))
+            .filter((item) => item.length > 0)
+        : [],
+    };
+  } catch {
+    return null;
+  }
+}
+
+export async function getPromoBannerSection(): Promise<ApiPromoBannerSection | null> {
+  try {
+    const res = await fetch(`${API_BASE}/api/settings/promo-banner-section`, {
+      headers: { Accept: "application/json" },
+      next: { revalidate: 300, tags: ["promo-banner"] },
+    } as RequestInit);
+
+    if (!res.ok) return null;
+
+    const json = await res.json();
+    const data = (json?.data ?? null) as Record<string, unknown> | null;
+    if (!data) return null;
+
+    return {
+      enabled: typeof data.enabled === "boolean" ? data.enabled : Boolean(data.enabled),
+      badgeText: typeof data.badgeText === "string" ? data.badgeText.trim() : "",
+      heading: typeof data.heading === "string" ? data.heading.trim() : "",
+      subheading: typeof data.subheading === "string" ? data.subheading.trim() : "",
+      placement: normalizeHomeSectionPlacement(data.placement, "after_why_choose_us"),
+      offerPrimary: typeof data.offerPrimary === "string" ? data.offerPrimary.trim() : "",
+      offerSecondary: typeof data.offerSecondary === "string" ? data.offerSecondary.trim() : "",
+      buttonLabel: typeof data.buttonLabel === "string" ? data.buttonLabel.trim() : "",
+      buttonLink: typeof data.buttonLink === "string" ? data.buttonLink.trim() : "/shop",
+    };
+  } catch {
+    return null;
+  }
+}
+
+export async function getSocialProofSection(): Promise<ApiSocialProofSection | null> {
+  try {
+    const res = await fetch(`${API_BASE}/api/settings/social-proof-section`, {
+      headers: { Accept: "application/json" },
+      next: { revalidate: 300, tags: ["social-proof"] },
+    } as RequestInit);
+
+    if (!res.ok) return null;
+
+    const json = await res.json();
+    const data = (json?.data ?? null) as Record<string, unknown> | null;
+    if (!data) return null;
+
+    return {
+      enabled: typeof data.enabled === "boolean" ? data.enabled : Boolean(data.enabled),
+      eyebrow: typeof data.eyebrow === "string" ? data.eyebrow.trim() : "",
+      heading: typeof data.heading === "string" ? data.heading.trim() : "",
+      subheading: typeof data.subheading === "string" ? data.subheading.trim() : "",
+      placement: normalizeHomeSectionPlacement(data.placement, "after_promo_banner"),
+      testimonials: Array.isArray(data.testimonials)
+        ? data.testimonials
+            .map((entry) => {
+              const item = entry as Record<string, unknown>;
+              const id = Number(item.id ?? 0);
+              const name = typeof item.name === "string" ? item.name.trim() : "";
+              const quote = typeof item.quote === "string" ? item.quote.trim() : "";
+
+              if (!id || !name || !quote) return null;
+
+              return {
+                id,
+                name,
+                title: typeof item.title === "string" ? item.title.trim() : "",
+                quote,
+                stars: Math.max(1, Math.min(5, Number(item.stars ?? 5) || 5)),
+                imageUrl: normalizeMediaUrl(typeof item.imageUrl === "string" ? item.imageUrl : null),
+              } satisfies ApiSocialProofTestimonial;
+            })
+            .filter((item): item is ApiSocialProofTestimonial => Boolean(item))
+        : [],
+    };
   } catch {
     return null;
   }

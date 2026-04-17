@@ -1,0 +1,101 @@
+.section {
+  background: linear-gradient(140deg, #071023 0%, #0c1d38 50%, #0f2444 100%);
+}
+
+.gridOverlay {
+  background-image:
+    linear-gradient(rgba(70, 190, 150, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(70, 190, 150, 0.045) 1px, transparent 1px),
+    linear-gradient(rgba(60, 130, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(60, 130, 255, 0.04) 1px, transparent 1px);
+  background-size: 10px 10px, 10px 10px, 50px 50px, 50px 50px;
+}
+
+.glowTop {
+  background: radial-gradient(ellipse 55% 55% at 100% 0%, rgba(46, 124, 138, 0.22) 0%, transparent 70%);
+}
+
+.glowBottom {
+  background: radial-gradient(ellipse 55% 55% at 0% 100%, rgba(78, 168, 95, 0.18) 0%, transparent 70%);
+}
+
+.item {
+  opacity: 0;
+}
+
+.show {
+  animation: fadeUp 550ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.delay0 {
+  animation-delay: 0ms;
+}
+
+.delay1 {
+  animation-delay: 80ms;
+}
+
+.delay2 {
+  animation-delay: 150ms;
+}
+
+.delay3 {
+  animation-delay: 220ms;
+}
+
+.delay4 {
+  animation-delay: 290ms;
+}
+
+.delay5 {
+  animation-delay: 360ms;
+}
+
+.delay6 {
+  animation-delay: 430ms;
+}
+
+.delay7 {
+  animation-delay: 500ms;
+}
+
+.eyebrow {
+  color: rgba(78, 168, 95, 0.9);
+}
+
+.heading {
+  background-image: linear-gradient(135deg, #6ea8d8 0%, #2e7c8a 42%, #4ea85f 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+.subheading {
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.icon {
+  color: #4ea85f;
+}
+
+.cardText {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

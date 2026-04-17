@@ -1,6 +1,6 @@
 import Container from "@/components/layout/Container";
 import NewsletterForm from "@/components/layout/NewsletterForm";
-import { getNewsletterSection } from "@/lib/api";
+import { getNewsletterSection, type ApiNewsletterSection } from "@/lib/api";
 import { Mail, Bell } from "lucide-react";
 
 const DEFAULTS = {
@@ -18,8 +18,12 @@ const DEFAULTS = {
   form_subtitle: "No spam, unsubscribe any time.",
 };
 
-export default async function NewsletterSection() {
-  const data = await getNewsletterSection();
+interface NewsletterSectionProps {
+  section?: ApiNewsletterSection | null;
+}
+
+export default async function NewsletterSection({ section }: NewsletterSectionProps = {}) {
+  const data = section ?? await getNewsletterSection();
 
   if (data && !data.is_active) return null;
 
