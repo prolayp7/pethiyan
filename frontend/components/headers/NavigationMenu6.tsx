@@ -4,10 +4,11 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   X,
   Menu,
   ArrowRight,
-  ChevronRight,
   Package,
   Search,
   ShoppingBag,
@@ -132,9 +133,12 @@ export default function NavigationMenu6({
   const [shopOpen, setShopOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [canScrollBestSellersLeft, setCanScrollBestSellersLeft] = useState(false);
+  const [canScrollBestSellersRight, setCanScrollBestSellersRight] = useState(false);
 
   const megaTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const shopTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const bestSellersRef = useRef<HTMLDivElement | null>(null);
 
   const handleMegaEnter = () => {
     if (megaTimer.current) clearTimeout(megaTimer.current);
@@ -168,6 +172,37 @@ export default function NavigationMenu6({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
+
+  useEffect(() => {
+    const rail = bestSellersRef.current;
+    if (!rail || !megaOpen) return;
+
+    const updateScrollButtons = () => {
+      const maxScrollLeft = rail.scrollWidth - rail.clientWidth;
+      setCanScrollBestSellersLeft(rail.scrollLeft > 4);
+      setCanScrollBestSellersRight(maxScrollLeft - rail.scrollLeft > 4);
+    };
+
+    updateScrollButtons();
+    rail.addEventListener("scroll", updateScrollButtons, { passive: true });
+    window.addEventListener("resize", updateScrollButtons);
+
+    return () => {
+      rail.removeEventListener("scroll", updateScrollButtons);
+      window.removeEventListener("resize", updateScrollButtons);
+    };
+  }, [megaOpen, megaFeaturedProducts.length, activeIndex]);
+
+  const scrollBestSellers = (direction: "left" | "right") => {
+    const rail = bestSellersRef.current;
+    if (!rail) return;
+
+    const amount = Math.max(rail.clientWidth * 0.65, 220);
+    rail.scrollBy({
+      left: direction === "right" ? amount : -amount,
+      behavior: "smooth",
+    });
+  };
 
   const active = sidebarCategories[activeIndex];
 
@@ -517,7 +552,7 @@ export default function NavigationMenu6({
                 </div>
 
                 {/* ── RIGHT: 3-Column Sub-links ── */}
-                <div className="flex-1 py-6 pl-7">
+                <div className="flex-1 min-w-0 py-6 pl-7">
                   <div className="flex items-center justify-between mb-5">
                     <p
                       className="text-[9px] font-black tracking-[0.25em] uppercase"
@@ -575,17 +610,45 @@ export default function NavigationMenu6({
                           <Star className="h-3 w-3" style={{ color: "#f59e0b" }} aria-hidden="true" />
                           Best Sellers
                         </p>
-                        <Link
-                          href="/best-sellers"
-                          className="text-xs font-semibold hover:underline underline-offset-4 flex items-center gap-1"
-                          style={{ color: "#4caf50" }}
-                          onClick={() => setMegaOpen(false)}
-                        >
-                          View all
-                          <ArrowRight className="h-3 w-3" aria-hidden="true" />
-                        </Link>
+                        <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              aria-label="Scroll best sellers left"
+                              onClick={() => scrollBestSellers("left")}
+                              disabled={!canScrollBestSellersLeft}
+                              className="flex h-7 w-7 items-center justify-center rounded-full border transition-colors disabled:cursor-not-allowed disabled:opacity-35"
+                              style={{ borderColor: "#dbe5ef", color: "#1f4f8a", background: "#fff" }}
+                            >
+                              <ChevronLeft className="h-3.5 w-3.5" aria-hidden="true" />
+                            </button>
+                            <button
+                              type="button"
+                              aria-label="Scroll best sellers right"
+                              onClick={() => scrollBestSellers("right")}
+                              disabled={!canScrollBestSellersRight}
+                              className="flex h-7 w-7 items-center justify-center rounded-full border transition-colors disabled:cursor-not-allowed disabled:opacity-35"
+                              style={{ borderColor: "#dbe5ef", color: "#1f4f8a", background: "#fff" }}
+                            >
+                              <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
+                            </button>
+                          </div>
+                          <Link
+                            href="/best-sellers"
+                            className="text-xs font-semibold hover:underline underline-offset-4 flex items-center gap-1"
+                            style={{ color: "#4caf50" }}
+                            onClick={() => setMegaOpen(false)}
+                          >
+                            View all
+                            <ArrowRight className="h-3 w-3" aria-hidden="true" />
+                          </Link>
+                        </div>
                       </div>
-                      <div className="flex items-start gap-3">
+                      <div
+                        ref={bestSellersRef}
+                        className="flex items-start gap-3 overflow-x-auto scroll-smooth pb-1"
+                        style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+                      >
                         {megaFeaturedProducts.map((p, idx) => (
                           <Link
                             key={idx}

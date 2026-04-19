@@ -13,7 +13,7 @@ import { getOrder, type ApiOrder, type ApiTrackingStep } from "@/lib/api";
 
 function fmt(n: number) {
   return new Intl.NumberFormat("en-IN", {
-    style: "currency", currency: "INR", maximumFractionDigits: 0,
+    style: "currency", currency: "INR", minimumFractionDigits: 2, maximumFractionDigits: 2,
   }).format(n);
 }
 
@@ -163,8 +163,13 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
 
   const status        = STATUS_MAP[order.status] ?? { label: order.status, cls: "bg-gray-100 text-gray-600" };
   const trackingSteps = order.tracking?.length ? order.tracking : buildDefaultTracking(order.status, order.created_at);
-  const subtotal      = order.subtotal ?? order.total - (order.shipping_charge ?? 0) + (order.discount ?? 0);
-  const gst           = order.gst_amount ?? Math.round(order.total * 18 / 118);
+  const subtotal         = order.subtotal ?? order.total - (order.shipping_charge ?? 0) + (order.discount ?? 0);
+  const productAfterDiscount = subtotal - (order.discount ?? 0);
+  // order.gst_amount may be stored as 0 when not calculated at save-time — derive it from
+  // the product amount after discount (GST is not applicable to shipping or discount savings).
+  const gst = (order.gst_amount != null && order.gst_amount > 0)
+    ? order.gst_amount
+    : Math.round(productAfterDiscount * 18 / 118);
 
   return (
     <div className="space-y-5">
@@ -241,12 +246,10 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                     {item.variant_label && (
                       <p className="text-xs text-gray-400 mt-0.5">{item.variant_label}</p>
                     )}
-                    <p className="text-xs text-gray-500 mt-0.5">
-                      {fmt(item.price)} × {item.quantity}
-                    </p>
+                    <p className="text-xs text-gray-500 mt-0.5">Qty: {item.quantity}</p>
                   </div>
                   <p className="text-sm font-bold text-(--color-secondary) shrink-0">
-                    {fmt(item.price * item.quantity)}
+                    {fmt(item.subtotal ?? item.price * item.quantity)}
                   </p>
                 </div>
               ))}

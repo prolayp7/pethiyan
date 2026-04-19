@@ -13,6 +13,16 @@ function normalizeIconUrl(src?: string | null): string | null {
   if (!trimmed) return null;
 
   if (/^https?:\/\//i.test(trimmed)) {
+    try {
+      const incoming = new URL(trimmed);
+      const apiBase  = new URL(API_BASE);
+      // Rewrite localhost/127.0.0.1 URLs to the configured API origin
+      if (["127.0.0.1", "localhost"].includes(incoming.hostname)) {
+        return `${apiBase.origin}${incoming.pathname}${incoming.search}${incoming.hash}`;
+      }
+    } catch {
+      // fall through
+    }
     return trimmed;
   }
 

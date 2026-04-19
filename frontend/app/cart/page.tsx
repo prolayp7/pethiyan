@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -89,6 +89,21 @@ export default function CartPage() {
     }
   }, [couponCode, total]);
 
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem("applied_coupon");
+      if (!saved) return;
+
+      const parsed = JSON.parse(saved) as ApiCouponResult;
+      if (!parsed?.valid) return;
+
+      setCouponCode(parsed.code);
+      setCouponResult(parsed);
+    } catch {
+      sessionStorage.removeItem("applied_coupon");
+    }
+  }, []);
+
   const removeCoupon = () => {
     setCouponResult(null);
     setCouponCode("");
@@ -96,14 +111,15 @@ export default function CartPage() {
     sessionStorage.removeItem("applied_coupon");
   };
 
-  const discount    = couponResult?.discount_amount ?? 0;
-  const grandTotal  = total - discount;
+  const discount = couponResult?.discount_amount ?? 0;
+  const grandTotal = Math.max(total - discount, 0);
+  const gst = Math.round((grandTotal * 18) / 118);
   const isFreeShipping = grandTotal >= FREE_SHIPPING_THRESHOLD;
   void isFreeShipping; // referenced elsewhere if needed
 
   if (items.length === 0) {
     return (
-      <div className="bg-(--background) min-h-screen">
+      <div className="bg-background min-h-screen">
         <Container>
           <EmptyCart />
         </Container>
@@ -112,7 +128,7 @@ export default function CartPage() {
   }
 
   return (
-    <div className="bg-(--background) min-h-screen">
+    <div className="bg-background min-h-screen">
       <Container className="py-8 lg:py-12">
 
         {/* ── Header ── */}
@@ -190,7 +206,7 @@ export default function CartPage() {
                       <button
                         type="button"
                         onClick={() => removeItem(item.id)}
-                        className="shrink-0 p-1.5 rounded-full text-gray-300 border border-transparent hover:text-white hover:border-transparent hover:shadow-md hover:bg-[linear-gradient(135deg,_#17396f_0%,_#2f6f9f_52%,_#49ad57_100%)] transition-all"
+                        className="shrink-0 p-1.5 rounded-full text-gray-300 border border-transparent hover:text-white hover:border-transparent hover:shadow-md hover:bg-[linear-gradient(135deg,#17396f_0%,#2f6f9f_52%,#49ad57_100%)] transition-all"
                         aria-label="Remove item"
                       >
                         <X className="h-4 w-4" />
@@ -209,7 +225,7 @@ export default function CartPage() {
                         >
                           <Minus className="h-3.5 w-3.5" />
                         </button>
-                        <span className="px-3 py-1.5 text-sm font-semibold text-(--color-secondary) tabular-nums min-w-[2rem] text-center">
+                        <span className="px-3 py-1.5 text-sm font-semibold text-(--color-secondary) tabular-nums min-w-8 text-center">
                           {item.quantity}
                         </span>
                         <button
@@ -225,10 +241,10 @@ export default function CartPage() {
                       {/* Price */}
                       <div className="text-right">
                         <p className="text-sm font-bold text-(--color-secondary)">
-                          {fmt(item.price * item.quantity)}
+                          {fmt((item.price * item.quantity * 100) / 118)}
                         </p>
                         {item.quantity > 1 && (
-                          <p className="text-[11px] text-gray-400">{fmt(item.price)} each</p>
+                          <p className="text-[11px] text-gray-400">{fmt((item.price * 100) / 118)} each</p>
                         )}
                         {weightDisplay && (
                           <p className="text-[11px] text-gray-400 mt-1">{weightDisplay}</p>
@@ -321,7 +337,7 @@ export default function CartPage() {
               <div className="space-y-3 border-t border-gray-100 pt-4">
                 <div className="flex justify-between text-sm text-gray-600">
                   <span>Subtotal ({itemCount} items)</span>
-                  <span className="font-semibold text-(--color-secondary)">{fmt(total)}</span>
+                  <span className="font-semibold text-(--color-secondary)">{fmt((total * 100) / 118)}</span>
                 </div>
                 {discount > 0 && (
                   <div className="flex justify-between text-sm">
@@ -329,12 +345,16 @@ export default function CartPage() {
                     <span className="text-green-600 font-semibold">−{fmt(discount)}</span>
                   </div>
                 )}
+                <div className="flex justify-between text-xs text-gray-400 border-t border-dashed border-gray-100 pt-3">
+                  <span>GST (18% incl.)</span>
+                  <span>{fmt(gst)}</span>
+                </div>
               </div>
 
               {/* Grand total */}
               <div className="flex justify-between items-center border-t border-gray-200 pt-4 mt-4">
                 <span className="text-base font-extrabold text-(--color-secondary)">Total</span>
-                <span className="text-xl font-extrabold text-(--color-secondary)">{fmt(grandTotal)}</span>
+                <span className="text-xl font-extrabold text-(--color-secondary)">{fmt((grandTotal * 100) / 118 + gst)}</span>
               </div>
 
               {/* Checkout button */}

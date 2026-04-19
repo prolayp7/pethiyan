@@ -120,10 +120,13 @@ export function CartProvider({
           const variant = product?.variants.find((entry) => entry.id === variantId);
           if (variant?.weight == null || variant.weight <= 0) return null;
 
+          const weightUnit = variant.weight_unit ?? item.weightUnit;
+          if (!weightUnit) return null;
+
           return {
             id: item.id,
             weight: variant.weight,
-            weightUnit: variant.weight_unit ?? item.weightUnit,
+            weightUnit,
           };
         })
       );
@@ -132,7 +135,7 @@ export function CartProvider({
 
       const updates = new Map(
         resolved
-          .filter((entry): entry is { id: string; weight: number; weightUnit?: string } => Boolean(entry))
+          .filter((entry): entry is { id: string; weight: number; weightUnit: string } => entry !== null)
           .map((entry) => [entry.id, entry])
       );
 

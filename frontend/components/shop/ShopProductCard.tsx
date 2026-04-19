@@ -18,6 +18,7 @@ import {
   type RealApiProduct, type RealApiVariant,
 } from "@/lib/api";
 import { useSiteSettings } from "@/context/SiteSettingsContext";
+import AttributePills from "@/components/product/AttributePills";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -61,7 +62,6 @@ export default function ShopProductCard({ product }: { product: RealApiProduct }
   const { isWishlisted, toggle } = useWishlist();
   const { isLoggedIn } = useAuth();
   const {
-    showVariantColorsInGrid,
     showGstInGrid,
     showCategoryNameInGrid,
     showMinQtyInGrid,
@@ -79,14 +79,20 @@ export default function ShopProductCard({ product }: { product: RealApiProduct }
   const { variant: defaultVariant, pricing: defaultPricing } = getDefaultPricing(product);
   const price     = defaultPricing?.special_price || defaultPricing?.price || 0;
   const compare   = defaultPricing?.price || 0;
-  const showCompare = compare > 0 && compare > price;
-  const discount  = showCompare ? Math.round(((compare - price) / compare) * 100) : null;
+  // Display price: prefer special_price when available, otherwise use cost (price without GST) or price
+  const displayPrice = defaultPricing?.special_price ?? (defaultPricing?.cost ? parseFloat(String(defaultPricing.cost)) : defaultPricing?.price ?? 0);
+  const showCompare = compare > 0 && compare > displayPrice;
+  const discount  = showCompare ? Math.round(((compare - displayPrice) / compare) * 100) : null;
   const inStock   = (defaultPricing?.stock ?? 0) > 0;
   const minQty    = product.policies?.minimum_order_quantity ?? 1;
   const imgSrc    = normalizeImageUrl(
     defaultVariant?.image || product.images?.main_image
   );
   const isInWishlist = isWishlisted(product.id);
+  
+  // Price to show in grid (prefer discounted special_price when present)
+  const priceWithoutGst = displayPrice;
+  const compareWithoutGst = compare;
 
   // ── Quick view derived values ─────────────────────────────────────────────
   const quickViewVariants = useMemo(() => quickViewProduct?.variants ?? [], [quickViewProduct]);
@@ -324,28 +330,7 @@ export default function ShopProductCard({ product }: { product: RealApiProduct }
             <p className="text-sm font-semibold text-gray-900 leading-snug line-clamp-2 group-hover:text-[#2e7c8a] transition-colors">
               {product.title}
             </p>
-
-            {/* Color swatches + variant count */}
-            {showVariantColorsInGrid && (() => {
-              const colorMap = new Map<string, string>();
-              for (const v of product.variants ?? []) {
-                const c = v.attributes?.color;
-                if (c && !colorMap.has(c)) colorMap.set(c, COLOR_MAP[c] ?? "#aaa");
-              }
-              const colors = Array.from(colorMap.entries());
-              const variantCount = product.variants?.length ?? 0;
-              if (colors.length === 0 && variantCount <= 1) return null;
-              return (
-                <div className="flex items-center gap-1.5">
-                  {colors.slice(0, 5).map(([c, bg]) => (
-                    <span key={c} title={c} className="w-3 h-3 rounded-full border border-black/10 shrink-0" style={{ background: bg }} />
-                  ))}
-                  {variantCount > 1 && (
-                    <span className="text-[10px] text-gray-400 ml-0.5">{variantCount} variants</span>
-                  )}
-                </div>
-              );
-            })()}
+            <AttributePills attributes={defaultVariant?.attributes ?? null} />
 
             {/* Bottom row: price+meta left, cart right */}
             <div className="flex items-end justify-between gap-2 mt-auto pt-2 border-t border-gray-100">
@@ -353,11 +338,11 @@ export default function ShopProductCard({ product }: { product: RealApiProduct }
               <div className="flex flex-col gap-0.5 min-w-0">
                 <div className="flex items-baseline gap-1">
                   <span className="text-sm font-extrabold text-gray-900">
-                    {product.currency?.symbol || "₹"}{price.toFixed(2)}
+                    {product.currency?.symbol || "₹"}{priceWithoutGst.toFixed(2)}
                   </span>
                   {showCompare && (
                     <span className="text-[10px] text-gray-400 line-through">
-                      {product.currency?.symbol || "₹"}{compare.toFixed(2)}
+                      {product.currency?.symbol || "₹"}{compareWithoutGst.toFixed(2)}
                     </span>
                   )}
                 </div>

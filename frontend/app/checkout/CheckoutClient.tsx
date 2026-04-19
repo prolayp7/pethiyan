@@ -323,16 +323,19 @@ interface OrderSummaryProps {
   subtotal: number;
   discount: number;
   shippingCharge: number;
+  shippingLabel?: string | null;
+  shippingEta?: string | null;
   couponResult: ApiCouponResult | null;
   currencySymbol: string;
   items: { name: string; quantity: number; price: number; image?: string | null; weight?: number; weightUnit?: string }[];
 }
 
-function OrderSummary({ subtotal, discount, shippingCharge, couponResult, currencySymbol, items }: OrderSummaryProps) {
+function OrderSummary({ subtotal, discount, shippingCharge, shippingLabel, shippingEta, couponResult, currencySymbol, items }: OrderSummaryProps) {
   const fmt = makeFmt(currencySymbol);
-  const taxable = subtotal - discount + shippingCharge;
-  const gst = Math.round(taxable * 18 / 118);
-  const grand = taxable;
+  const baseSubtotal = (subtotal * 100) / 118;
+  // GST applies only to products, not to shipping charge
+  const productGst = Math.round((subtotal - discount) * 18 / 118);
+  const grand = (subtotal - discount) * 100 / 118 + productGst + shippingCharge;
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 sticky top-28">
@@ -361,7 +364,7 @@ function OrderSummary({ subtotal, discount, shippingCharge, couponResult, curren
                   </div>
                 )}
               </div>
-              <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-(--color-primary) text-white text-[9px] flex items-center justify-center font-bold z-10">
+              <span className="absolute -top-1.5 -right-1.5 min-w-4.5 h-4.5 px-1 rounded-full bg-(--color-primary) text-white text-[9px] flex items-center justify-center font-bold z-10">
                 {item.quantity > 99 ? "99+" : item.quantity}
               </span>
             </div>
@@ -372,7 +375,7 @@ function OrderSummary({ subtotal, discount, shippingCharge, couponResult, curren
               )}
             </div>
             <p className="text-xs font-bold text-(--color-secondary) shrink-0">
-              {fmt(item.price * item.quantity)}
+              {fmt((item.price * item.quantity * 100) / 118)}
             </p>
           </div>
         );})}
@@ -391,14 +394,29 @@ function OrderSummary({ subtotal, discount, shippingCharge, couponResult, curren
       <div className="space-y-2 border-t border-gray-100 pt-4 text-sm">
         <div className="flex justify-between text-gray-600">
           <span>Subtotal</span>
-          <span className="font-semibold text-(--color-secondary)">{fmt(subtotal)}</span>
+          <span className="font-semibold text-(--color-secondary)">{fmt(baseSubtotal)}</span>
         </div>
+        {shippingLabel && (
+          <div className="flex items-start justify-between gap-3 text-gray-600">
+            <div>
+              <p>Shipping</p>
+              <p className="text-[11px] text-gray-400 mt-0.5">{shippingLabel}{shippingEta ? ` · ${shippingEta}` : ""}</p>
+            </div>
+            <span className="font-semibold text-(--color-secondary)">
+              {shippingCharge === 0 ? <span className="text-green-600">Free</span> : fmt(shippingCharge)}
+            </span>
+          </div>
+        )}
         {discount > 0 && (
           <div className="flex justify-between text-green-600">
             <span>Discount</span>
             <span className="font-semibold">−{fmt(discount)}</span>
           </div>
         )}
+        <div className="flex justify-between text-xs text-gray-400 border-t border-dashed border-gray-100 pt-3">
+          <span>GST (18% incl.)</span>
+          <span>{fmt(productGst)}</span>
+        </div>
       </div>
 
       <div className="flex justify-between items-center border-t border-gray-200 pt-4 mt-4">
@@ -538,7 +556,8 @@ export default function CheckoutClient() {
   const discount = couponResult?.discount_amount ?? 0;
   const selectedRate = shippingRates.find((r) => r.id === selectedRateId);
   const shippingCharge = selectedRate?.charge ?? 0;
-  const grandTotal = total - discount + shippingCharge;
+  // GST applies to products only (not shipping); grandTotal matches the displayed Order Summary total
+  const grandTotal = (total - discount) * 100 / 118 + Math.round((total - discount) * 18 / 118) + shippingCharge;
   const selectedAddress = addresses.find((a) => a.id === selectedAddressId);
 
   // ── Handlers ──
@@ -1159,6 +1178,25 @@ export default function CheckoutClient() {
                   </button>
                 </div>
 
+                {selectedRate && (
+                  <div className="mb-6 p-3 rounded-xl bg-gray-50 border border-gray-100">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Selected Shipping</p>
+                        <p className="text-sm font-semibold text-(--color-secondary) mt-1">{selectedRate.label}</p>
+                        <p className="text-xs text-gray-400 mt-0.5">Estimated delivery: {selectedRate.estimated_days}</p>
+                      </div>
+                      <p className="text-sm font-bold text-(--color-secondary)">
+                        {selectedRate.is_free || selectedRate.charge === 0 ? (
+                          <span className="text-green-600">Free</span>
+                        ) : (
+                          fmt(selectedRate.charge)
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 {/* Coupon in payment step */}
                 <div className="mb-6 p-4 rounded-xl bg-gray-50 border border-gray-100">
                   <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
@@ -1172,7 +1210,7 @@ export default function CheckoutClient() {
                         <span className="text-sm font-semibold text-green-700">{couponResult.code}</span>
                         <span className="text-sm text-green-600">— {fmt(discount)} off</span>
                       </div>
-                      <button onClick={() => { setCouponResult(null); sessionStorage.removeItem("applied_coupon"); }} className="text-green-400 hover:text-green-600">
+                      <button onClick={() => { setCouponResult(null); sessionStorage.removeItem("applied_coupon"); }} className="text-green-400 hover:text-green-600" aria-label="Remove coupon" title="Remove coupon">
                         <X className="h-4 w-4" />
                       </button>
                     </div>
@@ -1303,6 +1341,8 @@ export default function CheckoutClient() {
               subtotal={total}
               discount={discount}
               shippingCharge={shippingCharge}
+              shippingLabel={selectedRate?.label ?? null}
+              shippingEta={selectedRate?.estimated_days ?? null}
               couponResult={couponResult}
               currencySymbol={currencySymbol}
               items={items}

@@ -1,8 +1,9 @@
 "use client";
 
+import { useRef, useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 
 const bestSellerProducts = [
   { id: 1, image: "/images/products/1.jpg", name: "Stand-Up Pouch", subtitle: "Resealable Ziplock", price: "From $0.85", href: "/products/1", badge: "Best Seller" },
@@ -15,7 +16,34 @@ const bestSellerProducts = [
   { id: 8, image: "/images/products/8.jpg", name: "Vacuum Seal Bag", subtitle: "Industrial Grade", price: "From $0.72", href: "/products/8", badge: "Bulk Deal" },
 ];
 
+const SCROLL_AMOUNT = 360;
+
 export default function MegaMenuBestSellers({ onClose }: { onClose: () => void }) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [canPrev, setCanPrev] = useState(false);
+  const [canNext, setCanNext] = useState(false);
+
+  const updateArrows = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    setCanPrev(el.scrollLeft > 4);
+    setCanNext(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+  }, []);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    updateArrows();
+    el.addEventListener("scroll", updateArrows, { passive: true });
+    const ro = new ResizeObserver(updateArrows);
+    ro.observe(el);
+    return () => { el.removeEventListener("scroll", updateArrows); ro.disconnect(); };
+  }, [updateArrows]);
+
+  const scroll = (dir: "prev" | "next") => {
+    scrollRef.current?.scrollBy({ left: dir === "next" ? SCROLL_AMOUNT : -SCROLL_AMOUNT, behavior: "smooth" });
+  };
+
   return (
     <div
       className="py-5 px-4 sm:px-6 lg:px-8"
@@ -26,16 +54,44 @@ export default function MegaMenuBestSellers({ onClose }: { onClose: () => void }
           <p className="text-[9px] font-black tracking-[0.28em] uppercase" style={{ color: "#123f7a" }}>
             Best-Sellers
           </p>
-          <Link
-            href="/best-sellers"
-            className="flex items-center gap-1 text-[11px] font-semibold hover:underline underline-offset-4 transition-colors"
-            style={{ color: "#4ea85f" }}
-            onClick={onClose}
-          >
-            View all <ArrowRight className="h-3 w-3" />
-          </Link>
+          <div className="flex items-center gap-2">
+            {/* Prev / Next buttons */}
+            <button
+              type="button"
+              onClick={() => scroll("prev")}
+              disabled={!canPrev}
+              className="w-6 h-6 rounded-full border flex items-center justify-center transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:border-[#123f7a]"
+              style={{ borderColor: "#e2e8f0", color: "#123f7a" }}
+              aria-label="Scroll left"
+            >
+              <ChevronLeft className="h-3.5 w-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => scroll("next")}
+              disabled={!canNext}
+              className="w-6 h-6 rounded-full border flex items-center justify-center transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:border-[#123f7a]"
+              style={{ borderColor: "#e2e8f0", color: "#123f7a" }}
+              aria-label="Scroll right"
+            >
+              <ChevronRight className="h-3.5 w-3.5" />
+            </button>
+            <Link
+              href="/best-sellers"
+              className="flex items-center gap-1 text-[11px] font-semibold hover:underline underline-offset-4 transition-colors ml-1"
+              style={{ color: "#4ea85f" }}
+              onClick={onClose}
+            >
+              View all <ArrowRight className="h-3 w-3" />
+            </Link>
+          </div>
         </div>
-        <div className="flex items-start gap-3.5 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
+
+        <div
+          ref={scrollRef}
+          className="flex items-start gap-3.5 overflow-x-auto pb-1"
+          style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+        >
           {bestSellerProducts.map((product) => (
             <Link
               key={product.id}

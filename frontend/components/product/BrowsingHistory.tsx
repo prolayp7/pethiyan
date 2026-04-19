@@ -7,6 +7,16 @@ import { ArrowRight, ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
 import Container from "@/components/layout/Container";
 import { getBrowsingHistorySlugs, clearBrowsingHistory } from "@/lib/browsingHistory";
 import { API_BASE, type RealApiProduct } from "@/lib/api";
+import AttributePills from "@/components/product/AttributePills";
+
+const COLOR_MAP: Record<string, string> = {
+  Transparent: "#c8e6f5", Brown: "#8B6347", Colorful: "linear-gradient(135deg,#f44,#4f4,#44f)",
+  Black: "#111", White: "#f0f0f0", Red: "#e53", Blue: "#36f", Green: "#4b8",
+  Yellow: "#fb0", Gray: "#9ca3af", Grey: "#9ca3af", "Light Gray": "#d1d5db",
+  "Light Grey": "#d1d5db", "Dark Gray": "#374151", "Dark Grey": "#374151",
+  Silver: "#c0c0c0", Orange: "#f97316", Purple: "#a855f7", Pink: "#ec4899",
+  Beige: "#e8dcc8", Navy: "#1e3a5f", Maroon: "#800000",
+};
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -94,6 +104,12 @@ function HistoryCard({ product }: { product: RealApiProduct }) {
         {variantTitle && (
           <p className="text-[10px] text-gray-400 truncate">{variantTitle}</p>
         )}
+        {/* Attributes: color swatches and other attribute pills */}
+        {product.variants && (() => {
+          const variant = product.variants.find((v) => v.is_default) ?? product.variants[0];
+          const attrs = (variant && (variant as any).attributes) || null;
+          return <AttributePills attributes={attrs} />;
+        })()}
         {price > 0 && (
           <div className="flex items-baseline gap-1.5 mt-0.5">
             <span className="text-sm font-extrabold text-(--color-primary)">

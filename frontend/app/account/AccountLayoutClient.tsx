@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -8,6 +8,8 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useWishlist } from "@/context/WishlistContext";
+import LoginModal from "@/components/auth/LoginModal";
+import BrowsingHistory from "@/components/product/BrowsingHistory";
 
 const NAV_ITEMS = [
   { href: "/account/orders",    label: "My Orders",  icon: Package },
@@ -21,12 +23,16 @@ export default function AccountLayoutClient({ children }: { children: React.Reac
   const { count: wishlistCount } = useWishlist();
   const router   = useRouter();
   const pathname = usePathname();
+  const [loginOpen, setLoginOpen] = useState(false);
 
   useEffect(() => {
     if (!isLoading && !isLoggedIn) {
-      router.replace(`/login?redirect=${encodeURIComponent(pathname)}`);
+      setLoginOpen(true);
     }
-  }, [isLoading, isLoggedIn, pathname, router]);
+    if (!isLoading && isLoggedIn) {
+      setLoginOpen(false);
+    }
+  }, [isLoading, isLoggedIn]);
 
   if (isLoading) {
     return (
@@ -36,7 +42,15 @@ export default function AccountLayoutClient({ children }: { children: React.Reac
     );
   }
 
-  if (!isLoggedIn) return null;
+  if (!isLoggedIn) {
+    return (
+      <LoginModal
+        open={loginOpen}
+        onClose={() => { setLoginOpen(false); router.replace("/"); }}
+        redirectTo={pathname}
+      />
+    );
+  }
 
   const initials = user?.name
     ?.split(" ")
@@ -144,7 +158,15 @@ export default function AccountLayoutClient({ children }: { children: React.Reac
             {children}
           </main>
         </div>
+
       </div>
+
+      {/* Full-width browsing history — profile page only */}
+      {["/account/profile", "/account/orders", "/account/addresses", "/account/wishlist"].includes(pathname) && (
+        <div className="mt-2 pb-12">
+          <BrowsingHistory />
+        </div>
+      )}
     </div>
   );
 }

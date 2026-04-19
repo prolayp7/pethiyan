@@ -89,7 +89,7 @@ function AddressForm({
         </div>
         <div>
           <label className="text-xs font-semibold text-gray-500 mb-1 block">State *</label>
-          <select className={cls} value={value.state} onChange={set("state")}>
+          <select className={cls} value={value.state} onChange={set("state")} title="State">
             <option value="">Select state</option>
             {INDIAN_STATES.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
@@ -298,38 +298,6 @@ export default function AddressesPage() {
       address_line1: addr.address_line1, address_line2: addr.address_line2 ?? "",
       city: addr.city, state: addr.state, pincode: addr.pincode,
     });
-  *** Add File: /var/www/lcommerce/admin/database/migrations/2026_04_16_140000_add_company_name_to_addresses_and_orders_tables.php
-  <?php
-
-  use Illuminate\Database\Migrations\Migration;
-  use Illuminate\Database\Schema\Blueprint;
-  use Illuminate\Support\Facades\Schema;
-
-  return new class extends Migration
-  {
-    public function up(): void
-    {
-      Schema::table('addresses', function (Blueprint $table) {
-        $table->string('company_name')->nullable()->after('user_id');
-      });
-
-      Schema::table('orders', function (Blueprint $table) {
-        $table->string('billing_company_name')->nullable()->after('billing_name');
-        $table->string('shipping_company_name')->nullable()->after('shipping_name');
-      });
-    }
-
-    public function down(): void
-    {
-      Schema::table('orders', function (Blueprint $table) {
-        $table->dropColumn(['billing_company_name', 'shipping_company_name']);
-      });
-
-      Schema::table('addresses', function (Blueprint $table) {
-        $table->dropColumn('company_name');
-      });
-    }
-  };
   }, []);
 
   const cancelForm = useCallback(() => {
@@ -357,8 +325,28 @@ export default function AddressesPage() {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-8 w-8 animate-spin text-(--color-primary)" />
+        <div className="space-y-4">
+          {[0, 1].map((i) => (
+            <div key={i} className="bg-white rounded-2xl border-2 border-gray-100 shadow-sm p-5 animate-pulse">
+              <div className="flex items-start justify-between gap-3 mb-4">
+                <div className="flex-1 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="h-4 w-32 bg-gray-200 rounded" />
+                    {i === 0 && <div className="h-4 w-14 bg-gray-200 rounded-full" />}
+                  </div>
+                  <div className="h-3.5 w-64 bg-gray-200 rounded" />
+                  <div className="h-3.5 w-48 bg-gray-200 rounded" />
+                  <div className="h-3.5 w-40 bg-gray-200 rounded" />
+                  <div className="h-3 w-28 bg-gray-100 rounded mt-1" />
+                </div>
+              </div>
+              <div className="flex items-center gap-2 mt-2">
+                <div className="h-7 w-16 bg-gray-200 rounded-lg" />
+                {i !== 0 && <div className="h-7 w-28 bg-gray-200 rounded-lg" />}
+                <div className="h-7 w-20 bg-gray-100 rounded-lg ml-auto" />
+              </div>
+            </div>
+          ))}
         </div>
       ) : (
         <div className="space-y-4">

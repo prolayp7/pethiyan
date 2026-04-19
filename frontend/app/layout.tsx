@@ -8,13 +8,13 @@ import { CartProvider } from "@/context/CartContext";
 import { AuthProvider } from "@/context/AuthContext";
 import { WishlistProvider } from "@/context/WishlistContext";
 import { SiteSettingsProvider } from "@/context/SiteSettingsContext";
-import { getHeaderMenu, getSystemSettings, getWebSettings } from "@/lib/api";
+import { getAnnouncementBar, getHeaderMenu, getSystemSettings, getWebSettings } from "@/lib/api";
 import GoogleAnalytics from "@/components/analytics/GoogleAnalytics";
 import { GTMScript, GTMNoScript } from "@/components/analytics/GoogleTagManager";
 import FacebookPixel from "@/components/analytics/FacebookPixel";
 import CartDrawer from "@/components/ui/CartDrawer";
 import TopAnnouncementBar from "@/components/headers/TopAnnouncementBar";
-import OfferTicker from "@/components/headers/OfferTicker";
+import OfferTickerClient from "@/components/headers/OfferTickerClient";
 import MainHeader from "@/components/headers/MainHeader1";
 import NavigationMenu from "@/components/headers/NavigationMenuServer";
 import MobileBottomNav from "@/components/ui/MobileBottomNav";
@@ -139,7 +139,7 @@ export default async function RootLayout({
   const initialWishlistCount = parseCountCookie(cookieStore.get(WISHLIST_COUNT_COOKIE)?.value);
   const orgSchema = organizationSchema();
   const siteSchema = websiteSchema();
-  const [siteSettings, webSettings, headerMenu] = await Promise.all([
+  const [siteSettings, webSettings, headerMenu, announcementBar] = await Promise.all([
     getSystemSettings().then(s => s ?? {
       appName: "Pethiyan", logo: null, favicon: null,
       showVariantColorsInGrid: false, showGstInGrid: false,
@@ -147,7 +147,20 @@ export default async function RootLayout({
     }),
     getWebSettings(),
     getHeaderMenu(),
+    getAnnouncementBar(),
   ]);
+
+  const DEFAULT_TICKER = [
+    "🚚 Free Shipping on Orders Above $50",
+    "⚡ Fast Global Delivery Available",
+    "📦 Premium Packaging for Modern Brands",
+    "🎁 Bundle & Save — Buy 3 Get 1 Free",
+    "🌿 100% Eco-Friendly Material Options",
+  ];
+  const topBarText   = announcementBar?.topBar.text ?? "The Power of Perfect Packaging — Trusted by 10,000+ Brands Worldwide";
+  const topBarActive = announcementBar?.topBar.active ?? true;
+  const tickerActive = announcementBar?.ticker.active ?? true;
+  const tickerItems  = announcementBar?.ticker.items?.length ? announcementBar.ticker.items : DEFAULT_TICKER;
 
   return (
     <html lang="en" className={inter.variable} suppressHydrationWarning>
@@ -170,8 +183,8 @@ export default async function RootLayout({
           <WishlistProvider initialCount={initialWishlistCount}>
             <CartProvider initialItemCount={initialCartCount}>
               {/* Non-sticky top bars */}
-              <TopAnnouncementBar />
-              <OfferTicker />
+              {topBarActive && <TopAnnouncementBar text={topBarText} />}
+              {tickerActive && <OfferTickerClient items={tickerItems} />}
 
               {/* Sticky header: MainHeader + CategoryNav */}
               <div className="sticky top-0 z-40">

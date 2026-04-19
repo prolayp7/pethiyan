@@ -15,7 +15,7 @@ import { trackOrder, type ApiOrder, type ApiTrackingStep } from "@/lib/api";
 
 function fmt(n: number) {
   return new Intl.NumberFormat("en-IN", {
-    style: "currency", currency: "INR", maximumFractionDigits: 0,
+    style: "currency", currency: "INR", minimumFractionDigits: 2, maximumFractionDigits: 2,
   }).format(n);
 }
 
@@ -196,7 +196,7 @@ function OrderResult({ order }: { order: ApiOrder }) {
                     <p className="text-[11px] text-gray-400">Qty: {item.quantity}</p>
                   </div>
                   <p className="text-xs font-bold text-gray-700 shrink-0">
-                    {fmt(item.price * item.quantity)}
+                    Total: {fmt(item.subtotal ?? item.price * item.quantity)}
                   </p>
                 </div>
               ))}
@@ -378,8 +378,65 @@ export default function TrackOrderClient() {
           </p>
         </div>
 
+        {/* Skeleton while loading */}
+        {loading && (
+          <div className="mt-6 space-y-4 animate-pulse">
+            {/* Summary banner skeleton */}
+            <div className="rounded-2xl p-5 bg-gray-200 h-24" />
+
+            <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
+              {/* Tracking timeline skeleton */}
+              <div className="sm:col-span-3 bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-5">
+                <div className="h-4 w-28 bg-gray-200 rounded" />
+                {[0, 1, 2, 3].map((i) => (
+                  <div key={i} className="flex gap-4">
+                    <div className="flex flex-col items-center">
+                      <div className="w-9 h-9 rounded-full bg-gray-200 shrink-0" />
+                      {i < 3 && <div className="w-0.5 flex-1 my-1 bg-gray-100 rounded-full min-h-10" />}
+                    </div>
+                    <div className="pb-7 flex-1 space-y-2">
+                      <div className="h-3.5 w-32 bg-gray-200 rounded" />
+                      <div className="h-3 w-48 bg-gray-100 rounded" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Right column skeleton */}
+              <div className="sm:col-span-2 space-y-4">
+                {/* Items skeleton */}
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-3">
+                  <div className="h-4 w-20 bg-gray-200 rounded" />
+                  {[0, 1, 2].map((i) => (
+                    <div key={i} className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-gray-200 shrink-0" />
+                      <div className="flex-1 space-y-1.5">
+                        <div className="h-3 w-full bg-gray-200 rounded" />
+                        <div className="h-2.5 w-12 bg-gray-100 rounded" />
+                      </div>
+                      <div className="h-3 w-14 bg-gray-200 rounded shrink-0" />
+                    </div>
+                  ))}
+                  <div className="flex justify-between pt-3 border-t border-gray-100">
+                    <div className="h-3 w-10 bg-gray-100 rounded" />
+                    <div className="h-4 w-20 bg-gray-200 rounded" />
+                  </div>
+                </div>
+
+                {/* Address skeleton */}
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-2">
+                  <div className="h-4 w-24 bg-gray-200 rounded mb-3" />
+                  <div className="h-3.5 w-36 bg-gray-200 rounded" />
+                  <div className="h-3 w-28 bg-gray-100 rounded" />
+                  <div className="h-3 w-16 bg-gray-100 rounded" />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Result */}
-        {result && <OrderResult order={result} />}
+        {!loading && result && <OrderResult order={result} />}
 
         {/* Logged in user shortcut */}
         {!hasSearched && (

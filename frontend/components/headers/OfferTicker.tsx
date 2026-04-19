@@ -1,7 +1,7 @@
-"use client";
+import { getAnnouncementBar } from "@/lib/api";
+import OfferTickerClient from "./OfferTickerClient";
 
-const offers = [
-  "🔥 20% OFF on Custom Packaging — Limited Time",
+const DEFAULT_ITEMS = [
   "🚚 Free Shipping on Orders Above $50",
   "⚡ Fast Global Delivery Available",
   "📦 Premium Packaging for Modern Brands",
@@ -9,30 +9,12 @@ const offers = [
   "🌿 100% Eco-Friendly Material Options",
 ];
 
-// Duplicate for seamless infinite loop
-const tickerItems = [...offers, ...offers];
+export default async function OfferTicker() {
+  const data = await getAnnouncementBar();
 
-export default function OfferTicker() {
-  return (
-    <div
-      className="bg-gray-50 border-b border-gray-100 overflow-hidden py-1.5"
-      aria-label="Promotional offers"
-      role="marquee"
-    >
-      <div
-        className="flex gap-12 w-max animate-ticker hover:[animation-play-state:paused]"
-        aria-live="off"
-      >
-        {tickerItems.map((offer, i) => (
-          <span
-            key={i}
-            className="text-xs sm:text-sm text-gray-600 font-medium whitespace-nowrap flex-shrink-0"
-          >
-            {offer}
-            <span className="mx-6 text-gray-300" aria-hidden="true">|</span>
-          </span>
-        ))}
-      </div>
-    </div>
-  );
+  if (data && !data.ticker.active) return null;
+
+  const items = data?.ticker.items?.length ? data.ticker.items : DEFAULT_ITEMS;
+
+  return <OfferTickerClient items={items} />;
 }

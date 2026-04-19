@@ -24,10 +24,7 @@ export default function CartDrawer() {
   const currencySymbol = items[0]?.currencySymbol ?? "₹";
   const fmt = (amount: number) =>
     `${currencySymbol}${amount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-
-  // Free shipping threshold in the same currency (₹999 for INR, $50 otherwise)
-  const freeShippingThreshold = currencySymbol === "₹" ? 999 : 50;
-  const shippingCharge        = currencySymbol === "₹" ? 0 : 5.99; // shown only below threshold
+  const gstAmount = Math.round((total * 18) / 118);
 
   return (
     <Sheet open={isOpen} onOpenChange={(open) => !open && closeCart()}>
@@ -73,7 +70,7 @@ export default function CartDrawer() {
               {items.map((item) => (
                 <li key={item.id} className="py-4 flex gap-3">
                   {/* Product Image */}
-                  <div className="w-16 h-16 rounded-lg bg-gray-50 border border-gray-100 flex-shrink-0 overflow-hidden">
+                  <div className="w-16 h-16 rounded-lg bg-gray-50 border border-gray-100 shrink-0 overflow-hidden">
                     {item.image ? (
                       <Image
                         src={item.image}
@@ -96,7 +93,7 @@ export default function CartDrawer() {
                       {item.name}
                     </p>
                     <p className="text-sm text-(--color-primary) font-semibold mt-0.5">
-                      {fmt(item.price * item.quantity)}
+                      {fmt((item.price * item.quantity * 100) / 118)}
                     </p>
 
                     {/* Quantity Controls */}
@@ -124,10 +121,10 @@ export default function CartDrawer() {
                   {/* Remove */}
                   <button
                     onClick={() => removeItem(item.id)}
-                    className="group p-1.5 rounded-full text-gray-300 border border-transparent hover:text-white hover:border-transparent hover:shadow-md hover:bg-[linear-gradient(135deg,_#17396f_0%,_#2f6f9f_52%,_#49ad57_100%)] transition-all self-start"
+                    className="group p-1.5 rounded-full text-gray-500 border border-gray-200 bg-white shadow-sm hover:text-white hover:border-transparent hover:shadow-md hover:bg-[linear-gradient(135deg,#17396f_0%,#2f6f9f_52%,#49ad57_100%)] transition-all self-start"
                     aria-label={`Remove ${item.name}`}
                   >
-                    <Trash2 className="h-4 w-4 transition-colors" />
+                    <Trash2 className="h-4 w-4 text-current group-hover:text-white transition-colors" />
                   </button>
                 </li>
               ))}
@@ -142,17 +139,15 @@ export default function CartDrawer() {
             <div className="space-y-2">
               <div className="flex justify-between text-sm text-gray-500">
                 <span>Subtotal</span>
-                <span>{fmt(total)}</span>
+                <span>{fmt((total * 100) / 118)}</span>
               </div>
               <div className="flex justify-between text-sm text-gray-500">
-                <span>Shipping</span>
-                <span className="text-green-600 font-medium">
-                  {total >= freeShippingThreshold ? "Free" : fmt(shippingCharge)}
-                </span>
+                <span>GST</span>
+                <span>{fmt(gstAmount)}</span>
               </div>
               <div className="flex justify-between font-semibold text-gray-900 pt-2 border-t border-gray-100">
                 <span>Total</span>
-                <span>{fmt(total >= freeShippingThreshold ? total : total + shippingCharge)}</span>
+                <span>{fmt((total * 100) / 118 + gstAmount)}</span>
               </div>
             </div>
 
@@ -170,11 +165,6 @@ export default function CartDrawer() {
               </Button>
             </div>
 
-            {total < freeShippingThreshold && (
-              <p className="text-xs text-center text-gray-400">
-                Add {fmt(freeShippingThreshold - total)} more for free shipping
-              </p>
-            )}
           </div>
         )}
       </SheetContent>

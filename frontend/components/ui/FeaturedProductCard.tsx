@@ -10,6 +10,7 @@ import { useCart } from "@/context/CartContext";
 import { useWishlist } from "@/context/WishlistContext";
 import { useAuth } from "@/context/AuthContext";
 import { useSiteSettings } from "@/context/SiteSettingsContext";
+import AttributePills from "@/components/product/AttributePills";
 import { API_BASE, addToWishlist, getProduct, getWishlistItems, removeWishlistItem, type RealApiProduct, type RealApiVariant } from "@/lib/api";
 import toast from "react-hot-toast";
 
@@ -17,6 +18,7 @@ export interface FallbackProduct {
   id: string;
   name: string;
   price: number;
+  cost?: number;
   originalPrice?: number;
   badge?: "Sale" | "New" | "Hot";
   image?: string;
@@ -90,6 +92,10 @@ export default function FeaturedProductCard({ p }: { p: FallbackProduct }) {
   const discount = p.originalPrice
     ? Math.round(((p.originalPrice - p.price) / p.originalPrice) * 100)
     : 0;
+
+  // Use cost field from API (price without GST)
+  const priceWithoutGst = p.cost ?? p.price;
+  const originalPriceWithoutGst = p.originalPrice;
 
   const numericProductId = Number(p.id);
   const isInWishlist = Number.isFinite(numericProductId)
@@ -394,9 +400,7 @@ export default function FeaturedProductCard({ p }: { p: FallbackProduct }) {
         {/* Color swatches + variant count */}
         {showVariantColorsInGrid && (p.colors.length > 0 || p.variantCount > 1) && (
           <div className="flex min-h-[0.875rem] items-center gap-1.5 overflow-hidden">
-            {p.colors.slice(0, 5).map((c) => (
-              <span key={c} title={c} className="w-3 h-3 rounded-full border border-black/10 shrink-0" style={{ background: COLOR_MAP[c] ?? "#aaa" }} />
-            ))}
+            <AttributePills colors={p.colors} />
             {p.variantCount > 1 && (
               <span className="ml-0.5 truncate text-[10px] text-gray-400">{p.variantCount} variants</span>
             )}
@@ -424,11 +428,11 @@ export default function FeaturedProductCard({ p }: { p: FallbackProduct }) {
           <div className="flex flex-col items-end gap-1.5 shrink-0">
             <div className="flex items-baseline gap-1">
               <span className="text-sm font-extrabold text-gray-900">
-                ₹{p.price.toFixed(2)}
+                ₹{priceWithoutGst.toFixed(2)}
               </span>
-              {p.originalPrice && (
+              {originalPriceWithoutGst && (
                 <span className="text-[10px] text-gray-400 line-through">
-                  ₹{p.originalPrice.toFixed(2)}
+                  ₹{originalPriceWithoutGst.toFixed(2)}
                 </span>
               )}
             </div>

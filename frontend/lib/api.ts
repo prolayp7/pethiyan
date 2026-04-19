@@ -27,7 +27,10 @@ function getApiErrorMessage(payload: unknown): string | undefined {
   }
 
   // 3. Fallback to message
-  return payload.message;
+  if (typeof payload === "object" && payload !== null && "message" in payload) {
+    return String(payload.message);
+  }
+  return undefined;
 }
 
 // ─── API Types ────────────────────────────────────────────────────────────────
@@ -161,6 +164,7 @@ export interface ApiAddressMutationResult {
 
 type ApiAddressInput = Omit<ApiAddress, "id" | "is_default"> & {
   gstin?: string;
+  is_default?: boolean;
 };
 
 export interface ApiOrder {
@@ -906,19 +910,37 @@ export async function registerUser(data: {
   password: string;
   password_confirmation: string;
   country_code?: string;
-}): Promise<{ success: boolean; token?: string; user?: import("@/context/AuthContext").AuthUser; message?: string }> {
+}): Promise<{
+  success: boolean;
+  token?: string;
+  user?: import("@/context/AuthContext").AuthUser;
+  message?: string;
+  smsOtpSent?: boolean;
+  emailOtpSent?: boolean;
+}> {
   const res = await apiFetch<{
     success: boolean;
     message?: string;
     access_token?: string;
-    data?: { user: import("@/context/AuthContext").AuthUser };
+    data?: {
+      user: import("@/context/AuthContext").AuthUser;
+      sms_otp_sent?: boolean;
+      email_otp_sent?: boolean;
+    };
   }>("/api/register", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ country_code: "+91", ...data }),
   });
   if (!res) return { success: false, message: "Request failed" };
-  return { success: res.success, message: res.message, token: res.success && res.data?.user ? AUTH_SESSION_MARKER : undefined, user: res.data?.user };
+  return {
+    success: res.success,
+    message: res.message,
+    token: res.success && res.data?.user ? AUTH_SESSION_MARKER : undefined,
+    user: res.data?.user,
+    smsOtpSent: res.data?.sms_otp_sent,
+    emailOtpSent: res.data?.email_otp_sent,
+  };
 }
 
 export async function verifyMobile(
@@ -1248,32 +1270,63 @@ export async function deleteAddress(id: number): Promise<boolean> {
 // ─── Orders ───────────────────────────────────────────────────────────────────
 
 function normalizeOrder(raw: Record<string, unknown>): ApiOrder {
-  const items = ((raw.items ?? []) as Record<string, unknown>[]).map((item) => ({
-    ...(item as object),
-    product_name:
-      (item.title as string) ??
-      ((item.product as Record<string, unknown>)?.name as string) ??
-      "Unknown",
-    product_slug:
-      ((item.product as Record<string, unknown>)?.slug as string) ?? "",
-    variant_label:
-      (item.variant_title as string) ??
-      ((item.variant as Record<string, unknown>)?.title as string) ??
-      undefined,
-    image:
-      normalizeMediaUrl(
-        (item.image as string) ??
-        ((item.variant as Record<string, unknown>)?.image as string) ??
-        ((item.product as Record<string, unknown>)?.image as string) ??
-        null
+  const pickFirstMediaField = (...values: unknown[]): string | null => {
+    for (const value of values) {
+      if (typeof value === "string" && value.trim()) {
+        return normalizeMediaUrl(value);
+      }
+    }
+    return null;
+  };
+
+  const items = ((raw.items ?? []) as Record<string, unknown>[]).map((item) => {
+    const product = (item.product as Record<string, unknown> | undefined) ?? {};
+    const variant = (item.variant as Record<string, unknown> | undefined) ?? {};
+
+    return {
+      ...(item as object),
+      price: parseFloat(String(item.price ?? item.unit_price ?? 0)),
+      subtotal: parseFloat(String(item.subtotal ?? item.total ?? 0)),
+      product_name:
+        (item.title as string) ??
+        (product.name as string) ??
+        "Unknown",
+      product_slug:
+        (product.slug as string) ?? "",
+      variant_label:
+        (item.variant_title as string) ??
+        (variant.title as string) ??
+        undefined,
+      image: pickFirstMediaField(
+        item.image,
+        item.image_url,
+        item.thumbnail,
+        item.thumbnail_url,
+        variant.image,
+        variant.image_url,
+        variant.thumbnail,
+        variant.thumbnail_url,
+        product.image,
+        product.image_url,
+        product.thumbnail,
+        product.thumbnail_url,
+        product.main_image
       ),
-  })) as ApiOrderItem[];
+    };
+  }) as ApiOrderItem[];
 
   return {
     ...(raw as object),
     order_number: (raw.slug as string) ?? String(raw.id),
     total: parseFloat(String(raw.final_total ?? raw.total_payable ?? 0)),
-    shipping_charge: parseFloat(String(raw.delivery_charge ?? 0)),
+    final_total: parseFloat(String(raw.final_total ?? raw.total_payable ?? 0)),
+    subtotal: parseFloat(String(raw.subtotal ?? 0)),
+    shipping_charge: parseFloat(String(raw.shipping_charge ?? raw.delivery_charge ?? 0)),
+    delivery_charge: parseFloat(String(raw.delivery_charge ?? raw.shipping_charge ?? 0)),
+    discount: parseFloat(String(raw.discount ?? raw.promo_discount ?? 0)),
+    gst_amount: parseFloat(String(raw.gst_amount ?? raw.total_gst ?? 0)),
+    promo_discount: parseFloat(String(raw.promo_discount ?? 0)),
+    gift_card_discount: parseFloat(String(raw.gift_card_discount ?? 0)),
     items,
   } as ApiOrder;
 }
@@ -1601,7 +1654,7 @@ export async function getFooterData(): Promise<ApiFooterData | null> {
               target: typeof item.target === "string" ? item.target : undefined,
             } satisfies ApiFooterLink;
           })
-          .filter((item): item is ApiFooterLink => Boolean(item))
+          .filter((item): item is NonNullable<typeof item> => item !== null)
       : [];
 
   const mapMenu = (value: unknown): ApiFooterMenu | null => {
@@ -2130,6 +2183,26 @@ export interface ApiHeroSection {
     autoplayDelay: number;
     heroHeight: number;
   };
+}
+
+// ─── Announcement Bar ─────────────────────────────────────────────────────────
+
+export interface ApiAnnouncementBar {
+  topBar: { active: boolean; text: string };
+  ticker: { active: boolean; items: string[] };
+}
+
+export async function getAnnouncementBar(): Promise<ApiAnnouncementBar | null> {
+  try {
+    const res = await fetch(`${API_BASE}/api/announcement-bar`, {
+      headers: { Accept: "application/json" },
+      next: { tags: ["announcement-bar"] },
+    });
+    if (!res.ok) return null;
+    return res.json() as Promise<ApiAnnouncementBar>;
+  } catch {
+    return null;
+  }
 }
 
 /** Fetches hero section data with tag-based cache (invalidated on admin updates). */

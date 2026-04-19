@@ -61,7 +61,13 @@ export default async function Footer() {
       <FooterNavigationGrid
         brand={footerData?.brand}
         navColumns={navColumns}
-        socialLinks={footerData?.brand.socialLinks ?? []}
+        socialLinks={
+          footerData?.brand.socialLinks?.map((link) => ({
+            label: link.label,
+            href: link.url,
+            platform: link.platform,
+          })) ?? []
+        }
       />
 
      

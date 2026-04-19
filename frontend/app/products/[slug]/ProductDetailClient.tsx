@@ -125,6 +125,14 @@ function Gallery({
 }) {
   const [active, setActive] = useState(0);
   const [zoomed, setZoomed] = useState(false);
+  const [origin, setOrigin] = useState("50% 50%");
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    setOrigin(`${x}% ${y}%`);
+  };
 
   const allThumbs = [
     ...images.map((src) => ({ type: "image" as const, src })),
@@ -146,7 +154,8 @@ function Gallery({
       <div
         className="relative aspect-square rounded-2xl overflow-hidden bg-gray-50 border border-(--color-border) cursor-zoom-in group"
         onMouseEnter={() => setZoomed(true)}
-        onMouseLeave={() => setZoomed(false)}
+        onMouseLeave={() => { setZoomed(false); setOrigin("50% 50%"); }}
+        onMouseMove={handleMouseMove}
       >
         {isVideo ? (
           <div className="absolute inset-0 flex items-center justify-center bg-black">
@@ -158,7 +167,11 @@ function Gallery({
               src={images[active] ?? images[0]}
               alt={`${name} — image ${active + 1}`}
               fill
-              className={`object-contain transition-transform duration-500 ${zoomed ? "scale-110" : "scale-100"}`}
+              className="object-contain transition-transform duration-200"
+              style={{
+                transformOrigin: origin,
+                transform: zoomed ? "scale(2.2)" : "scale(1)",
+              }}
               sizes="(max-width: 768px) 100vw, 50vw"
               priority
               unoptimized={shouldBypassOptimizer(images[active] ?? images[0])}

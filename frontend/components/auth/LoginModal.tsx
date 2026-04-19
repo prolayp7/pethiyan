@@ -100,7 +100,11 @@ export default function LoginModal({ open, onClose, onSuccess, redirectTo }: Log
   // OTP
   const [otp, setOtp] = useState("");
 
-  const pendingAuth = useRef<{ user: AuthUser } | null>(null);
+  const pendingAuth = useRef<{
+    user: AuthUser;
+    smsOtpSent: boolean;
+    emailOtpSent: boolean;
+  } | null>(null);
 
   // Google new-user completion state
   const [googleIdToken, setGoogleIdToken] = useState<string | null>(null);
@@ -305,7 +309,11 @@ export default function LoginModal({ open, onClose, onSuccess, redirectTo }: Log
         password_confirmation: regConfirmPassword,
       });
       if (res.success && res.user) {
-        pendingAuth.current = { user: res.user };
+        pendingAuth.current = {
+          user: res.user,
+          smsOtpSent: Boolean(res.smsOtpSent),
+          emailOtpSent: Boolean(res.emailOtpSent),
+        };
         setStep("otp");
         startCountdown();
       } else setApiError(res.message ?? "Registration failed. Please try again.");
@@ -440,6 +448,12 @@ export default function LoginModal({ open, onClose, onSuccess, redirectTo }: Log
   const isOtpStep = step === "otp";
   const mobileSummary = tab === "login" ? loginMobile : regMobile;
   const handleVerifyOtp = tab === "login" ? handleLoginVerifyOtp : handleRegisterVerifyOtp;
+  const registerSmsOtpSent = Boolean(pendingAuth.current?.smsOtpSent);
+  const registerEmailOtpSent = Boolean(pendingAuth.current?.emailOtpSent);
+  const registerOtpHeading = registerSmsOtpSent ? "Verify your mobile" : registerEmailOtpSent ? "Verify your email" : "Verify your mobile";
+  const registerOtpDestination = registerSmsOtpSent ? `+91 ${regMobile}` : registerEmailOtpSent ? regEmail : `+91 ${regMobile}`;
+  const otpHeading = tab === "login" ? "Verify your mobile" : registerOtpHeading;
+  const otpDestination = tab === "login" ? `+91 ${mobileSummary}` : registerOtpDestination;
 
   // ── Render ────────────────────────────────────────────────────────────────────
 
@@ -620,8 +634,8 @@ export default function LoginModal({ open, onClose, onSuccess, redirectTo }: Log
                   <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-1" style={{ background: "linear-gradient(135deg,#17396f,#2f6f9f)" }}>
                     <ShieldCheck className="h-7 w-7 text-white" />
                   </div>
-                  <h3 className="text-lg font-bold text-gray-900">Verify your mobile</h3>
-                  <p className="text-sm text-gray-500">OTP sent to <span className="font-semibold text-gray-700">+91 {mobileSummary}</span></p>
+                  <h3 className="text-lg font-bold text-gray-900">{otpHeading}</h3>
+                  <p className="text-sm text-gray-500">OTP sent to <span className="font-semibold text-gray-700">{otpDestination}</span></p>
                   {demoOtp && (
                     <p className="text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5 inline-block">
                       Demo mode — use OTP: <span className="font-bold tracking-widest">{demoOtp}</span>

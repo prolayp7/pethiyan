@@ -63,6 +63,38 @@ document.addEventListener('show.bs.modal', event => {
             submitButton.innerHTML = '<i class="ti ti-plus me-1"></i> Create';
         }
     }
+    if (event.target.id === 'faq-modal') {
+        const triggerButton = event.relatedTarget;
+        const faqId = triggerButton ? triggerButton.getAttribute('data-id') : null;
+
+        const form = document.querySelector('#faq-modal .form-submit');
+        const modalTitle = document.querySelector('#faq-modal .modal-title');
+        const submitButton = document.querySelector('#faq-modal button[type="submit"]');
+        if (!form) return;
+
+        if (faqId) {
+            fetch(`${base_url}/${panel}/faqs/${faqId}/edit`, {method: 'GET'})
+                .then(response => response.json())
+                .then(responseData => {
+                    const data = responseData.data;
+                    form.querySelector('textarea[name="question"]').value = data.question || '';
+                    form.querySelector('textarea[name="answer"]').value = data.answer || '';
+                    form.querySelector('select[name="status"]').value = data.status || 'active';
+                    form.setAttribute('action', `${base_url}/${panel}/faqs/${faqId}`);
+                    modalTitle.textContent = 'Edit FAQ';
+                    submitButton.innerHTML = '<i class="ti ti-edit me-1"></i> Update';
+                })
+                .catch(error => console.error('AJAX Error:', error));
+        } else {
+            form.reset();
+            form.querySelector('textarea[name="question"]').value = '';
+            form.querySelector('textarea[name="answer"]').value = '';
+            form.querySelector('select[name="status"]').value = 'active';
+            form.setAttribute('action', `${base_url}/${panel}/faqs`);
+            modalTitle.textContent = 'Add FAQ';
+            submitButton.innerHTML = '<i class="ti ti-plus me-1"></i> Create';
+        }
+    }
     if (event.target.id === 'product-faq-modal') {
         const triggerButton = event.relatedTarget;
         const conditionId = triggerButton ? triggerButton.getAttribute('data-id') : null;
@@ -71,7 +103,8 @@ document.addEventListener('show.bs.modal', event => {
         const form = document.querySelector('#product-faq-modal .form-submit');
         const modalTitle = document.querySelector('#product-faq-modal .modal-title');
         const submitButton = document.querySelector('#product-faq-modal button[type="submit"]');
-        const selectProduct = document.getElementById('select-product');
+        // Prefer modal-specific select to avoid collision with header filter select
+        const selectProduct = document.getElementById('select-product-modal') || document.getElementById('select-product');
         let selectProductTom = selectProduct && selectProduct.tomselect ? selectProduct.tomselect : null;
 
         if (conditionId) {
@@ -84,7 +117,8 @@ document.addEventListener('show.bs.modal', event => {
                     // Fill form fields
                     form.querySelector('textarea[name="question"]').value = data.question || '';
                     form.querySelector('textarea[name="answer"]').value = data.answer || '';
-                    form.querySelector('select[name="product_id"]').value = data.product_id || '';
+                    const productField = form.querySelector('[name="product_id"]');
+                    if (productField) productField.value = data.product_id || '';
                     form.querySelector('select[name="status"]').value = data.status || '';
 
                     if (selectProductTom) {
@@ -108,9 +142,24 @@ document.addEventListener('show.bs.modal', event => {
             if (form) form.reset();
             if (selectProductTom) selectProductTom.clear();
             if (selectProduct) selectProduct.value = '';
+            const productIdFromTrigger = triggerButton ? triggerButton.getAttribute('data-product-id') : null;
             form.querySelector('textarea[name="question"]').value = '';
             form.querySelector('textarea[name="answer"]').value = '';
-            form.querySelector('select[name="product_id"]').value = '';
+            const productFieldCreate = form.querySelector('[name="product_id"]');
+            if (productFieldCreate) productFieldCreate.value = '';
+            if (productIdFromTrigger) {
+                if (selectProductTom) {
+                    // ensure option exists then set
+                    try {
+                        selectProductTom.addOption && selectProductTom.addOption({value: productIdFromTrigger, text: productIdFromTrigger});
+                    } catch (e) {}
+                    selectProductTom.setValue(productIdFromTrigger);
+                } else if (selectProduct) {
+                    selectProduct.value = productIdFromTrigger;
+                }
+                const hiddenInput = form.querySelector('[name="product_id"]');
+                if (hiddenInput) hiddenInput.value = productIdFromTrigger;
+            }
             form.querySelector('select[name="status"]').value = 'active';
             // Set action for create
             form.setAttribute('action', `${base_url}/${panel}/product-faqs`);
@@ -123,6 +172,7 @@ document.addEventListener('click', function (event) {
     // delete soft store
     handleDelete(event, '.delete-product-condition', `/${panel}/product-conditions/`, 'You are about to delete this Product Condition.');
     handleDelete(event, '.delete-product', `/${panel}/products/`, 'You are about to delete this Product.');
+    handleDelete(event, '.delete-faq', `/${panel}/faqs/`, 'You are about to delete this FAQ.');
     handleDelete(event, '.delete-product-faq', `/${panel}/product-faqs/`, 'You are about to delete this Product Faq.');
 });
 
@@ -270,6 +320,161 @@ document.addEventListener('DOMContentLoaded', function () {
     updateWizard();
 });
 
+// Product FAQ AJAX handlers: submit and delete (updates table without reload)
+document.addEventListener('DOMContentLoaded', function () {
+    const faqForm = document.getElementById('product-faq-form');
+    const faqTbody = document.getElementById('product-faqs-tbody');
+    const modalEl = document.getElementById('product-faq-modal');
+
+    // Helper to render a row for a FAQ
+    function renderFaqRow(faq) {
+        const tr = document.createElement('tr');
+        tr.setAttribute('data-id', faq.id);
+        tr.innerHTML = `
+            <td>${faq.id}</td>
+            <td>${escapeHtml(faq.question)}</td>
+            <td>${escapeHtml(faq.answer)}</td>
+            <td class="text-capitalize">${escapeHtml(faq.status || '')}</td>
+            <td class="text-end">
+                <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#product-faq-modal" data-id="${faq.id}">Edit</button>
+                <button type="button" class="btn btn-sm btn-outline-danger delete-product-faq" data-id="${faq.id}">Delete</button>
+            </td>
+        `;
+        return tr;
+    }
+
+    function escapeHtml(unsafe) {
+        if (unsafe === null || unsafe === undefined) return '';
+        return String(unsafe)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    if (faqForm) {
+        faqForm.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const submitBtn = faqForm.querySelector('button[type="submit"]');
+            const originalText = submitBtn && submitBtn.innerHTML;
+            try {
+                if (submitBtn) submitBtn.disabled = true;
+                if (submitBtn) submitBtn.innerHTML = 'Please wait...';
+
+                const action = faqForm.getAttribute('action');
+                const formData = new FormData(faqForm);
+
+                const res = await fetch(action, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'application/json'
+                    },
+                    body: formData
+                });
+                const data = await res.json();
+                if (data.success) {
+                    const faq = data.data;
+
+                    // Remove any placeholder empty row
+                    const emptyRows = faqTbody ? Array.from(faqTbody.querySelectorAll('tr')).filter(r => {
+                        const tds = r.querySelectorAll('td');
+                        return tds.length === 1 && tds[0].hasAttribute('colspan');
+                    }) : [];
+                    emptyRows.forEach(r => r.parentNode.removeChild(r));
+
+                    // If row exists, update it, else append
+                    const existing = faqTbody ? faqTbody.querySelector(`tr[data-id="${faq.id}"]`) : null;
+                    if (existing) {
+                        const newRow = renderFaqRow(faq);
+                        existing.parentNode.replaceChild(newRow, existing);
+                    } else if (faqTbody) {
+                        faqTbody.appendChild(renderFaqRow(faq));
+                    }
+
+                    // Hide modal
+                    if (modalEl) {
+                        try {
+                            const modalObj = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+                            modalObj.hide();
+                        } catch (err) {}
+                    }
+
+                    Swal.fire('Success', data.message || 'Saved', 'success');
+                } else {
+                    Swal.fire('Error', data.message || 'Failed', 'error');
+                }
+            } catch (err) {
+                console.error(err);
+                Swal.fire('Error', 'There was an error saving the FAQ.', 'error');
+            } finally {
+                if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = originalText; }
+            }
+        });
+    }
+
+    // Delegate delete clicks for product-faqs (prevent global handler)
+    // Use capture phase so this runs before other bubble-phase handlers.
+    document.addEventListener('click', function (ev) {
+        const btn = ev.target.closest('.delete-product-faq');
+        if (!btn) return;
+        // prevent the global handleDelete from running
+        ev.stopPropagation();
+        ev.preventDefault();
+
+        const id = btn.getAttribute('data-id');
+        const explicitUrl = btn.getAttribute('data-url');
+        const url = explicitUrl || `${base_url}/${panel}/product-faqs/${id}`;
+
+        Swal.fire({
+            title: 'Are you sure?',
+            html: 'You are about to delete this Product Faq.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: primaryColor,
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Yes, delete it!'
+        }).then(async (result) => {
+            if (!result.isConfirmed) return;
+            try {
+                const res = await fetch(url, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'application/json'
+                    }
+                });
+                const data = await res.json();
+                if (data.success) {
+                    // remove row if present
+                    if (faqTbody) {
+                        const row = faqTbody.querySelector(`tr[data-id="${id}"]`);
+                        if (row) row.parentNode.removeChild(row);
+
+                        // if no rows remain, insert empty placeholder row
+                        if (!faqTbody.querySelector('tr')) {
+                            const emptyText = faqTbody.getAttribute('data-empty-text') || 'No product FAQs found';
+                            const tr = document.createElement('tr');
+                            const td = document.createElement('td');
+                            td.setAttribute('colspan', '5');
+                            td.textContent = emptyText;
+                            tr.appendChild(td);
+                            faqTbody.appendChild(tr);
+                        }
+                    }
+                    Swal.fire('Deleted!', data.message || 'Deleted', 'success');
+                } else {
+                    Swal.fire('Error!', data.message || 'Failed to delete', 'error');
+                }
+            } catch (err) {
+                Swal.fire('Error!', 'There was a problem deleting the FAQ.', 'error');
+            }
+        });
+    }, true);
+});
+
 function initHsnCodeSync() {
     const mainInput = document.getElementById('hsn-code-main');
     const gstInput = document.getElementById('hsn-code-gst');
@@ -332,7 +537,7 @@ function initializeEditMode() {
             attributes: {},
             title: sv.title || '',
             image: sv.image || '',
-            availability: sv.availability || '',
+            availability: sv.availability === null || sv.availability === undefined ? '' : sv.availability,
             is_default: 'on',
             weight: sv.weight ?? '',
             weight_unit: sv.weight_unit || 'g',
@@ -374,7 +579,7 @@ function initializeVariantData() {
             attributes: attrs,
             title: serverVariant.title || '',
             image: serverVariant.image || '',
-            availability: serverVariant.availability || '',
+            availability: serverVariant.availability === null || serverVariant.availability === undefined ? '' : serverVariant.availability,
             is_default: serverVariant.is_default || '',
             weight: serverVariant.weight ?? '',
             weight_unit: serverVariant.weight_unit || 'g',
@@ -1742,9 +1947,17 @@ function bindVariantGstPreviewEvents() {
     const pricingContainer = document.getElementById('storePricingAccordion');
     if (pricingContainer && !pricingContainer.dataset.gstEventsBound) {
         pricingContainer.addEventListener('input', function (event) {
-            if (event.target && event.target.classList.contains('store-price')) {
-                recalculateVariantGstRow(event.target.closest('.variant-pricing-row'));
+            const target = event.target;
+            if (!target) return;
+            const row = target.closest('.variant-pricing-row');
+            if (target.classList.contains('store-price')) {
+                handlePriceChangeForDiscount(row);
+                recalculateVariantGstRow(row);
                 recalculateVisiblePanIndiaTables();
+            } else if (target.classList.contains('store-disc-pct')) {
+                handleDiscPctChange(row);
+            } else if (target.classList.contains('store-special-price')) {
+                handleSpecialPriceChange(row);
             }
         });
         pricingContainer.dataset.gstEventsBound = '1';
@@ -1773,9 +1986,17 @@ function bindSimpleGstPreviewEvents() {
     const pricingContainer = document.getElementById('simplePricingAccordion');
     if (pricingContainer && !pricingContainer.dataset.gstEventsBound) {
         pricingContainer.addEventListener('input', function (event) {
-            if (event.target && event.target.classList.contains('store-price')) {
-                recalculateSimpleGstRow(event.target.closest('.simple-pricing-row'));
+            const target = event.target;
+            if (!target) return;
+            const row = target.closest('.simple-pricing-row');
+            if (target.classList.contains('store-price')) {
+                handlePriceChangeForDiscount(row);
+                recalculateSimpleGstRow(row);
                 recalculateVisiblePanIndiaTables();
+            } else if (target.classList.contains('store-disc-pct')) {
+                handleDiscPctChange(row);
+            } else if (target.classList.contains('store-special-price')) {
+                handleSpecialPriceChange(row);
             }
         });
         pricingContainer.dataset.gstEventsBound = '1';
@@ -1800,6 +2021,58 @@ function bindSimpleGstPreviewEvents() {
 document.addEventListener('DOMContentLoaded', function () {
     ensureGstSlabPreselected();
 });
+
+// ============================================================
+// Discount helpers (Disc % ↔ Special Price)
+// ============================================================
+
+function handleDiscPctChange(row) {
+    if (!row) return;
+    const price = parseFloat(row.querySelector('.store-price')?.value);
+    const discInput = row.querySelector('.store-disc-pct');
+    const spInput = row.querySelector('.store-special-price');
+    if (!discInput || !spInput) return;
+    const disc = parseFloat(discInput.value);
+    if (!isNaN(price) && price > 0 && !isNaN(disc) && disc >= 0 && disc <= 100) {
+        spInput.value = (price * (1 - disc / 100)).toFixed(2);
+    } else {
+        spInput.value = '';
+    }
+}
+
+function handleSpecialPriceChange(row) {
+    if (!row) return;
+    const price = parseFloat(row.querySelector('.store-price')?.value);
+    const discInput = row.querySelector('.store-disc-pct');
+    const spInput = row.querySelector('.store-special-price');
+    if (!discInput || !spInput) return;
+    const special = parseFloat(spInput.value);
+    if (!isNaN(price) && price > 0 && !isNaN(special) && special > 0 && special < price) {
+        discInput.value = (((price - special) / price) * 100).toFixed(2);
+    } else {
+        discInput.value = '';
+        if (!isNaN(special) && !isNaN(price) && special >= price) {
+            spInput.value = '';
+        }
+    }
+}
+
+function handlePriceChangeForDiscount(row) {
+    if (!row) return;
+    const price = parseFloat(row.querySelector('.store-price')?.value);
+    const discInput = row.querySelector('.store-disc-pct');
+    const spInput = row.querySelector('.store-special-price');
+    if (!discInput || !spInput) return;
+    const disc = parseFloat(discInput.value);
+    if (!isNaN(price) && price > 0 && !isNaN(disc) && disc > 0) {
+        spInput.value = (price * (1 - disc / 100)).toFixed(2);
+    } else if (!isNaN(price) && price > 0 && spInput.value !== '') {
+        const sp = parseFloat(spInput.value);
+        if (!isNaN(sp) && sp < price) {
+            discInput.value = (((price - sp) / price) * 100).toFixed(2);
+        }
+    }
+}
 
 // ============================================================
 // Pan India GST Breakdown
@@ -1888,11 +2161,12 @@ function buildPanIndiaTableHtml(wrapper) {
             `;
         }).join('');
 
+        const stickyBg = isIntra ? '#d1e7dd' : 'var(--tblr-body-bg, #fff)';
         return `
             <tr class="${rowCls}">
-                <td class="text-nowrap small">${state.name}</td>
-                <td class="text-center"><span class="badge bg-blue-lt text-blue">${state.gst_code || ''}</span></td>
-                <td><span class="badge ${badgeCls} small">${supplyLbl}</span></td>
+                <td class="text-nowrap small" style="position:sticky;left:0;z-index:1;background:${stickyBg};min-width:130px;">${state.name}</td>
+                <td class="text-center" style="position:sticky;left:130px;z-index:1;background:${stickyBg};min-width:52px;"><span class="badge bg-blue-lt text-blue">${state.gst_code || ''}</span></td>
+                <td style="position:sticky;left:182px;z-index:1;background:${stickyBg};min-width:90px;"><span class="badge ${badgeCls} small">${supplyLbl}</span></td>
                 ${priceCols}
             </tr>
         `;
@@ -1907,12 +2181,12 @@ function buildPanIndiaTableHtml(wrapper) {
             <span class="badge bg-blue-lt text-blue ms-auto">Seller State: ${sellerLabel}</span>
         </div>
         <div class="table-responsive border rounded" style="max-height:400px;overflow-y:auto;">
-            <table class="table table-sm table-bordered table-hover mb-0">
+            <table class="table table-sm table-bordered table-hover mb-0" style="border-collapse:separate;border-spacing:0;">
                 <thead class="sticky-top">
                     <tr class="table-dark">
-                        <th rowspan="${priceEntries.length > 1 ? 2 : 1}">State</th>
-                        <th rowspan="${priceEntries.length > 1 ? 2 : 1}">GST</th>
-                        <th rowspan="${priceEntries.length > 1 ? 2 : 1}">Supply</th>
+                        <th rowspan="${priceEntries.length > 1 ? 2 : 1}" style="position:sticky;left:0;z-index:3;min-width:130px;">STATE</th>
+                        <th rowspan="${priceEntries.length > 1 ? 2 : 1}" style="position:sticky;left:130px;z-index:3;min-width:52px;">GST</th>
+                        <th rowspan="${priceEntries.length > 1 ? 2 : 1}" style="position:sticky;left:182px;z-index:3;min-width:90px;">SUPPLY</th>
                         ${headerPriceCols}
                     </tr>
                     ${priceEntries.length > 1 ? `<tr class="table-secondary">${subHeaderCols}</tr>` : ''}
@@ -2044,6 +2318,8 @@ function initializeSimplePricing() {
             let storePrice = '';
             let storeStock = '';
             let storeSku = '';
+            let storeSpecialPrice = '';
+            let storeDiscPct = '';
 
             // If we're in edit mode and have pricing data
             if (productPricing && productPricing.variant_pricing) {
@@ -2060,8 +2336,14 @@ function initializeSimplePricing() {
                         storePrice = storePricing.price || '';
                         storeStock = storePricing.stock || '';
                         storeSku = storePricing.sku || '';
+                        storeSpecialPrice = storePricing.special_price || '';
                     }
                 }
+            }
+            if (storeSpecialPrice && storePrice && parseFloat(storePrice) > 0) {
+                const _sp = parseFloat(storeSpecialPrice), _p = parseFloat(storePrice);
+                if (_sp < _p) storeDiscPct = (((_p - _sp) / _p) * 100).toFixed(2);
+                else storeSpecialPrice = '';
             }
             html += `
                 <div class="accordion-item store-pricing-card" data-store-id="${store.id}">
@@ -2081,6 +2363,8 @@ function initializeSimplePricing() {
                                     <thead class="table-light">
                                         <tr>
                                             <th>Price</th>
+                                            <th>Disc %</th>
+                                            <th>Special Price</th>
                                             <th>Stock</th>
                                             <th>SKU</th>
                                             <th>Supply</th>
@@ -2097,6 +2381,18 @@ function initializeSimplePricing() {
                                                 <div class="input-group input-group-sm">
                                                     <span class="input-group-text">${currencySymbol}</span>
                                                     <input type="number" class="form-control store-price" name="store_pricing[${store.id}][price]" step="0.01" min="0" value="${storePrice}">
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="input-group input-group-sm">
+                                                    <input type="number" class="form-control store-disc-pct" step="0.01" min="0" max="100" placeholder="0" value="${storeDiscPct}">
+                                                    <span class="input-group-text">%</span>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="input-group input-group-sm">
+                                                    <span class="input-group-text">${currencySymbol}</span>
+                                                    <input type="number" class="form-control store-special-price" name="store_pricing[${store.id}][special_price]" step="0.01" min="0" placeholder="—" value="${storeSpecialPrice}">
                                                 </div>
                                             </td>
                                             <td>
@@ -2196,6 +2492,8 @@ function updateVariantPricing() {
                                         <tr>
                                             <th>Variant</th>
                                             <th>Price</th>
+                                            <th>Disc %</th>
+                                            <th>Special Price</th>
                                             <th>Stock</th>
                                             <th>SKU</th>
                                             <th>Supply</th>
@@ -2215,6 +2513,8 @@ function updateVariantPricing() {
                 let storePrice = '';
                 let storeStock = '';
                 let storeSku = '';
+                let storeSpecialPrice = '';
+                let storeDiscPct = '';
 
                 if (productPricing && productPricing.variant_pricing) {
                     if (productPricing.variant_pricing[variantId]) {
@@ -2226,6 +2526,7 @@ function updateVariantPricing() {
                             storePrice = storePricing.price || '';
                             storeStock = storePricing.stock || '';
                             storeSku = storePricing.sku || '';
+                            storeSpecialPrice = storePricing.special_price || '';
                         }
                     } else {
                         const serverVariants = window.productData && window.productData.variants ? window.productData.variants : [];
@@ -2253,10 +2554,16 @@ function updateVariantPricing() {
                                     storePrice = storePricing.price || '';
                                     storeStock = storePricing.stock || '';
                                     storeSku = storePricing.sku || '';
+                                    storeSpecialPrice = storePricing.special_price || '';
                                 }
                             }
                         }
                     }
+                }
+                if (storeSpecialPrice && storePrice && parseFloat(storePrice) > 0) {
+                    const _sp = parseFloat(storeSpecialPrice), _p = parseFloat(storePrice);
+                    if (_sp < _p) storeDiscPct = (((_p - _sp) / _p) * 100).toFixed(2);
+                    else storeSpecialPrice = '';
                 }
 
                 const variantAttributeBadges = Object.entries(variant.attributes).map(([attrId, valueId]) => {
@@ -2287,6 +2594,18 @@ function updateVariantPricing() {
                                                         <div class="input-group input-group-sm">
                                                             <span class="input-group-text">${currencySymbol}</span>
                                                             <input type="number" class="form-control store-price" name="variant_pricing[${store.id}][${variantId}][price]" step="0.01" min="0" value="${storePrice}">
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <div class="input-group input-group-sm">
+                                                            <input type="number" class="form-control store-disc-pct" step="0.01" min="0" max="100" placeholder="0" value="${storeDiscPct}">
+                                                            <span class="input-group-text">%</span>
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <div class="input-group input-group-sm">
+                                                            <span class="input-group-text">${currencySymbol}</span>
+                                                            <input type="number" class="form-control store-special-price" name="variant_pricing[${store.id}][${variantId}][special_price]" step="0.01" min="0" placeholder="—" value="${storeSpecialPrice}">
                                                         </div>
                                                     </td>
                                                     <td>

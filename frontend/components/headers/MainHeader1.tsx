@@ -3,14 +3,17 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Menu, Search, X, PackageSearch, Heart } from "lucide-react";
 import { cn } from "@/lib/utils";
 import SearchBar from "./SearchBar";
 import CartButton from "./CartButton";
 import UserMenu from "./UserMenu";
 import MobileMenu from "./MobileMenu";
+import LoginModal from "@/components/auth/LoginModal";
 import { useCart } from "@/context/CartContext";
 import { useWishlist } from "@/context/WishlistContext";
+import { useAuth } from "@/context/AuthContext";
 import { useSiteSettings } from "@/context/SiteSettingsContext";
 import type { ApiMenuItem } from "@/lib/api";
 
@@ -22,9 +25,20 @@ export default function MainHeader({ mobileNavItems }: MainHeaderProps) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [loginOpen, setLoginOpen] = useState(false);
   const { openCart } = useCart();
   const { count: wishlistCount } = useWishlist();
+  const { isLoggedIn } = useAuth();
   const { appName, logo } = useSiteSettings();
+  const router = useRouter();
+
+  const handleWishlistClick = () => {
+    if (isLoggedIn) {
+      router.push("/account/wishlist");
+    } else {
+      setLoginOpen(true);
+    }
+  };
 
   return (
     <>
@@ -101,8 +115,9 @@ export default function MainHeader({ mobileNavItems }: MainHeaderProps) {
               <span className="hidden md:contents"><UserMenu /></span>
 
               {/* Wishlist icon */}
-              <Link
-                href="/wishlist"
+              <button
+                type="button"
+                onClick={handleWishlistClick}
                 className="hidden sm:flex p-2 rounded-full hover:bg-gray-100 transition-colors group relative"
                 aria-label="Wishlist"
               >
@@ -115,7 +130,8 @@ export default function MainHeader({ mobileNavItems }: MainHeaderProps) {
                 <span className="pointer-events-none absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-gray-900 px-2 py-1 text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity">
                   Wishlist
                 </span>
-              </Link>
+              </button>
+              <LoginModal open={loginOpen} onClose={() => setLoginOpen(false)} />
 
               <span className="hidden md:contents"><CartButton onClick={openCart} /></span>
 
