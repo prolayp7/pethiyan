@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -468,9 +468,14 @@ export default function CheckoutClient() {
   const [paymentError, setPaymentError] = useState("");
   const [lastPincode, setLastPincode] = useState("");
 
-  // Redirect if cart empty
+  // Set to true synchronously before clearCart() on payment success so the guard below never fires
+  const orderSuccessRef = useRef(false);
+  // When syncing/removing items during checkout we temporarily suppress the "empty cart -> redirect" guard
+  const suppressEmptyCartRedirectRef = useRef(false);
+
+  // Redirect if cart empty — skip when we just completed an order
   useEffect(() => {
-    if (items.length === 0) router.replace("/cart");
+    if (items.length === 0 && !orderSuccessRef.current && !suppressEmptyCartRedirectRef.current) router.replace("/cart");
   }, [items.length, router]);
 
   useEffect(() => {
@@ -718,11 +723,15 @@ export default function CheckoutClient() {
       if (!synced.success) {
         // Remove items that failed to sync from local cart so user isn't stuck in a loop
         if (synced.failedVariantIds && synced.failedVariantIds.length > 0) {
+          // suppress redirect while we remove items (avoid immediate redirect to /cart)
+          suppressEmptyCartRedirectRef.current = true;
           for (const item of items) {
             if (item.variantId && synced.failedVariantIds.includes(item.variantId)) {
               removeItem(item.id);
             }
           }
+          // leave suppression active briefly so the removal render doesn't trigger a redirect
+          setTimeout(() => { suppressEmptyCartRedirectRef.current = false; }, 1500);
         }
         setPaymentError(synced.message ?? "Failed to sync cart. Please try again.");
         setProcessingPayment(false);
@@ -741,7 +750,6 @@ export default function CheckoutClient() {
         payment_method: "cod",
         items: checkoutItems,
       });
-      setProcessingPayment(false);
       if (result.success) {
         storePurchaseEvent({
           transaction_id: result.order_number ?? "",
@@ -754,10 +762,17 @@ export default function CheckoutClient() {
             quantity:  i.quantity,
           })),
         });
+        orderSuccessRef.current = true;
         clearCart();
         sessionStorage.removeItem("applied_coupon");
-        router.push(`/order-confirmed?order_number=${result.order_number ?? ""}&order_id=${result.order_id ?? ""}`);
+        console.log("[checkout] navigation to order-confirmed (COD):", { order_number: result.order_number, order_id: result.order_id });
+        {
+          const slug = (result as any).slug ?? (result as any).order_slug ?? "";
+          const href = `/order-confirmed?order_number=${result.order_number ?? ""}&order_id=${result.order_id ?? ""}&order_slug=${encodeURIComponent(slug)}`;
+          try { (window.top as any)?.location && ((window.top as any).location.href = href); } catch (e) { window.location.href = href; }
+        }
       } else {
+        setProcessingPayment(false);
         setPaymentError(result.message ?? "Order failed. Please try again.");
       }
       return;
@@ -797,7 +812,10 @@ export default function CheckoutClient() {
           quantity:  i.quantity,
         })),
       });
-      window.location.href = easepayOrder.payment_url;
+      {
+        const url = easepayOrder.payment_url;
+        try { (window.top as any)?.location && ((window.top as any).location.href = url); } catch (e) { window.location.href = url; }
+      }
       return;
     }
 
@@ -869,7 +887,6 @@ export default function CheckoutClient() {
         console.log("createCheckout result:", result);
         console.groupEnd();
 
-        setProcessingPayment(false);
         if (result.success) {
           storePurchaseEvent({
             transaction_id: result.order_number ?? "",
@@ -882,10 +899,17 @@ export default function CheckoutClient() {
               quantity:  i.quantity,
             })),
           });
+          orderSuccessRef.current = true;
           clearCart();
           sessionStorage.removeItem("applied_coupon");
-          router.push(`/order-confirmed?order_number=${result.order_number ?? ""}&order_id=${result.order_id ?? ""}`);
+          console.log("[checkout] navigation to order-confirmed (Razorpay):", { order_number: result.order_number, order_id: result.order_id });
+          {
+            const slug = (result as any).slug ?? (result as any).order_slug ?? "";
+            const href = `/order-confirmed?order_number=${result.order_number ?? ""}&order_id=${result.order_id ?? ""}&order_slug=${encodeURIComponent(slug)}`;
+            try { (window.top as any)?.location && ((window.top as any).location.href = href); } catch (e) { window.location.href = href; }
+          }
         } else {
+          setProcessingPayment(false);
           setPaymentError(result.message ?? "Order placement failed. Contact support.");
         }
       },

@@ -343,7 +343,7 @@ interface ProductDetailClientProps {
 }
 
 export default function ProductDetailClient({ product, reviews: initialReviews, faqs: initialFaqs, initialVariantSlug }: ProductDetailClientProps) {
-  const { addItem, openCart, items } = useCart();
+  const { addItem, openCart, items, updateQuantity } = useCart();
   const { isLoggedIn } = useAuth();
   const { isWishlisted, add, remove } = useWishlist();
   const router = useRouter();
@@ -473,6 +473,18 @@ export default function ProductDetailClient({ product, reviews: initialReviews, 
     return selectedVariantStorePricing.find((s) => s.store_id === selectedStoreIdSafe) ?? selectedVariantStorePricing[0];
   }, [selectedVariantStorePricing, selectedStoreIdSafe]);
 
+  // Keep product page quantity in sync with cart: when the same variant+store
+  // exists in cart, reflect its quantity on the product page so updates from
+  // the cart drawer are visible here.
+  useEffect(() => {
+    if (!selectedVariant || !selectedStoreIdSafe) return;
+    const itemId = `${product.id}-${selectedVariant.id}-${selectedStoreIdSafe}`;
+    const match = items.find((it) => it.id === itemId);
+    if (match && typeof match.quantity === "number") {
+      setQty(match.quantity);
+    }
+  }, [items, selectedVariant, selectedStoreIdSafe, product.id]);
+
   const colorOptions = useMemo(() => {
     const map = new Map<string, number>();
     variantList.forEach((variant) => {
@@ -538,27 +550,34 @@ export default function ProductDetailClient({ product, reviews: initialReviews, 
     const itemId = `${product.id}-${selectedVariant.id}-${selectedStorePricing.store_id}`;
     const safeQty = qtySafe;
     const existsInCart = items.some((item) => item.id === itemId);
-    const addCalls = existsInCart
-      ? safeQty
-      : Math.max(safeQty - moq + 1, 1);
+    // Add once, then set the desired total quantity explicitly. The previous
+    // approach called addItem in a loop which repeatedly incremented by the
+    // step causing large incorrect totals (e.g. 1000). Instead add a single
+    // entry and update its quantity to the selected value on the next tick.
+    addItem({
+      id: itemId,
+      productId: product.id,
+      slug: product.slug,
+      variantId: selectedVariant.id,
+      variantLabel: selectedVariant.title,
+      minQty: moq,
+      step: stepSize,
+      totalAllowed: (product as any).policies?.total_allowed_quantity ?? null,
+      stock: selectedStorePricing?.stock ?? undefined,
+      name: selectedVariant.title || productName,
+      price: effectivePrice,
+      image: selectedVariant.image || product.images?.main_image || null,
+      currencySymbol,
+      weight: selectedVariant.weight ?? undefined,
+      weightUnit: selectedVariant.weight_unit ?? undefined,
+      storeId: selectedStoreIdSafe ?? undefined,
+    });
 
-    for (let i = 0; i < addCalls; i++) {
-      addItem({
-        id: itemId,
-        productId: product.id,
-        slug: product.slug,
-        variantId: selectedVariant.id,
-        variantLabel: selectedVariant.title,
-        minQty: moq,
-        name: selectedVariant.title || productName,
-        price: effectivePrice,
-        image: selectedVariant.image || product.images?.main_image || null,
-        currencySymbol,
-        weight: selectedVariant.weight ?? undefined,
-        weightUnit: selectedVariant.weight_unit ?? undefined,
-        storeId: selectedStoreIdSafe ?? undefined,
-      });
-    }
+    // Ensure cart quantity reflects the selected qty. Use a microtask so the
+    // item exists in state before updating quantity.
+    setTimeout(() => {
+      try { updateQuantity(itemId, safeQty); } catch (e) { /* silent */ }
+    }, 0);
 
     trackAddToCart({
       item_id:      String(product.id),

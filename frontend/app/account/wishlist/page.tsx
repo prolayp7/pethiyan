@@ -8,6 +8,7 @@ import toast from "react-hot-toast";
 import { useWishlist } from "@/context/WishlistContext";
 import { useCart } from "@/context/CartContext";
 import { API_BASE, clearAllWishlistItems, getWishlistItems, removeWishlistItem } from "@/lib/api";
+import { normalizeImageUrl } from "@/lib/image";
 import { useAuth } from "@/context/AuthContext";
 
 function fmt(n: number) {
@@ -16,17 +17,7 @@ function fmt(n: number) {
   }).format(n);
 }
 
-function normalizeImageUrl(src?: string | null): string | null {
-  if (!src) return null;
-  const trimmed = String(src).trim();
-  if (!trimmed) return null;
-  if (/^https?:\/\//i.test(trimmed)) return trimmed;
-
-  const base = API_BASE.replace(/\/+$/, "");
-  if (trimmed.startsWith("/")) return `${base}${trimmed}`;
-  if (trimmed.startsWith("storage/") || trimmed.startsWith("uploads/")) return `${base}/${trimmed}`;
-  return `${base}/storage/${trimmed}`;
-}
+// use shared normalizeImageUrl from '@/lib/image'
 
 function EmptyWishlist() {
   return (

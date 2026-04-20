@@ -15,6 +15,9 @@ export interface CartItem {
   variantId?: number;
   variantLabel?: string;
   minQty?: number;
+  step?: number;            // quantity_step_size
+  totalAllowed?: number | null; // total_allowed_quantity (null = unlimited)
+  stock?: number;          // store stock for the variant
   currencySymbol?: string;  // e.g. "₹", "$"
   weight?: number;          // weight per unit
   weightUnit?: string;      // e.g. "g", "kg"
@@ -55,14 +58,45 @@ export function CartProvider({
   const itemsRef = useRef<CartItem[]>([]);
   useEffect(() => { itemsRef.current = items; }, [items]);
 
+  // Prevent rapid duplicate addItem calls for same id (e.g., accidental
+  // double-clicks or render loops). Tracks IDs that are in the process of
+  // being added so subsequent calls within the same tick are ignored.
+  const pendingAddsRef = useRef(new Set<string>());
+
   // Hydrate from localStorage on mount
   useEffect(() => {
     try {
       const saved = localStorage.getItem(LS_KEY);
       if (saved) {
         const parsed = JSON.parse(saved) as CartItem[];
-        setItems(parsed);
-        itemsRef.current = parsed;
+
+        // Sanitize persisted quantities so corrupted or stale values don't
+        // produce huge totals in the cart drawer. Enforce min/step/stock/totalAllowed
+        // and snap quantities to the configured step relative to minQty.
+        const sanitized = parsed.map((it) => {
+          const min = Number(it.minQty ?? 1) || 1;
+          const step = Number(it.step ?? 1) || 1;
+          let q = Number(it.quantity ?? 0) || 0;
+          q = Math.max(q, min);
+
+          if (q > min && step > 0) {
+            const delta = q - min;
+            const n = Math.round(delta / step);
+            q = min + n * step;
+            if (q < min) q = min;
+          }
+
+          if (it.totalAllowed && it.totalAllowed > 0) q = Math.min(q, it.totalAllowed);
+          if (it.stock != null) q = Math.min(q, it.stock);
+
+          // Reasonable upper bound guard
+          q = Math.min(q, 1_000_000);
+
+          return { ...it, quantity: q } as CartItem;
+        });
+
+        setItems(sanitized);
+        itemsRef.current = sanitized;
       }
     } catch {
       // ignore corrupted data
@@ -162,23 +196,45 @@ export function CartProvider({
   const closeCart = useCallback(() => setIsOpen(false), []);
 
   const addItem = useCallback((newItem: Omit<CartItem, "quantity">) => {
+    // If an add for this item id is already in progress, ignore duplicate
+    // calls to avoid accidental repeated increments (seen as huge totals).
+    if (pendingAddsRef.current.has(newItem.id)) return;
+    pendingAddsRef.current.add(newItem.id);
+
     // Use the functional updater so the existence check always reads the
     // latest state — prevents duplicate keys on rapid double-clicks.
     setItems((prev) => {
       const existing = prev.find((i) => i.id === newItem.id);
       if (existing) {
-        return prev.map((i) =>
-          i.id === newItem.id ? { ...i, quantity: existing.quantity + 1 } : i
-        );
+        const step = existing.step ?? 1;
+        let candidateQty = existing.quantity + step;
+        if (existing.totalAllowed && existing.totalAllowed > 0) candidateQty = Math.min(candidateQty, existing.totalAllowed);
+        if (existing.stock != null) candidateQty = Math.min(candidateQty, existing.stock);
+        return prev.map((i) => (i.id === newItem.id ? { ...i, quantity: candidateQty } : i));
       }
-      return [...prev, { ...newItem, quantity: newItem.minQty ?? 1 }];
+
+      // New item: set basic fields; step/totalAllowed/stock may be populated later
+      const initialQty = newItem.minQty ?? 1;
+      const itemToAdd: CartItem = {
+        ...newItem,
+        quantity: initialQty,
+        step: (newItem as any).step ?? 1,
+        totalAllowed: (newItem as any).totalAllowed ?? null,
+        stock: (newItem as any).stock,
+      };
+
+      return [...prev, itemToAdd];
     });
+    // Clear the pending marker soon after scheduling the update so future
+    // legitimate adds are allowed. Using a microtask timeout keeps this
+    // window short and avoids swallowing subsequent user actions.
+    setTimeout(() => pendingAddsRef.current.delete(newItem.id), 50);
 
     // Server sync: use ref for best-effort (ref may be one render behind,
     // but that only affects the network call, not the local cart state).
     const existing = itemsRef.current.find((i) => i.id === newItem.id);
     if (existing) {
-      const newQty = existing.quantity + 1;
+      const newQty = existing.quantity;
       if (existing.serverCartItemId) {
         serverCartUpdateQty(existing.serverCartItemId, newQty).then((ok) => {
           console.log(`[cart] updateQty serverCartItemId=${existing.serverCartItemId} qty=${newQty} ok=${ok}`);
@@ -196,6 +252,28 @@ export function CartProvider({
             );
           }
         });
+
+        // Try to populate policy fields from product if slug available
+        if (newItem.slug) {
+          void (async () => {
+            try {
+              const prod = await getProduct(newItem.slug!);
+              if (!prod) return;
+              const variant = prod.variants?.find((v) => v.id === newItem.variantId);
+              setItems((current) =>
+                current.map((i) => i.id === newItem.id ? {
+                  ...i,
+                  step: i.step ?? prod.policies?.quantity_step_size ?? 1,
+                  minQty: i.minQty ?? prod.policies?.minimum_order_quantity ?? i.minQty,
+                  totalAllowed: i.totalAllowed ?? (prod as any).policies?.total_allowed_quantity ?? null,
+                  stock: i.stock ?? variant?.store_pricing?.[0]?.stock ?? i.stock,
+                } : i)
+              );
+            } catch (err) {
+              // ignore
+            }
+          })();
+        }
       } else {
         console.warn(`[cart] skipping server add — missing variantId=${newItem.variantId} storeId=${newItem.storeId}`);
       }
@@ -214,19 +292,36 @@ export function CartProvider({
 
   const updateQuantity = useCallback((id: string, quantity: number) => {
     const item = itemsRef.current.find((i) => i.id === id);
-    const min = item?.minQty ?? 1;
+    if (!item) return;
 
-    if (quantity < min) {
+    const min = item.minQty ?? 1;
+    const step = item.step ?? 1;
+    let q = Math.max(quantity, min);
+
+    // Snap to step: allowed = min + n*step
+    if (q > min && step > 0) {
+      const delta = q - min;
+      const n = Math.round(delta / step);
+      q = min + n * step;
+      if (q < min) q = min;
+    }
+
+    // Apply totalAllowed and stock caps
+    if (item.totalAllowed && item.totalAllowed > 0) q = Math.min(q, item.totalAllowed);
+    if (item.stock != null) q = Math.min(q, item.stock);
+
+    // If quantity falls below min after snapping, remove item
+    if (q < min) {
       setItems((prev) => prev.filter((i) => i.id !== id));
-      if (item?.serverCartItemId) {
-        serverCartRemove(item.serverCartItemId);
-      }
+      if (item.serverCartItemId) serverCartRemove(item.serverCartItemId);
       return;
     }
 
-    setItems((prev) => prev.map((i) => i.id === id ? { ...i, quantity } : i));
-    if (item?.serverCartItemId) {
-      serverCartUpdateQty(item.serverCartItemId, quantity);
+    setItems((prev) => prev.map((i) => i.id === id ? { ...i, quantity: q } : i));
+    if (item.serverCartItemId) {
+      serverCartUpdateQty(item.serverCartItemId, q).then((ok) => {
+        if (!ok) console.warn(`[cart] server update failed for ${item.serverCartItemId}`);
+      });
     }
   }, []);
 

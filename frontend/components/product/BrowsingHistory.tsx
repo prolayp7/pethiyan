@@ -7,7 +7,8 @@ import { ArrowRight, ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
 import Container from "@/components/layout/Container";
 import { getBrowsingHistorySlugs, clearBrowsingHistory } from "@/lib/browsingHistory";
 import { API_BASE, type RealApiProduct } from "@/lib/api";
-import AttributePills from "@/components/product/AttributePills";
+import { normalizeImageUrl } from "@/lib/image";
+import AttributePills, { AttributePillsWithVariants } from "@/components/product/AttributePills";
 
 const COLOR_MAP: Record<string, string> = {
   Transparent: "#c8e6f5", Brown: "#8B6347", Colorful: "linear-gradient(135deg,#f44,#4f4,#44f)",
@@ -20,16 +21,7 @@ const COLOR_MAP: Record<string, string> = {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function normalizeImg(src?: string | null): string | null {
-  if (!src) return null;
-  const t = String(src).trim();
-  if (!t) return null;
-  if (/^https?:\/\//i.test(t)) return t;
-  const base = API_BASE.replace(/\/+$/, "");
-  if (t.startsWith("/")) return `${base}${t}`;
-  if (t.startsWith("storage/") || t.startsWith("uploads/")) return `${base}/${t}`;
-  return `${base}/storage/${t}`;
-}
+// use shared normalizeImageUrl from '@/lib/image'
 
 function getPrice(product: RealApiProduct): { price: number; special: number | null; variantTitle: string | null } {
   const variant = product.variants?.find((v) => v.is_default) ?? product.variants?.[0];
@@ -62,8 +54,24 @@ async function fetchBySlug(slugs: string[]): Promise<RealApiProduct[]> {
 // ─── Mini product card (designed for horizontal scroll) ───────────────────────
 
 function HistoryCard({ product }: { product: RealApiProduct }) {
-  const img = normalizeImg(product.images?.main_image);
-  const { price, special, variantTitle } = getPrice(product);
+  const [hoveredVariantId, setHoveredVariantId] = useState<number | null>(null);
+  const variant = product.variants.find((v) => v.is_default) ?? product.variants[0];
+  const baseImg = normalizeImageUrl(product.images?.main_image);
+
+  const hoveredVariant = product.variants.find((v) => v.id === hoveredVariantId) ?? null;
+
+  const img = normalizeImageUrl(hoveredVariant?.image || variant?.image || product.images?.main_image);
+
+  const pricingSource = (v: typeof hoveredVariant | null) => {
+    const chosen = v ?? variant;
+    const pricing = chosen?.store_pricing?.[0];
+    if (!pricing) return { price: 0, special: null, variantTitle: chosen?.title && chosen.title !== product.title ? chosen.title : null };
+    return { price: Number(pricing.price) || 0, special: pricing.special_price ? Number(pricing.special_price) : null, variantTitle: chosen?.title && chosen.title !== product.title ? chosen.title : null };
+  };
+
+  const { price, special } = pricingSource(hoveredVariant);
+  const defaultVariant = product.variants.find((v) => v.is_default) ?? product.variants[0];
+  const displayTitle = hoveredVariant?.title ?? (product.type === "variant" ? (defaultVariant?.title ?? product.title) : product.title);
   const symbol = "₹";
   const hasDiscount = special !== null && special < price;
   const fmt = (n: number) => n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -99,13 +107,46 @@ function HistoryCard({ product }: { product: RealApiProduct }) {
       {/* Info */}
       <div className="p-3 flex flex-col gap-1">
         <p className="text-xs font-semibold text-(--color-secondary) line-clamp-2 leading-tight group-hover:text-(--color-primary) transition-colors">
-          {product.title}
+          {displayTitle}
         </p>
-        {variantTitle && (
-          <p className="text-[10px] text-gray-400 truncate">{variantTitle}</p>
-        )}
-        {/* Attributes: color swatches and other attribute pills */}
-        {product.variants && (() => {
+        {/* Attributes: color, size, weight (interactive when product is variant) */}
+        {product.type === "variant" && product.variants && (() => {
+          const seenColor = new Set<string>();
+          const seenSize = new Set<string>();
+          const seenWeight = new Set<string>();
+          const colors: { color: string; variantId: number }[] = [];
+          const sizes: { size: string; variantId: number }[] = [];
+          const weights: { weight: string; variantId: number }[] = [];
+          for (const v of product.variants) {
+            const attrs = (v as any).attributes || {};
+            const col = attrs.color;
+            const sz = attrs.size ?? attrs.size_label ?? attrs.size_in ?? null;
+            const wt = attrs.weight ?? attrs.weight_kg ?? attrs.weight_g ?? null;
+            if (col && !seenColor.has(col)) { seenColor.add(col); colors.push({ color: String(col), variantId: v.id }); }
+            if (sz && !seenSize.has(String(sz))) { seenSize.add(String(sz)); sizes.push({ size: String(sz), variantId: v.id }); }
+            if (wt && !seenWeight.has(String(wt))) { seenWeight.add(String(wt)); weights.push({ weight: String(wt), variantId: v.id }); }
+          }
+          if (colors.length === 0 && sizes.length === 0 && weights.length === 0) {
+            const variant = product.variants.find((v) => v.is_default) ?? product.variants[0];
+            const attrs = (variant && (variant as any).attributes) || null;
+            return <AttributePills attributes={attrs} />;
+          }
+          const hasVariantImages = (product.images?.variant_images?.length ?? 0) > 0;
+          const variantImageSet = new Set<number>(product.variants?.filter((v) => Boolean(v.image)).map((v) => v.id) ?? []);
+          return (
+            <AttributePillsWithVariants
+              colors={colors}
+              sizes={sizes.map((s) => ({ value: s.size, variantId: s.variantId }))}
+              weights={weights.map((w) => ({ value: w.weight, variantId: w.variantId }))}
+              hoveredVariantId={hoveredVariantId}
+              onHoverVariant={(id) => { if (id == null) { setHoveredVariantId(null); return; } if (hasVariantImages && variantImageSet.has(id)) setHoveredVariantId(id); }}
+              variantImageSet={variantImageSet}
+              hoverEnabled={hasVariantImages}
+              showColorSwatches={true}
+            />
+          );
+        })()}
+        {product.type !== "variant" && (() => {
           const variant = product.variants.find((v) => v.is_default) ?? product.variants[0];
           const attrs = (variant && (variant as any).attributes) || null;
           return <AttributePills attributes={attrs} />;

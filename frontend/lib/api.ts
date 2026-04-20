@@ -2,6 +2,8 @@
 export const API_BASE =
   process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
 
+import toast from "react-hot-toast";
+
 const LS_TOKEN_KEY = "auth_token";
 const AUTH_SESSION_MARKER = "__http_only_session__";
 
@@ -1317,7 +1319,7 @@ function normalizeOrder(raw: Record<string, unknown>): ApiOrder {
 
   return {
     ...(raw as object),
-    order_number: (raw.slug as string) ?? String(raw.id),
+    order_number: (raw.order_number as string) ?? (raw.slug as string) ?? String(raw.id),
     total: parseFloat(String(raw.final_total ?? raw.total_payable ?? 0)),
     final_total: parseFloat(String(raw.final_total ?? raw.total_payable ?? 0)),
     subtotal: parseFloat(String(raw.subtotal ?? 0)),
@@ -1784,7 +1786,11 @@ export async function serverCartAdd(
     });
     const body = await res.json();
     console.log("[serverCartAdd] HTTP", res.status, JSON.stringify(body));
-    if (!res.ok) return null;
+    if (!res.ok) {
+      const msg = (body && (body.message || body.error || (body.errors && Object.values(body.errors).flat()[0]))) || "Failed to add item to cart";
+      try { toast.error(msg); } catch { /* ignore */ }
+      return null;
+    }
     const typed = body as { success?: boolean; data?: { items?: { id: number; product_variant_id: number; store_id: number }[] } };
     if (!typed.success || !typed.data?.items) {
       console.warn("[serverCartAdd] unexpected body shape:", body);
@@ -1819,7 +1825,18 @@ export async function serverCartUpdateQty(
       credentials: "include",
       body: JSON.stringify({ quantity }),
     });
-    return res.ok;
+    if (!res.ok) {
+      // try to show server message
+      try {
+        const body = await res.json().catch(() => null);
+        const msg = body && (body.message || body.error || (body.errors && Object.values(body.errors).flat()[0])) || "Failed to update cart item";
+        try { toast.error(msg); } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
+      return false;
+    }
+    return true;
   } catch {
     return false;
   }
@@ -1919,7 +1936,7 @@ export async function syncCartToServer(
 
 export async function createCheckout(
   payload: ApiCheckoutPayload
-): Promise<{ success: boolean; order_id?: number; order_number?: string; message?: string }> {
+): Promise<{ success: boolean; order_id?: number; order_number?: string; order_slug?: string; message?: string }> {
   // Map frontend field names → backend field names
   const mapped: OrderApiPayload = {
     address_id:          payload.address_id,
@@ -1969,12 +1986,13 @@ export async function createCheckout(
       return { success: false, message: msg };
     }
 
-    const data = rawBody as { success?: boolean; message?: string; data?: { id?: number; order_number?: string } };
+    const data = rawBody as { success?: boolean; message?: string; data?: { id?: number; order_number?: string; slug?: string; order_slug?: string } };
     if (data.success && data.data) {
       return {
         success: true,
         order_id:     data.data.id,
         order_number: data.data.order_number,
+        order_slug:   data.data.slug ?? data.data.order_slug ?? '',
         message:      data.message,
       };
     }

@@ -17,8 +17,9 @@ import {
   API_BASE, getProduct, addToWishlist, getWishlistItems, removeWishlistItem,
   type RealApiProduct, type RealApiVariant,
 } from "@/lib/api";
+import { normalizeImageUrl } from "@/lib/image";
 import { useSiteSettings } from "@/context/SiteSettingsContext";
-import AttributePills from "@/components/product/AttributePills";
+import AttributePills, { AttributePillsWithVariants } from "@/components/product/AttributePills";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -33,16 +34,7 @@ const COLOR_MAP: Record<string, string> = {
   Pink: "#ec4899", Beige: "#e8dcc8", Navy: "#1e3a5f", Maroon: "#800000",
 };
 
-function normalizeImageUrl(src?: string | null): string | null {
-  if (!src) return null;
-  const trimmed = String(src).trim();
-  if (!trimmed) return null;
-  if (/^https?:\/\//i.test(trimmed)) return trimmed;
-  const base = API_BASE.replace(/\/+$/, "");
-  if (trimmed.startsWith("/")) return `${base}${trimmed}`;
-  if (trimmed.startsWith("storage/") || trimmed.startsWith("uploads/")) return `${base}/${trimmed}`;
-  return `${base}/storage/${trimmed}`;
-}
+
 
 /** Extract the best available pricing from a product's variants. */
 function getDefaultPricing(product: RealApiProduct) {
@@ -58,7 +50,7 @@ const QA_BTN =
 
 export default function ShopProductCard({ product }: { product: RealApiProduct }) {
   const router = useRouter();
-  const { addItem, openCart } = useCart();
+  const { addItem, openCart, updateQuantity } = useCart();
   const { isWishlisted, toggle } = useWishlist();
   const { isLoggedIn } = useAuth();
   const {
@@ -77,6 +69,7 @@ export default function ShopProductCard({ product }: { product: RealApiProduct }
 
   // ── Derived card values ──────────────────────────────────────────────────
   const { variant: defaultVariant, pricing: defaultPricing } = getDefaultPricing(product);
+  const [hoveredVariantId, setHoveredVariantId] = useState<number | null>(null);
   const price     = defaultPricing?.special_price || defaultPricing?.price || 0;
   const compare   = defaultPricing?.price || 0;
   // Display price: prefer special_price when available, otherwise use cost (price without GST) or price
@@ -86,13 +79,32 @@ export default function ShopProductCard({ product }: { product: RealApiProduct }
   const inStock   = (defaultPricing?.stock ?? 0) > 0;
   const minQty    = product.policies?.minimum_order_quantity ?? 1;
   const imgSrc    = normalizeImageUrl(
-    defaultVariant?.image || product.images?.main_image
+    // prefer hovered variant image when hovering a swatch; treat empty string as missing
+    (product.variants?.find((v) => v.id === hoveredVariantId)?.image) || defaultVariant?.image || product.images?.main_image
   );
   const isInWishlist = isWishlisted(product.id);
   
   // Price to show in grid (prefer discounted special_price when present)
-  const priceWithoutGst = displayPrice;
-  const compareWithoutGst = compare;
+  // If hovering a variant, try to use that variant's pricing
+  const hoveredVariant = product.variants?.find((v) => v.id === hoveredVariantId) ?? null;
+  const defaultDisplayTitle = hoveredVariant?.title ?? (product.type === "variant" ? (defaultVariant?.title ?? product.title) : product.title);
+  function getPricingForVariant(v: typeof defaultVariant | null) {
+    if (!v) return null;
+    // Prefer a store pricing that matches defaultPricing store_id if available
+    const matchStoreId = defaultPricing?.store_id ?? null;
+    const pricing = (v.store_pricing?.find((s) => (matchStoreId ? s.store_id === matchStoreId : s.stock_status === "in_stock")) ?? v.store_pricing?.[0]) ?? null;
+    return pricing ? {
+      display: pricing.special_price ?? (pricing.cost ? parseFloat(String(pricing.cost)) : pricing.price ?? 0),
+      compare: pricing.price ?? 0,
+      raw: pricing,
+    } : null;
+  }
+
+  const hoveredPricingInfo = getPricingForVariant(hoveredVariant as any);
+  const defaultPricingInfo = getPricingForVariant(defaultVariant as any) ?? { display: displayPrice, compare };
+
+  const priceWithoutGst = hoveredPricingInfo?.display ?? defaultPricingInfo.display ?? 0;
+  const compareWithoutGst = hoveredPricingInfo?.compare ?? defaultPricingInfo.compare ?? 0;
 
   // ── Quick view derived values ─────────────────────────────────────────────
   const quickViewVariants = useMemo(() => quickViewProduct?.variants ?? [], [quickViewProduct]);
@@ -150,8 +162,9 @@ export default function ShopProductCard({ product }: { product: RealApiProduct }
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     if (!defaultVariant || !defaultPricing) return;
+    const itemId = `${product.id}-v${defaultVariant.id}-s${defaultPricing.store_id}`;
     addItem({
-      id: `${product.id}-v${defaultVariant.id}-s${defaultPricing.store_id}`,
+      id: itemId,
       productId: product.id,
       name: product.title,
       price,
@@ -160,11 +173,16 @@ export default function ShopProductCard({ product }: { product: RealApiProduct }
       variantId: defaultVariant.id,
       variantLabel: defaultVariant.title,
       minQty,
+      step: product.policies?.quantity_step_size ?? 1,
+      totalAllowed: (product as any).policies?.total_allowed_quantity ?? null,
+      stock: defaultPricing?.stock ?? undefined,
       storeId: defaultPricing.store_id,
       currencySymbol: product.currency?.symbol || "₹",
       weight: defaultVariant.weight ?? undefined,
       weightUnit: defaultVariant.weight_unit ?? undefined,
     });
+    // Reflect selected qty (local `qty`) in cart after add
+    setTimeout(() => updateQuantity(itemId, qty), 0);
     openCart();
   };
 
@@ -233,8 +251,9 @@ export default function ShopProductCard({ product }: { product: RealApiProduct }
   const addSelectedToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     if (!quickViewProduct || !selectedVariant || !selectedPricing) return;
+    const itemId = `${quickViewProduct.id}-v${selectedVariant.id}-s${selectedPricing.store_id}`;
     addItem({
-      id: `${quickViewProduct.id}-v${selectedVariant.id}-s${selectedPricing.store_id}`,
+      id: itemId,
       productId: quickViewProduct.id,
       name: quickViewProduct.title,
       price: Number(priceNow || 0),
@@ -243,11 +262,15 @@ export default function ShopProductCard({ product }: { product: RealApiProduct }
       variantId: selectedVariant.id,
       variantLabel: selectedVariant.title,
       minQty: qty,
+      step: quickViewProduct.policies?.quantity_step_size ?? 1,
+      totalAllowed: (quickViewProduct as any).policies?.total_allowed_quantity ?? null,
+      stock: selectedPricing?.stock ?? undefined,
       storeId: selectedPricing.store_id,
       currencySymbol: quickViewProduct.currency?.symbol || "₹",
       weight: selectedVariant.weight ?? undefined,
       weightUnit: selectedVariant.weight_unit ?? undefined,
     });
+    setTimeout(() => updateQuantity(itemId, qty), 0);
     openCart();
     closeQuickView();
   };
@@ -257,7 +280,7 @@ export default function ShopProductCard({ product }: { product: RealApiProduct }
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <>
-      <div className="featured-card-border transition-all duration-300 hover:-translate-y-1">
+      <div onMouseLeave={() => setHoveredVariantId(null)} className="featured-card-border transition-all duration-300 hover:-translate-y-1">
         <Link href={`/products/${product.slug}`} className="group">
 
           {/* Image */}
@@ -328,9 +351,95 @@ export default function ShopProductCard({ product }: { product: RealApiProduct }
               </p>
             )}
             <p className="text-sm font-semibold text-gray-900 leading-snug line-clamp-2 group-hover:text-[#2e7c8a] transition-colors">
-              {product.title}
+              {defaultDisplayTitle}
             </p>
-            <AttributePills attributes={defaultVariant?.attributes ?? null} />
+            {/* Variant attributes (interactive) */}
+            {product.type === "variant" && product.variants && (() => {
+              const seenColor = new Set<string>();
+              const seenSize = new Set<string>();
+              const seenWeight = new Set<string>();
+              const colors: { color: string; variantId: number }[] = [];
+              const sizes: { size: string; variantId: number }[] = [];
+              const weights: { weight: string; variantId: number }[] = [];
+
+              // Determine the default variant's color so we only show sizes for that color
+              const defaultAttrsRaw = (defaultVariant as any)?.attributes || {};
+              const defaultAttrs: Record<string, any> = {};
+              for (const [k, val] of Object.entries(defaultAttrsRaw)) {
+                defaultAttrs[String(k).toLowerCase()] = val;
+              }
+              const defaultColor = defaultAttrs.color ?? defaultAttrs.col ?? null;
+
+              // Check if ANY variant in this product has a color attribute
+              const productHasColorVariants = product.variants.some((v) => {
+                const a = (v as any).attributes || {};
+                return Object.entries(a).some(([k]) => {
+                  const key = String(k).toLowerCase();
+                  return key === "color" || key === "col";
+                });
+              });
+
+              for (const v of product.variants) {
+                const raw = (v as any).attributes || {};
+                // normalize attribute keys to lowercase for robust lookup
+                const attrs: Record<string, any> = {};
+                for (const [k, val] of Object.entries(raw)) {
+                  attrs[String(k).toLowerCase()] = val;
+                }
+                const col = attrs.color ?? attrs.col ?? null;
+                const sz = attrs.size ?? attrs.size_label ?? attrs.size_in ?? attrs.size_cm ?? attrs.dimensions ?? attrs.pouch_size ?? attrs.pouchsize ?? attrs["pouch-size"] ?? attrs["pack_size"] ?? attrs["pack-size"] ?? attrs.measurement ?? attrs.dim ?? null;
+                const wt = attrs.weight ?? attrs.weight_kg ?? attrs.weight_g ?? attrs.wt ?? null;
+                // Always collect colors from all variants
+                if (col && !seenColor.has(String(col))) { seenColor.add(String(col)); colors.push({ color: String(col), variantId: v.id }); }
+                // If product uses color as a variant dimension, include sizes from:
+                // (a) variants matching the default color, OR (b) variants with no color attribute.
+                // Exclude variants with a different explicit color (e.g. don't show Pink sizes on Red).
+                const colorMatches = !productHasColorVariants
+                  ? true
+                  : (col == null || String(col) === String(defaultColor));
+                if (!colorMatches) continue;
+                let finalSize = sz;
+                // fallback: try parsing size-like patterns from title or sku or option values
+                if (!finalSize) {
+                  const titleStr = String(v.title ?? "");
+                  const skuStr = String((v as any).sku ?? "");
+                  const combined = `${titleStr} ${skuStr}`;
+                  const sizeMatch = combined.match(/\b\d+(?:\s*[x×]\s*\d+){1,2}\s*(?:mm|cm|in)?\b/i);
+                  if (sizeMatch) finalSize = sizeMatch[0];
+                }
+                // also check variant.options array (common in some APIs)
+                if (!finalSize && Array.isArray((v as any).options)) {
+                  for (const opt of (v as any).options) {
+                    if (!opt) continue;
+                    const val = String(opt.value ?? opt).trim();
+                    if (/\d+(?:\s*[x×]\s*\d+){1,2}/.test(val)) { finalSize = val; break; }
+                  }
+                }
+                if (finalSize && !seenSize.has(String(finalSize))) { seenSize.add(String(finalSize)); sizes.push({ size: String(finalSize), variantId: v.id }); }
+                if (wt && !seenWeight.has(String(wt))) { seenWeight.add(String(wt)); weights.push({ weight: String(wt), variantId: v.id }); }
+              }
+              const hasVariantImages = (product.images?.variant_images?.length ?? 0) > 0;
+              const variantImageSet = new Set<number>(product.variants?.filter((v) => Boolean(v.image)).map((v) => v.id) ?? []);
+              if (colors.length === 0 && sizes.length === 0 && weights.length === 0) {
+                return <AttributePills attributes={defaultVariant?.attributes ?? null} />;
+              }
+
+              return (
+                <AttributePillsWithVariants
+                  colors={colors}
+                  weights={weights.map((w) => ({ value: w.weight, variantId: w.variantId }))}
+                  hoveredVariantId={hoveredVariantId}
+                  onHoverVariant={(id) => {
+                    if (id == null) { setHoveredVariantId(null); return; }
+                    if (hasVariantImages && variantImageSet.has(id)) setHoveredVariantId(id);
+                  }}
+                  variantImageSet={variantImageSet}
+                  hoverEnabled={hasVariantImages}
+                  showColorSwatches={true}
+                />
+              );
+            })()}
+            {product.type !== "variant" && <AttributePills attributes={defaultVariant?.attributes ?? null} />}
 
             {/* Bottom row: price+meta left, cart right */}
             <div className="flex items-end justify-between gap-2 mt-auto pt-2 border-t border-gray-100">

@@ -12,6 +12,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useSiteSettings } from "@/context/SiteSettingsContext";
 import AttributePills from "@/components/product/AttributePills";
 import { API_BASE, addToWishlist, getProduct, getWishlistItems, removeWishlistItem, type RealApiProduct, type RealApiVariant } from "@/lib/api";
+import { normalizeImageUrl } from "@/lib/image";
 import toast from "react-hot-toast";
 
 export interface FallbackProduct {
@@ -59,16 +60,7 @@ const COLOR_MAP: Record<string, string> = {
   Maroon:       "#800000",
 };
 
-function normalizeImageUrl(src?: string | null): string | null {
-  if (!src) return null;
-  const trimmed = String(src).trim();
-  if (!trimmed) return null;
-  if (/^https?:\/\//i.test(trimmed)) return trimmed;
-  const base = API_BASE.replace(/\/+$/, "");
-  if (trimmed.startsWith("/")) return `${base}${trimmed}`;
-  if (trimmed.startsWith("storage/") || trimmed.startsWith("uploads/")) return `${base}/${trimmed}`;
-  return `${base}/storage/${trimmed}`;
-}
+// use shared normalizeImageUrl from '@/lib/image'
 
 export default function FeaturedProductCard({ p }: { p: FallbackProduct }) {
   const router = useRouter();
