@@ -775,6 +775,37 @@ export async function getProductReviews(slug: string): Promise<ApiReview[]> {
   return [];
 }
 
+export async function getAvailableOrderItemsForProduct(slug: string): Promise<Array<{id:number, order_id:number, product_id:number}>> {
+  const token = getToken();
+  try {
+    const res = await fetch(`${API_BASE}/api/products/${encodeURIComponent(slug)}/available-order-items`, {
+      headers: { Accept: 'application/json', ...getAuthHeaders(token) },
+      credentials: 'include',
+    } as RequestInit);
+    if (!res.ok) return [];
+    const json = await res.json();
+    if (json && json.success && json.data) return Array.isArray(json.data) ? json.data : [];
+    return [];
+  } catch {
+    return [];
+  }
+}
+
+export async function submitReview(formData: FormData): Promise<any | null> {
+  const token = getToken();
+  try {
+    const res = await fetch(`${API_BASE}/api/reviews`, {
+      method: 'POST',
+      headers: { Accept: 'application/json', ...getAuthHeaders(token) },
+      credentials: 'include',
+      body: formData,
+    } as RequestInit);
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
 export async function getProductFaqs(slug: string): Promise<ApiFaq[]> {
   const res = await apiFetch<ApiResponse<ApiFaq[]> | ApiFaq[]>(
     `/api/products/${slug}/faqs`

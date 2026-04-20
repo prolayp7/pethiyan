@@ -280,8 +280,8 @@ export default function ShopProductCard({ product }: { product: RealApiProduct }
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <>
-      <div onMouseLeave={() => setHoveredVariantId(null)} className="featured-card-border transition-all duration-300 hover:-translate-y-1">
-        <Link href={`/products/${product.slug}`} className="group">
+      <div onMouseLeave={() => setHoveredVariantId(null)} className="featured-card-border transition-all duration-300 hover:-translate-y-1 h-full">
+        <Link href={`/products/${product.slug}`} className="group flex flex-col h-full">
 
           {/* Image */}
           <div className="relative aspect-square overflow-hidden bg-gray-50">

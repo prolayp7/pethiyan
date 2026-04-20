@@ -44,6 +44,8 @@ import {
   getWishlistItems,
   removeWishlistItem,
   getProductReviews,
+  getAvailableOrderItemsForProduct,
+  submitReview,
   getProductFaqs,
   getAddresses,
 } from "@/lib/api";
@@ -51,6 +53,7 @@ import { trackViewItem, trackAddToCart } from "@/lib/analytics";
 import { recordBrowsingHistory } from "@/lib/api";
 import { pushRecentlyViewedId } from "@/lib/recently-viewed";
 import { pushBrowsingHistory } from "@/lib/browsingHistory";
+import ReviewForm from "./ReviewForm";
 
 function formatCurrency(amount: number | null | undefined, symbol = "₹"): string {
   const value = toNum(amount);
@@ -361,6 +364,16 @@ export default function ProductDetailClient({ product, reviews: initialReviews, 
   const productName = product.title ?? "Product";
   const variantList = useMemo(() => product.variants ?? [], [product.variants]);
 
+  // Render the selected variant first in the UI so it stays visible.
+  // Use `selectedVariantId` here to avoid referencing `selectedVariant`
+  // before it's declared.
+  const displayVariantList = useMemo(() => {
+    if (selectedVariantId == null) return variantList;
+    const sel = variantList.find((v) => v.id === selectedVariantId);
+    if (!sel) return variantList;
+    return [sel, ...variantList.filter((v) => v.id !== selectedVariantId)];
+  }, [variantList, selectedVariantId]);
+
   // Initialise selected variant from URL slug (variant page pre-selection)
   useEffect(() => {
     if (!initialVariantSlug) return;
@@ -494,6 +507,32 @@ export default function ProductDetailClient({ product, reviews: initialReviews, 
     return Array.from(map.entries()).map(([color, variantId]) => ({ color, variantId }));
   }, [variantList]);
 
+  // Collect all attributes available across variants (case-insensitive keying)
+  const attributeGroups = useMemo(() => {
+    const m = new Map<string, { displayKey: string; values: Map<string, number> }>();
+    variantList.forEach((variant) => {
+      const attrs = variant.attributes ?? {};
+      Object.entries(attrs).forEach(([k, v]) => {
+        const keyNorm = k.trim().toLowerCase();
+        if (!m.has(keyNorm)) m.set(keyNorm, { displayKey: k.trim(), values: new Map() });
+        const entry = m.get(keyNorm)!;
+        if (v && !entry.values.has(v)) entry.values.set(v, variant.id);
+      });
+    });
+    return Array.from(m.entries()).map(([key, { displayKey, values }]) => ({
+      key,
+      displayKey,
+      values: Array.from(values.entries()).map(([value, variantId]) => ({ value, variantId })),
+    }));
+  }, [variantList]);
+
+  function getAttributeValue(variant?: RealApiVariant | undefined, keyNorm?: string) {
+    if (!variant || !keyNorm) return undefined;
+    const attrs = variant.attributes ?? {};
+    const found = Object.entries(attrs).find(([k]) => k.trim().toLowerCase() === keyNorm);
+    return found ? found[1] : undefined;
+  }
+
   const galleryImages = useMemo(() => {
     return uniqueStrings([
       selectedVariant?.image,
@@ -522,6 +561,10 @@ export default function ProductDetailClient({ product, reviews: initialReviews, 
 
   const rating = 0;
   const reviewCount = reviews.length;
+
+  // Review submission state
+  const [submittingReview, setSubmittingReview] = useState(false);
+  const [reviewPendingMessage, setReviewPendingMessage] = useState<string | null>(null);
 
   const specs: Array<{ key: string; value: string }> = [
     { key: "Product Type", value: product.type },
@@ -696,6 +739,71 @@ export default function ProductDetailClient({ product, reviews: initialReviews, 
               name={productName}
               videoUrl={isVideoLink(product.video?.video_link) ? product.video?.video_link : null}
             />
+            {/* Variant selector moved under gallery (compact square boxes) */}
+            {variantList.length > 0 && (
+              <div className="mt-4">
+                <p className="text-sm font-semibold text-(--color-secondary) mb-2">Variants</p>
+                <div className="grid grid-cols-5 gap-2 max-h-[220px] overflow-y-auto">
+                  {displayVariantList.map((variant) => {
+                    const selected = selectedVariant?.id === variant.id;
+                    const attrLabel = Object.entries(variant.attributes ?? {}).map(([k, v]) => `${k}: ${v}`).join(" | ");
+                    const sizeKeys = [
+                      "pouch-size",
+                      "pouchsize",
+                      "size",
+                      "size_label",
+                      "pack_size",
+                      "pack-size",
+                      "dimensions",
+                      "measurement",
+                      "pouch_size",
+                    ];
+                    let variantSize: string | undefined;
+                    for (const k of sizeKeys) {
+                      const v = getAttributeValue(variant, k);
+                      if (v) { variantSize = String(v); break; }
+                    }
+                    if (!variantSize) {
+                      const m = String(variant.title ?? "").match(/\b\d+(?:\s*[x×]\s*\d+){0,2}\b/i);
+                      if (m) variantSize = m[0];
+                    }
+                    const variantImage = variant.image || product.images?.main_image;
+                    return (
+                      <button
+                        key={variant.id}
+                        onClick={() => navigateToVariant(variant)}
+                        aria-pressed={selected}
+                        title={attrLabel}
+                        className={`flex flex-col items-center justify-center gap-1 p-2 rounded-xl transition-all text-center min-w-[56px] ${
+                          selected
+                            ? "btn-brand border-2 border-(--color-primary) shadow-md"
+                            : "bg-white text-(--color-secondary) border border-(--color-border) hover:shadow-sm"
+                        }`}
+                      >
+                        {variantImage ? (
+                          <div className={`relative w-12 h-12 rounded-lg overflow-hidden shrink-0 ${selected ? "ring-2 ring-(--color-primary)" : ""}`}>
+                            <Image
+                              src={variantImage}
+                              alt={variant.title}
+                              fill
+                              className="object-cover"
+                              sizes="48px"
+                              unoptimized={shouldBypassOptimizer(variantImage)}
+                            />
+                          </div>
+                        ) : (
+                          <div className="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
+                            <Package className="h-5 w-5 text-gray-300" aria-hidden="true" />
+                          </div>
+                        )}
+                        <div className={`text-xs font-semibold leading-snug line-clamp-2 w-14 ${selected ? "text-white" : "text-(--color-secondary)"}`}>{variant.title}</div>
+                        {variantSize ? <div className={`text-[10px] ${selected ? "text-white/80" : "text-gray-400"}`}>{variantSize}</div> : null}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="flex flex-col">
@@ -762,67 +870,73 @@ export default function ProductDetailClient({ product, reviews: initialReviews, 
               )}
             </div>
 
-            {variantList.length > 0 && (
-              <div className="mt-5 flex flex-col space-y-2">
-                <p className="text-sm font-semibold text-(--color-secondary) flex items-center gap-2">
-                  Product Variants
-                </p>
-                <div className="grid gap-2 max-h-60 overflow-y-auto pr-1">
-                  {variantList.map((variant) => {
-                    const selected = selectedVariant?.id === variant.id;
-                    const attributeLabel = Object.entries(variant.attributes ?? {})
-                      .map(([k, v]) => `${k}: ${v}`)
-                      .join(" | ");
-                    return (
-                      <button
-                        key={variant.id}
-                        onClick={() => navigateToVariant(variant)}
-                        className={`text-left border rounded-xl p-3 transition-all ${
-                          selected
-                            ? "btn-brand border-transparent shadow-md"
-                            : "border-(--color-border) hover:border-(--color-primary)/50"
-                        }`}
-                        aria-pressed={selected}
-                      >
-                        <p className={`text-sm font-semibold ${selected ? "text-white" : "text-(--color-secondary)"}`}>{variant.title}</p>
-                        {attributeLabel && <p className={`text-xs mt-0.5 ${selected ? "text-white/80" : "text-gray-500"}`}>{attributeLabel}</p>}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
+            {/* product variants moved to left column */}
 
-            {colorOptions.length > 0 && (
+            {attributeGroups.length > 0 && (
               <div className="mt-5">
-                <p className="text-sm font-semibold text-(--color-secondary) mb-2 flex items-center gap-2">
-                  <Palette className="h-4 w-4" /> Color
-                </p>
-                <p className="text-2xl font-bold text-(--color-secondary) mb-3">
-                  Color: {selectedVariant?.attributes?.color || colorOptions[0]?.color || "-"}
-                </p>
-                <div className="flex flex-wrap items-center gap-2.5">
-                  {colorOptions.map((opt) => {
-                    const selected = selectedVariant?.id === opt.variantId;
-                    return (
-                      <button
-                        key={`${opt.color}-${opt.variantId}`}
-                        onClick={() => { const v = variantList.find((vr) => vr.id === opt.variantId); if (v) navigateToVariant(v); }}
-                        className={`h-10 w-10 rounded-full border-2 transition-all ${
-                          selected
-                            ? "border-white shadow-[0_0_0_3px_#17396f,_0_0_0_5px_#49ad57]"
-                            : "border-(--color-border) hover:border-(--color-primary)/60"
-                        }`}
-                        style={colorSwatchStyle(opt.color)}
-                        aria-pressed={selected}
-                        aria-label={`Select color ${opt.color}`}
-                        title={opt.color}
-                      >
-                        <span className="sr-only">{opt.color}</span>
-                      </button>
-                    );
-                  })}
-                </div>
+                {attributeGroups.map((group) => {
+                  // Only render attribute groups that exist on the currently
+                  // selected variant. Some variants (e.g. particular pouch
+                  // sizes) may not have a `color` attribute — hide the group
+                  // when the selected variant lacks that attribute.
+                  const selectedAttrValue = getAttributeValue(selectedVariant, group.key);
+                  if (selectedAttrValue == null || String(selectedAttrValue).trim() === "") return null;
+
+                  const selectedValue = selectedAttrValue;
+                  const isColorGroup = group.key.includes("color") || group.displayKey.toLowerCase().includes("color");
+                  return (
+                    <div key={group.key} className="mb-4">
+                      <p className="text-sm font-semibold text-(--color-secondary) mb-2 flex items-center gap-2">
+                        {isColorGroup ? <Palette className="h-4 w-4" /> : null}
+                        {group.displayKey}
+                      </p>
+                      <p className="text-2xl font-bold text-(--color-secondary) mb-3">
+                        {group.displayKey}: {selectedValue}
+                      </p>
+
+                      <div className="flex flex-wrap items-center gap-2.5">
+                        {group.values.map((opt) => {
+                          const selected = selectedVariant?.id === opt.variantId;
+                          const handleClick = () => {
+                            const v = variantList.find((vr) => vr.id === opt.variantId);
+                            if (v) navigateToVariant(v);
+                          };
+
+                          if (isColorGroup) {
+                            return (
+                              <button
+                                key={`${opt.value}-${opt.variantId}`}
+                                onClick={handleClick}
+                                className={`h-10 w-10 rounded-full border-2 transition-all ${
+                                  selected
+                                    ? "border-white shadow-[0_0_0_3px_#17396f,_0_0_0_5px_#49ad57]"
+                                    : "border-(--color-border) hover:border-(--color-primary)/60"
+                                }`}
+                                style={colorSwatchStyle(opt.value)}
+                                aria-pressed={selected}
+                                aria-label={`Select ${group.displayKey} ${opt.value}`}
+                                title={opt.value}
+                              >
+                                <span className="sr-only">{opt.value}</span>
+                              </button>
+                            );
+                          }
+
+                          return (
+                            <button
+                              key={`${opt.value}-${opt.variantId}`}
+                              onClick={handleClick}
+                              className={`px-3 py-2 min-w-[88px] text-center rounded-xl border transition-colors text-sm ${selected ? "btn-brand text-white" : "border-(--color-border) hover:border-(--color-primary)/60 text-(--color-secondary)"}`}
+                              aria-pressed={selected}
+                            >
+                              {opt.value}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
 
@@ -997,6 +1111,20 @@ export default function ProductDetailClient({ product, reviews: initialReviews, 
             )}
 
             {activeTab === "reviews" && <ReviewsTab reviews={reviews} rating={rating} />}
+
+            {activeTab === "reviews" && (
+              <div className="mt-6">
+                {reviewPendingMessage ? (
+                  <div className="p-3 rounded-md bg-yellow-50 text-yellow-800">{reviewPendingMessage}</div>
+                ) : (
+                  <ReviewForm
+                    productSlug={product.slug}
+                    onSubmitting={() => setSubmittingReview(true)}
+                    onDone={(msg) => { setSubmittingReview(false); setReviewPendingMessage(msg ?? null); }}
+                  />
+                )}
+              </div>
+            )}
 
             {activeTab === "faqs" && <FaqsTab faqs={faqs} />}
           </div>

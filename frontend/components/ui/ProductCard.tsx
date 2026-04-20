@@ -55,7 +55,7 @@ export default function ProductCard({ product }: ProductCardProps) {
       : null;
 
   return (
-    <article className="group relative bg-white rounded-2xl border border-(--color-border) overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+    <article className="group relative bg-white rounded-2xl border border-(--color-border) overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300 h-full flex flex-col">
       {/* Image area */}
       <Link href={product.href} className="block relative aspect-4/3 overflow-hidden" tabIndex={-1} aria-hidden="true">
         {product.image ? (
@@ -105,7 +105,7 @@ export default function ProductCard({ product }: ProductCardProps) {
       </button>
 
       {/* Content */}
-      <div className="p-4">
+      <div className="p-4 flex-1 flex flex-col">
         {/* Rating */}
         <div className="flex items-center gap-1 mb-2">
           {Array.from({ length: 5 }).map((_, i) => (
@@ -139,7 +139,7 @@ export default function ProductCard({ product }: ProductCardProps) {
         {/* Add to Cart */}
         <button
           onClick={handleAddToCart}
-          className="mt-3 w-full flex items-center justify-center gap-2 py-2 rounded-xl bg-(--color-primary)/10 text-(--color-primary) text-xs font-semibold hover:bg-(--color-primary) hover:text-white transition-all duration-200"
+          className="mt-auto w-full flex items-center justify-center gap-2 py-2 rounded-xl bg-(--color-primary)/10 text-(--color-primary) text-xs font-semibold hover:bg-(--color-primary) hover:text-white transition-all duration-200"
           aria-label={`Add ${product.name} to cart`}
         >
           <ShoppingCart className="h-3.5 w-3.5" aria-hidden="true" />
