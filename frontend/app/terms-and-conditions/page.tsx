@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ChevronRight, FileText } from "lucide-react";
+import { ChevronRight, Home, FileText } from "lucide-react";
 import Container from "@/components/layout/Container";
 
 export const metadata: Metadata = {
@@ -10,18 +10,30 @@ export const metadata: Metadata = {
 
 export default function TermsPage() {
   return (
-    <div style={{ background: "var(--background)" }}>
+    <div className="bg-background">
 
-      <div className="py-12 lg:py-16" style={{ background: "linear-gradient(160deg,#0f2f5f,#1f4f8a)" }}>
-        <Container className="text-center">
-          <nav className="flex items-center justify-center gap-1.5 text-xs text-blue-300 mb-4">
-            <Link href="/" className="hover:text-white">Home</Link>
-            <ChevronRight className="h-3 w-3" />
-            <span className="text-white font-medium">Terms & Conditions</span>
-          </nav>
-          <FileText className="h-10 w-10 text-white mx-auto mb-3 opacity-80" />
-          <h1 className="text-3xl font-extrabold text-white mb-2">Terms & Conditions</h1>
-          <p className="text-blue-300 text-xs">Last updated: March 25, 2026</p>
+      {/* ── Breadcrumb bar ── */}
+      <div className="bg-white border-b border-(--color-border) py-5">
+        <Container>
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <span className="flex items-center justify-center h-10 w-10 rounded-xl shrink-0 bg-[linear-gradient(135deg,#17396f_0%,#2f6f9f_52%,#49ad57_100%)]">
+                <FileText className="h-5 w-5 text-white" />
+              </span>
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-extrabold text-(--color-secondary)">Terms &amp; Conditions</h1>
+                <p className="mt-0.5 text-gray-500 text-sm">Please read these terms carefully before using our platform.</p>
+              </div>
+            </div>
+            <nav className="hidden sm:flex items-center gap-1.5 text-sm text-gray-500 shrink-0" aria-label="Breadcrumb">
+              <Link href="/" className="flex items-center gap-1 hover:text-(--color-primary) transition-colors">
+                <Home className="h-3.5 w-3.5" aria-hidden="true" />
+                <span>Home</span>
+              </Link>
+              <ChevronRight className="h-3.5 w-3.5 text-gray-300" aria-hidden="true" />
+              <span className="text-(--color-secondary) font-medium">Terms &amp; Conditions</span>
+            </nav>
+          </div>
         </Container>
       </div>
 

@@ -157,6 +157,7 @@ export default function ShopProductCard({ product }: { product: RealApiProduct }
       productId: product.id,
       name: product.title,
       price,
+      taxPerUnit: defaultPricing.gst?.total_tax_amount ?? 0,
       image: imgSrc,
       slug: product.slug,
       variantId: defaultVariant.id,
@@ -246,6 +247,7 @@ export default function ShopProductCard({ product }: { product: RealApiProduct }
       productId: quickViewProduct.id,
       name: quickViewProduct.title,
       price: Number(priceNow || 0),
+      taxPerUnit: selectedPricing.gst?.total_tax_amount ?? 0,
       image: selectedVariant.image || quickViewProduct.images?.main_image || null,
       slug: quickViewProduct.slug,
       variantId: selectedVariant.id,
@@ -298,7 +300,7 @@ export default function ShopProductCard({ product }: { product: RealApiProduct }
               )}
               {discount && (
                 <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full text-white bg-red-500">
-                  -{discount}%
+                  {discount}% off
                 </span>
               )}
             </div>

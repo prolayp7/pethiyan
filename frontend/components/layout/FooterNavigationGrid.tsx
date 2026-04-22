@@ -14,6 +14,8 @@ type FooterBrand = {
   address: string;
   supportEmail: string;
   supportNumber: string;
+  shortDescription?: string;
+  companyGstin?: string;
 };
 
 type FooterNavigationGridProps = {
@@ -49,10 +51,10 @@ export default function FooterNavigationGrid({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-6 lg:pt-10 lg:pb-8 relative z-10">
 
         {/* Top: brand left, nav columns right */}
-        <div className="flex flex-col md:flex-row gap-0">
+        <div className="flex flex-col lg:flex-row gap-0">
 
           {/* Column 1 — Logo + Business Contact */}
-          <div className="pb-8 md:pb-0 md:pr-10">
+          <div className="pb-8 lg:pb-0 lg:pr-10 shrink-0 lg:w-[280px]">
             <Link href="/" aria-label={`${appName} home`} className="inline-flex mb-6">
               <div className="relative w-40 h-13">
                 <Image
@@ -99,8 +101,28 @@ export default function FooterNavigationGrid({
             )}
           </div>
 
+          {/* Column 2 - About Company */}
+          {(brand?.shortDescription || brand?.companyGstin) && (
+            <div className="py-8 lg:py-0 border-t lg:border-t-0 lg:border-l border-gray-100 lg:px-10 shrink-0 lg:w-[280px]">
+              <h3 className="font-bold text-[15px] mb-5 text-gray-900">
+                About Company
+              </h3>
+              {brand?.shortDescription && (
+                <p className="text-sm text-gray-500 leading-relaxed mb-5">
+                  {brand.shortDescription}
+                </p>
+              )}
+              {brand?.companyGstin && (
+                <div className="inline-flex items-center gap-2 rounded-md bg-gray-50 border border-gray-100 px-3 py-2">
+                  <span className="text-xs font-semibold text-gray-700">GSTIN:</span>
+                  <span className="text-sm font-medium text-gray-900 uppercase tracking-widest">{brand.companyGstin}</span>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Nav columns */}
-          <div className="pt-8 md:pt-0 md:pl-10 ml-auto grid grid-cols-4 gap-10">
+          <div className="pt-8 lg:pt-0 lg:pl-10 border-t lg:border-t-0 lg:border-l border-gray-100 ml-auto grid grid-cols-2 md:grid-cols-4 gap-8 flex-grow">
             {navColumns.slice(0, 4).map((col) => (
               <div key={col.title}>
                 <h3 className="font-bold text-[15px] mb-4 text-gray-900">

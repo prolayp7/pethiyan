@@ -28,43 +28,53 @@ function shouldBypassOptimizer(src?: string | null): boolean {
   return /^https?:\/\//i.test(src);
 }
 
-const STATUS_MAP: Record<ApiOrder["status"], { label: string; cls: string }> = {
-  pending:    { label: "Pending",    cls: "bg-amber-100 text-amber-700"  },
-  processing: { label: "Processing", cls: "bg-blue-100 text-blue-700"    },
-  shipped:    { label: "Shipped",    cls: "bg-indigo-100 text-indigo-700" },
-  delivered:  { label: "Delivered",  cls: "bg-green-100 text-green-700"  },
-  cancelled:  { label: "Cancelled",  cls: "bg-red-100 text-red-700"      },
+const STATUS_MAP: Record<string, { label: string; cls: string }> = {
+  pending:                  { label: "Pending",               cls: "bg-amber-100 text-amber-700"   },
+  awaiting_store_response:  { label: "Awaiting Confirmation", cls: "bg-yellow-100 text-yellow-700" },
+  partially_accepted:       { label: "Partially Accepted",    cls: "bg-orange-100 text-orange-700" },
+  accepted_by_seller:       { label: "Accepted",              cls: "bg-blue-100 text-blue-700"     },
+  ready_for_pickup:         { label: "Ready for Pickup",      cls: "bg-indigo-100 text-indigo-700" },
+  assigned:                 { label: "Assigned",              cls: "bg-purple-100 text-purple-700" },
+  preparing:                { label: "Preparing",             cls: "bg-blue-100 text-blue-700"     },
+  collected:                { label: "Collected",             cls: "bg-indigo-100 text-indigo-700" },
+  out_for_delivery:         { label: "Out for Delivery",      cls: "bg-indigo-100 text-indigo-700" },
+  processing:               { label: "Processing",            cls: "bg-blue-100 text-blue-700"     },
+  shipped:                  { label: "Shipped",               cls: "bg-indigo-100 text-indigo-700" },
+  delivered:                { label: "Delivered",             cls: "bg-green-100 text-green-700"   },
+  cancelled:                { label: "Cancelled",             cls: "bg-red-100 text-red-700"       },
+  failed:                   { label: "Failed",                cls: "bg-red-100 text-red-700"       },
+  rejected_by_seller:       { label: "Rejected",              cls: "bg-red-100 text-red-700"       },
 };
 
 // ─── Generate default tracking steps from order status ────────────────────────
 
-function buildDefaultTracking(status: ApiOrder["status"], createdAt: string): ApiTrackingStep[] {
-  const ORDER_STATUSES: ApiOrder["status"][] = [
-    "pending", "processing", "shipped", "delivered",
-  ];
-  const currentIndex = ORDER_STATUSES.indexOf(status);
-
-  const steps: ApiTrackingStep[] = [
-    { status: "pending",    label: "Order Placed",     description: "Your order has been placed successfully.", completed: currentIndex >= 0, timestamp: createdAt },
-    { status: "processing", label: "Order Confirmed",  description: "We're preparing your items for dispatch.", completed: currentIndex >= 1 },
-    { status: "shipped",    label: "Dispatched",       description: "Your package is on its way.",              completed: currentIndex >= 2 },
-    { status: "delivered",  label: "Delivered",        description: "Your order has been delivered.",           completed: currentIndex >= 3 },
-  ];
-
-  if (status === "cancelled") {
+function buildDefaultTracking(status: string, createdAt: string): ApiTrackingStep[] {
+  if (status === "cancelled" || status === "failed" || status === "rejected_by_seller") {
     return [
-      { status: "pending",   label: "Order Placed",   description: "Order was placed.", completed: true, timestamp: createdAt },
-      { status: "cancelled", label: "Cancelled",      description: "This order was cancelled.", completed: true },
+      { status: "pending",  label: "Order Placed", description: "Order was placed.", completed: true, timestamp: createdAt },
+      { status,             label: STATUS_MAP[status]?.label ?? status, description: "This order was cancelled.", completed: true },
     ];
   }
+
+  // Map detailed backend statuses → 4 simplified frontend steps
+  const CONFIRMED_STATUSES = ["awaiting_store_response", "partially_accepted", "accepted_by_seller", "ready_for_pickup", "assigned", "preparing", "collected", "out_for_delivery", "processing", "shipped", "delivered"];
+  const DISPATCHED_STATUSES = ["out_for_delivery", "shipped", "delivered"];
+  const DELIVERED_STATUSES  = ["delivered"];
+
+  const steps: ApiTrackingStep[] = [
+    { status: "pending",        label: "Order Placed",    description: "Your order has been placed successfully.", completed: true,                              timestamp: createdAt },
+    { status: "confirmed",      label: "Order Confirmed", description: "We're preparing your items for dispatch.", completed: CONFIRMED_STATUSES.includes(status) },
+    { status: "out_for_delivery", label: "Dispatched",   description: "Your package is on its way.",              completed: DISPATCHED_STATUSES.includes(status) },
+    { status: "delivered",      label: "Delivered",       description: "Your order has been delivered.",           completed: DELIVERED_STATUSES.includes(status)  },
+  ];
 
   return steps;
 }
 
 // ─── Tracking Timeline ────────────────────────────────────────────────────────
 
-function TrackingTimeline({ steps, status }: { steps: ApiTrackingStep[]; status: ApiOrder["status"] }) {
-  const isCancelled = status === "cancelled";
+function TrackingTimeline({ steps, status }: { steps: ApiTrackingStep[]; status: string }) {
+  const isCancelled = status === "cancelled" || status === "failed" || status === "rejected_by_seller";
 
   return (
     <div className="relative">
@@ -163,13 +173,8 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
 
   const status        = STATUS_MAP[order.status] ?? { label: order.status, cls: "bg-gray-100 text-gray-600" };
   const trackingSteps = order.tracking?.length ? order.tracking : buildDefaultTracking(order.status, order.created_at);
-  const subtotal         = order.subtotal ?? order.total - (order.shipping_charge ?? 0) + (order.discount ?? 0);
-  const productAfterDiscount = subtotal - (order.discount ?? 0);
-  // order.gst_amount may be stored as 0 when not calculated at save-time — derive it from
-  // the product amount after discount (GST is not applicable to shipping or discount savings).
-  const gst = (order.gst_amount != null && order.gst_amount > 0)
-    ? order.gst_amount
-    : Math.round(productAfterDiscount * 18 / 118);
+  const subtotal = order.subtotal;
+  const gst      = order.gst_amount ?? 0;
 
   return (
     <div className="space-y-5">
@@ -249,7 +254,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                     <p className="text-xs text-gray-500 mt-0.5">Qty: {item.quantity}</p>
                   </div>
                   <p className="text-sm font-bold text-(--color-secondary) shrink-0">
-                    {fmt(item.subtotal ?? item.price * item.quantity)}
+                    {fmt(item.price > 0 ? item.price * item.quantity : (item.subtotal ?? 0))}
                   </p>
                 </div>
               ))}
@@ -280,10 +285,12 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                   {order.shipping_charge === 0 ? "Free" : fmt(order.shipping_charge)}
                 </span>
               </div>
-              <div className="flex justify-between text-xs text-gray-400 border-t border-dashed border-gray-100 pt-2.5">
-                <span>GST (18% incl.)</span>
-                <span>{fmt(gst)}</span>
-              </div>
+              {gst > 0 && (
+                <div className="flex justify-between text-xs text-gray-400 border-t border-dashed border-gray-100 pt-2.5">
+                  <span>GST</span>
+                  <span>{fmt(gst)}</span>
+                </div>
+              )}
               <div className="flex justify-between items-center border-t border-gray-200 pt-2.5">
                 <span className="font-extrabold text-(--color-secondary)">Total</span>
                 <span className="text-lg font-extrabold text-(--color-secondary)">{fmt(order.total)}</span>

@@ -36,14 +36,22 @@ export default function ContactForm() {
     setLoading(true);
 
     try {
-      // POST to contact API — gracefully handles 404 if endpoint isn't live yet
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost/lcommerce/admin"}/api/contact`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost/lcommerce/admin"}/api/contact`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, phone: `+91${form.phone}` }),
       });
+
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        setError(json?.message ?? "Something went wrong. Please try again.");
+        setLoading(false);
+        return;
+      }
     } catch {
-      // Non-critical — still show success so UX isn't broken
+      setError("Unable to send message. Please check your connection and try again.");
+      setLoading(false);
+      return;
     }
 
     setLoading(false);
@@ -176,7 +184,7 @@ export default function ContactForm() {
         type="submit"
         disabled={loading}
         className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-bold text-white transition-all hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-not-allowed"
-        style={{ background: "linear-gradient(135deg,#1f4f8a,#0f2f5f)" }}
+        style={{ background: "linear-gradient(135deg,#17396f 0%,#2f6f9f 52%,#49ad57 100%)" }}
       >
         {loading ? (
           <><Loader2 className="h-4 w-4 animate-spin" /> Sending…</>

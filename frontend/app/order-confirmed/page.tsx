@@ -156,9 +156,15 @@ function OrderConfirmedInner() {
                       <span>-{fmt(order.discount ?? 0)}</span>
                     </div>
                   )}
+                  {(order.discount ?? 0) > 0 && (
+                    <div className="flex justify-between text-green-600">
+                      <span>Discount</span>
+                      <span>-{fmt(order.discount ?? 0)}</span>
+                    </div>
+                  )}
                   {(order.gst_amount ?? 0) > 0 && (
                     <div className="flex justify-between text-gray-400 text-xs">
-                      <span>GST (incl.)</span>
+                      <span>GST</span>
                       <span>{fmt(order.gst_amount ?? 0)}</span>
                     </div>
                   )}

@@ -12,6 +12,7 @@ use App\Http\Controllers\Admin\DeliveryBoyWithdrawalController;
 use App\Http\Controllers\Admin\PromoController;
 use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\SellerWithdrawalController;
+use App\Http\Controllers\Admin\DataManagementController;
 use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\BannerController;
 use App\Http\Controllers\BrandController;
@@ -19,6 +20,7 @@ use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\DeliveryBoyController;
 use App\Http\Controllers\DeliveryZoneController;
 use App\Http\Controllers\FaqController;
+use App\Http\Controllers\FaqCategoryController;
 use App\Http\Controllers\FeaturedSectionController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OrderController;
@@ -82,6 +84,12 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('/enable', [AdminTotpController::class, 'enable'])->name('enable');
             Route::post('/disable', [AdminTotpController::class, 'disable'])->name('disable');
             Route::post('/recovery-codes', [AdminTotpController::class, 'regenerateRecoveryCodes'])->name('recovery-codes');
+        });
+
+        // data management (truncate orders / carts / transactions / payments)
+        Route::prefix('data-management')->name('data-management.')->group(function () {
+            Route::get('/', [DataManagementController::class, 'index'])->name('index');
+            Route::post('/truncate', [DataManagementController::class, 'truncate'])->name('truncate');
         });
 
         // settings
@@ -287,6 +295,16 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('/{id}', [FaqController::class, 'update'])->name('update');
             Route::delete('/{id}', [FaqController::class, 'destroy'])->name('delete');
             Route::get('/datatable', [FaqController::class, 'getFaqs'])->name('datatable');
+        });
+
+        // FAQ Categories
+        Route::prefix('faq-categories')->name('faq-categories.')->group(function () {
+            Route::get('/', [FaqCategoryController::class, 'index'])->name('index');
+            Route::post('/', [FaqCategoryController::class, 'store'])->name('store');
+            Route::get('/{id}/edit', [FaqCategoryController::class, 'edit'])->name('edit');
+            Route::post('/{id}', [FaqCategoryController::class, 'update'])->name('update');
+            Route::delete('/{id}', [FaqCategoryController::class, 'destroy'])->name('delete');
+            Route::get('/datatable', [FaqCategoryController::class, 'getCategories'])->name('datatable');
         });
 
         // banners
@@ -560,9 +578,12 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // cms pages
         Route::prefix('pages')->name('pages.')->group(function () {
             Route::get('/', [\App\Http\Controllers\Admin\PageController::class, 'index'])->name('index');
+            Route::get('/create', [\App\Http\Controllers\Admin\PageController::class, 'create'])->name('create');
+            Route::post('/', [\App\Http\Controllers\Admin\PageController::class, 'store'])->name('store');
             Route::get('/{page}/edit', [\App\Http\Controllers\Admin\PageController::class, 'edit'])->name('edit');
             Route::post('/{page}', [\App\Http\Controllers\Admin\PageController::class, 'update'])->name('update');
             Route::post('/{page}/media', [\App\Http\Controllers\Admin\PageController::class, 'uploadMedia'])->name('media.store');
+            Route::delete('/{page}', [\App\Http\Controllers\Admin\PageController::class, 'destroy'])->name('destroy');
         });
 
         // blog

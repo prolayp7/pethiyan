@@ -88,7 +88,7 @@ export default function ProductCard({ product }: ProductCardProps) {
       {/* Discount badge */}
       {discount && (
         <span className="absolute top-3 right-10 text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-600">
-          -{discount}%
+          {discount}% off
         </span>
       )}
 

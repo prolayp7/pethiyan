@@ -199,6 +199,7 @@ export default function FeaturedProductCard({ p }: { p: FallbackProduct }) {
       productId: quickViewProduct.id,
       name: quickViewProduct.title,
       price: Number(priceNow || 0),
+      taxPerUnit: selectedPricing.gst?.total_tax_amount ?? 0,
       image: selectedVariant.image || quickViewProduct.images.main_image || null,
       slug: quickViewProduct.slug,
       variantId: selectedVariant.id,
@@ -336,7 +337,7 @@ export default function FeaturedProductCard({ p }: { p: FallbackProduct }) {
                 : "#22c55e",
             }}
           >
-            {p.badge}{discount > 0 ? ` −${discount}%` : ""}
+            {p.badge}{discount > 0 ? ` ${discount}% off` : ""}
           </span>
         )}
 

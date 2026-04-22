@@ -8,7 +8,8 @@ export interface CartItem {
   id: string;               // unique key, e.g. "42-v15" (productId-variantId)
   productId?: number;
   name: string;
-  price: number;
+  price: number;            // GST-excluded unit price (special_price ?? cost)
+  taxPerUnit?: number;      // GST per unit (gst.total_tax_amount)
   quantity: number;
   image?: string | null;
   slug?: string;
@@ -29,6 +30,7 @@ interface CartContextType {
   items: CartItem[];
   itemCount: number;
   total: number;
+  totalGst: number;
   isOpen: boolean;
   openCart: () => void;
   closeCart: () => void;
@@ -117,6 +119,7 @@ export function CartProvider({
   const liveItemCount = items.reduce((sum, item) => sum + item.quantity, 0);
   const itemCount = hydrated ? liveItemCount : initialItemCount;
   const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const totalGst = items.reduce((sum, item) => sum + (item.taxPerUnit ?? 0) * item.quantity, 0);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -336,6 +339,7 @@ export function CartProvider({
         items,
         itemCount,
         total,
+        totalGst,
         isOpen,
         openCart,
         closeCart,
@@ -356,6 +360,7 @@ const fallbackCart: CartContextType = {
   items: [],
   itemCount: 0,
   total: 0,
+  totalGst: 0,
   isOpen: false,
   openCart: noop,
   closeCart: noop,

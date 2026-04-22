@@ -60,7 +60,7 @@ function EmptyCart() {
 // ─── Cart Page ────────────────────────────────────────────────────────────────
 
 export default function CartPage() {
-  const { items, updateQuantity, removeItem, total, clearCart } = useCart();
+  const { items, updateQuantity, removeItem, total, totalGst, clearCart } = useCart();
 
   const currencySymbol = items[0]?.currencySymbol ?? "₹";
   const fmt = (n: number) =>
@@ -112,8 +112,8 @@ export default function CartPage() {
   };
 
   const discount = couponResult?.discount_amount ?? 0;
-  const grandTotal = Math.max(total - discount, 0);
-  const gst = Math.round((grandTotal * 18) / 118);
+  const subtotalAfterDiscount = Math.max(total - discount, 0);
+  const grandTotal = subtotalAfterDiscount + totalGst;
   const isFreeShipping = grandTotal >= FREE_SHIPPING_THRESHOLD;
   void isFreeShipping; // referenced elsewhere if needed
 
@@ -218,7 +218,7 @@ export default function CartPage() {
                       <div className="flex items-center gap-1 border border-gray-200 rounded-lg overflow-hidden">
                         <button
                           type="button"
-                          onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                          onClick={() => updateQuantity(item.id, item.quantity - (item.step ?? 1))}
                           disabled={item.quantity <= (item.minQty ?? 1)}
                           className="px-2.5 py-1.5 text-gray-500 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                           aria-label="Decrease quantity"
@@ -230,7 +230,7 @@ export default function CartPage() {
                         </span>
                         <button
                           type="button"
-                          onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                          onClick={() => updateQuantity(item.id, item.quantity + (item.step ?? 1))}
                           className="px-2.5 py-1.5 text-gray-500 hover:bg-gray-50 transition-colors"
                           aria-label="Increase quantity"
                         >
@@ -241,10 +241,10 @@ export default function CartPage() {
                       {/* Price */}
                       <div className="text-right">
                         <p className="text-sm font-bold text-(--color-secondary)">
-                          {fmt((item.price * item.quantity * 100) / 118)}
+                          {fmt(item.price * item.quantity)}
                         </p>
                         {item.quantity > 1 && (
-                          <p className="text-[11px] text-gray-400">{fmt((item.price * 100) / 118)} each</p>
+                          <p className="text-[11px] text-gray-400">{fmt(item.price)} each</p>
                         )}
                         {weightDisplay && (
                           <p className="text-[11px] text-gray-400 mt-1">{weightDisplay}</p>
@@ -337,7 +337,7 @@ export default function CartPage() {
               <div className="space-y-3 border-t border-gray-100 pt-4">
                 <div className="flex justify-between text-sm text-gray-600">
                   <span>Subtotal ({itemCount} items)</span>
-                  <span className="font-semibold text-(--color-secondary)">{fmt((total * 100) / 118)}</span>
+                  <span className="font-semibold text-(--color-secondary)">{fmt(total)}</span>
                 </div>
                 {discount > 0 && (
                   <div className="flex justify-between text-sm">
@@ -345,16 +345,18 @@ export default function CartPage() {
                     <span className="text-green-600 font-semibold">−{fmt(discount)}</span>
                   </div>
                 )}
-                <div className="flex justify-between text-xs text-gray-400 border-t border-dashed border-gray-100 pt-3">
-                  <span>GST (18% incl.)</span>
-                  <span>{fmt(gst)}</span>
-                </div>
+                {totalGst > 0 && (
+                  <div className="flex justify-between text-xs text-gray-400 border-t border-dashed border-gray-100 pt-3">
+                    <span>GST</span>
+                    <span>{fmt(totalGst)}</span>
+                  </div>
+                )}
               </div>
 
               {/* Grand total */}
               <div className="flex justify-between items-center border-t border-gray-200 pt-4 mt-4">
                 <span className="text-base font-extrabold text-(--color-secondary)">Total</span>
-                <span className="text-xl font-extrabold text-(--color-secondary)">{fmt((grandTotal * 100) / 118 + gst)}</span>
+                <span className="text-xl font-extrabold text-(--color-secondary)">{fmt(grandTotal)}</span>
               </div>
 
               {/* Checkout button */}

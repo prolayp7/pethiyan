@@ -321,6 +321,7 @@ function AddressForm({ value, onChange, onSave, onCancel, saving, errorMessage, 
 
 interface OrderSummaryProps {
   subtotal: number;
+  totalGst: number;
   discount: number;
   shippingCharge: number;
   shippingLabel?: string | null;
@@ -330,12 +331,9 @@ interface OrderSummaryProps {
   items: { name: string; quantity: number; price: number; image?: string | null; weight?: number; weightUnit?: string }[];
 }
 
-function OrderSummary({ subtotal, discount, shippingCharge, shippingLabel, shippingEta, couponResult, currencySymbol, items }: OrderSummaryProps) {
+function OrderSummary({ subtotal, totalGst, discount, shippingCharge, shippingLabel, shippingEta, couponResult, currencySymbol, items }: OrderSummaryProps) {
   const fmt = makeFmt(currencySymbol);
-  const baseSubtotal = (subtotal * 100) / 118;
-  // GST applies only to products, not to shipping charge
-  const productGst = Math.round((subtotal - discount) * 18 / 118);
-  const grand = (subtotal - discount) * 100 / 118 + productGst + shippingCharge;
+  const grand = Math.max(subtotal - discount, 0) + totalGst + shippingCharge;
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 sticky top-28">
@@ -375,7 +373,7 @@ function OrderSummary({ subtotal, discount, shippingCharge, shippingLabel, shipp
               )}
             </div>
             <p className="text-xs font-bold text-(--color-secondary) shrink-0">
-              {fmt((item.price * item.quantity * 100) / 118)}
+              {fmt(item.price * item.quantity)}
             </p>
           </div>
         );})}
@@ -394,7 +392,7 @@ function OrderSummary({ subtotal, discount, shippingCharge, shippingLabel, shipp
       <div className="space-y-2 border-t border-gray-100 pt-4 text-sm">
         <div className="flex justify-between text-gray-600">
           <span>Subtotal</span>
-          <span className="font-semibold text-(--color-secondary)">{fmt(baseSubtotal)}</span>
+          <span className="font-semibold text-(--color-secondary)">{fmt(subtotal)}</span>
         </div>
         {shippingLabel && (
           <div className="flex items-start justify-between gap-3 text-gray-600">
@@ -413,10 +411,12 @@ function OrderSummary({ subtotal, discount, shippingCharge, shippingLabel, shipp
             <span className="font-semibold">−{fmt(discount)}</span>
           </div>
         )}
-        <div className="flex justify-between text-xs text-gray-400 border-t border-dashed border-gray-100 pt-3">
-          <span>GST (18% incl.)</span>
-          <span>{fmt(productGst)}</span>
-        </div>
+        {totalGst > 0 && (
+          <div className="flex justify-between text-xs text-gray-400 border-t border-dashed border-gray-100 pt-3">
+            <span>GST</span>
+            <span>{fmt(totalGst)}</span>
+          </div>
+        )}
       </div>
 
       <div className="flex justify-between items-center border-t border-gray-200 pt-4 mt-4">
@@ -432,7 +432,7 @@ function OrderSummary({ subtotal, discount, shippingCharge, shippingLabel, shipp
 export default function CheckoutClient() {
   const router = useRouter();
   const { user, updateUser, isLoading: authLoading, isLoggedIn } = useAuth();
-  const { items, total, clearCart, removeItem } = useCart();
+  const { items, total, totalGst, clearCart, removeItem } = useCart();
   const currencySymbol = items[0]?.currencySymbol ?? "₹";
   const fmt = makeFmt(currencySymbol);
 
@@ -561,8 +561,7 @@ export default function CheckoutClient() {
   const discount = couponResult?.discount_amount ?? 0;
   const selectedRate = shippingRates.find((r) => r.id === selectedRateId);
   const shippingCharge = selectedRate?.charge ?? 0;
-  // GST applies to products only (not shipping); grandTotal matches the displayed Order Summary total
-  const grandTotal = (total - discount) * 100 / 118 + Math.round((total - discount) * 18 / 118) + shippingCharge;
+  const grandTotal = Math.max(total - discount, 0) + totalGst + shippingCharge;
   const selectedAddress = addresses.find((a) => a.id === selectedAddressId);
 
   // ── Handlers ──
@@ -1363,6 +1362,7 @@ export default function CheckoutClient() {
           <div className="lg:col-span-5">
             <OrderSummary
               subtotal={total}
+              totalGst={totalGst}
               discount={discount}
               shippingCharge={shippingCharge}
               shippingLabel={selectedRate?.label ?? null}

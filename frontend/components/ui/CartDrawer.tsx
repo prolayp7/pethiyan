@@ -18,13 +18,13 @@ function shouldBypassOptimizer(src?: string | null): boolean {
 }
 
 export default function CartDrawer() {
-  const { isOpen, closeCart, items, total, updateQuantity, removeItem } = useCart();
+  const { isOpen, closeCart, items, total, totalGst, updateQuantity, removeItem } = useCart();
 
   // Pick currency symbol from the first cart item, fall back to ₹
   const currencySymbol = items[0]?.currencySymbol ?? "₹";
   const fmt = (amount: number) =>
     `${currencySymbol}${amount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  const gstAmount = Math.round((total * 18) / 118);
+  const grandTotal = total + totalGst;
 
   return (
     <Sheet open={isOpen} onOpenChange={(open) => !open && closeCart()} modal={false}>
@@ -93,7 +93,7 @@ export default function CartDrawer() {
                       {item.name}
                     </p>
                     <p className="text-sm text-(--color-primary) font-semibold mt-0.5">
-                      {fmt((item.price * item.quantity * 100) / 118)}
+                      {fmt(item.price * item.quantity)}
                     </p>
 
                     {/* Quantity Controls */}
@@ -139,15 +139,17 @@ export default function CartDrawer() {
             <div className="space-y-2">
               <div className="flex justify-between text-sm text-gray-500">
                 <span>Subtotal</span>
-                <span>{fmt((total * 100) / 118)}</span>
+                <span>{fmt(total)}</span>
               </div>
-              <div className="flex justify-between text-sm text-gray-500">
-                <span>GST</span>
-                <span>{fmt(gstAmount)}</span>
-              </div>
+              {totalGst > 0 && (
+                <div className="flex justify-between text-sm text-gray-500">
+                  <span>GST</span>
+                  <span>{fmt(totalGst)}</span>
+                </div>
+              )}
               <div className="flex justify-between font-semibold text-gray-900 pt-2 border-t border-gray-100">
                 <span>Total</span>
-                <span>{fmt((total * 100) / 118 + gstAmount)}</span>
+                <span>{fmt(grandTotal)}</span>
               </div>
             </div>
 

@@ -143,6 +143,7 @@ export default async function RootLayout({
   const [siteSettings, webSettings, headerMenu, announcementBar] = await Promise.all([
     getSystemSettings().then(s => s ?? {
       appName: "Pethiyan", logo: null, favicon: null,
+      smsOtpEnabled: false, emailOtpEnabled: false,
       showVariantColorsInGrid: false, showGstInGrid: false,
       showCategoryNameInGrid: false, showMinQtyInGrid: false,
     }),
