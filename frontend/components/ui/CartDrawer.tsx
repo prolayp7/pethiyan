@@ -27,8 +27,8 @@ export default function CartDrawer() {
   const gstAmount = Math.round((total * 18) / 118);
 
   return (
-    <Sheet open={isOpen} onOpenChange={(open) => !open && closeCart()}>
-      <SheetContent side="right" className="flex flex-col w-full max-w-sm p-0">
+    <Sheet open={isOpen} onOpenChange={(open) => !open && closeCart()} modal={false}>
+      <SheetContent side="right" className="flex flex-col w-full max-w-sm p-0" hideOverlay>
         {/* Header */}
         <SheetHeader className="px-6 py-4 border-b border-gray-100">
           <SheetTitle className="flex items-center gap-2">

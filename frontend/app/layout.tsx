@@ -13,6 +13,7 @@ import GoogleAnalytics from "@/components/analytics/GoogleAnalytics";
 import { GTMScript, GTMNoScript } from "@/components/analytics/GoogleTagManager";
 import FacebookPixel from "@/components/analytics/FacebookPixel";
 import CartDrawer from "@/components/ui/CartDrawer";
+import CartPushLayout from "@/components/layout/CartPushLayout";
 import TopAnnouncementBar from "@/components/headers/TopAnnouncementBar";
 import OfferTickerClient from "@/components/headers/OfferTickerClient";
 import MainHeader from "@/components/headers/MainHeader1";
@@ -182,27 +183,29 @@ export default async function RootLayout({
         <AuthProvider>
           <WishlistProvider initialCount={initialWishlistCount}>
             <CartProvider initialItemCount={initialCartCount}>
-              {/* Non-sticky top bars */}
-              {topBarActive && <TopAnnouncementBar text={topBarText} />}
-              {tickerActive && <OfferTickerClient items={tickerItems} />}
+              <CartPushLayout>
+                {/* Non-sticky top bars */}
+                {topBarActive && <TopAnnouncementBar text={topBarText} />}
+                {tickerActive && <OfferTickerClient items={tickerItems} />}
 
-              {/* Sticky header: MainHeader + CategoryNav */}
-              <div className="sticky top-0 z-40">
-                <div className="relative z-20">
-                  <MainHeader mobileNavItems={headerMenu?.nav_items} />
+                {/* Sticky header: MainHeader + CategoryNav */}
+                <div className="sticky top-0 z-40">
+                  <div className="relative z-20">
+                    <MainHeader mobileNavItems={headerMenu?.nav_items} />
+                  </div>
+                  <div className="relative z-10">
+                    <NavigationMenu />
+                  </div>
                 </div>
-                <div className="relative z-10">
-                  <NavigationMenu />
-                </div>
-              </div>
 
-              {/* Page Content */}
-              <main id="main-content" tabIndex={-1}>
-                {children}
-              </main>
+                {/* Page Content */}
+                <main id="main-content" tabIndex={-1}>
+                  {children}
+                </main>
 
-              {/* Footer */}
-              <Footer />
+                {/* Footer */}
+                <Footer />
+              </CartPushLayout>
 
               {/* Mobile Bottom Navigation */}
               <MobileBottomNav />
