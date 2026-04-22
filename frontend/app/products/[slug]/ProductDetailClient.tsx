@@ -40,6 +40,8 @@ import {
   type RealApiProduct,
   type RealApiStorePricing,
   type RealApiVariant,
+  selectPrimaryStorePricing,
+  resolveStorePricingDisplay,
   addToWishlist,
   getWishlistItems,
   removeWishlistItem,
@@ -54,6 +56,7 @@ import { recordBrowsingHistory } from "@/lib/api";
 import { pushRecentlyViewedId } from "@/lib/recently-viewed";
 import { pushBrowsingHistory } from "@/lib/browsingHistory";
 import ReviewForm from "./ReviewForm";
+import { toDisplayTitleCase } from "@/lib/text";
 
 function formatCurrency(amount: number | null | undefined, symbol = "₹"): string {
   const value = toNum(amount);
@@ -456,7 +459,7 @@ export default function ProductDetailClient({ product, reviews: initialReviews, 
   // Fire view_item whenever the selected variant changes (initial load + variant switch).
   useEffect(() => {
     if (!selectedVariant) return;
-    const price = toNum(selectedVariant.store_pricing?.[0]?.special_price ?? selectedVariant.store_pricing?.[0]?.price ?? 0);
+    const price = resolveStorePricingDisplay(selectPrimaryStorePricing(selectedVariant.store_pricing)).mainPrice;
     trackViewItem({
       item_id:       String(product.id),
       item_name:     product.title,
@@ -543,10 +546,14 @@ export default function ProductDetailClient({ product, reviews: initialReviews, 
     ]);
   }, [selectedVariant, product.images]);
 
-  const basePrice = toNum(selectedStorePricing?.price ?? selectedStorePricing?.special_price ?? 0);
-  const effectivePrice = toNum(selectedStorePricing?.special_price ?? selectedStorePricing?.price ?? 0);
-  const hasDiscount = basePrice > 0 && effectivePrice > 0 && effectivePrice < basePrice;
-  const discount = hasDiscount ? Math.round(((basePrice - effectivePrice) / basePrice) * 100) : null;
+  const pricingDisplay = useMemo(
+    () => resolveStorePricingDisplay(selectedStorePricing),
+    [selectedStorePricing]
+  );
+  const effectivePrice = pricingDisplay.mainPrice;
+  const basePrice = pricingDisplay.comparePrice;
+  const hasDiscount = pricingDisplay.hasDiscount;
+  const discount = pricingDisplay.discountPercent;
 
   const stockQty = selectedStorePricing?.stock ?? 0;
   const inStock = (selectedStorePricing?.stock_status === "in_stock") && stockQty > 0;
@@ -605,7 +612,7 @@ export default function ProductDetailClient({ product, reviews: initialReviews, 
       variantLabel: selectedVariant.title,
       minQty: moq,
       step: stepSize,
-      totalAllowed: (product as any).policies?.total_allowed_quantity ?? null,
+      totalAllowed: product.policies?.total_allowed_quantity ?? null,
       stock: selectedStorePricing?.stock ?? undefined,
       name: selectedVariant.title || productName,
       price: effectivePrice,
@@ -644,7 +651,7 @@ export default function ProductDetailClient({ product, reviews: initialReviews, 
   ];
 
   const tags = product.tags ?? [];
-  const displayTitle = selectedVariant?.title?.trim() || productName;
+  const displayTitle = toDisplayTitleCase(selectedVariant?.title?.trim() || productName);
   const wishlisted = isWishlisted(product.id);
 
   const handleWishlist = async () => {
@@ -740,7 +747,7 @@ export default function ProductDetailClient({ product, reviews: initialReviews, 
               videoUrl={isVideoLink(product.video?.video_link) ? product.video?.video_link : null}
             />
             {/* Variant selector moved under gallery (compact square boxes) */}
-            {variantList.length > 0 && (
+            {variantList.length > 1 && (
               <div className="mt-4">
                 <p className="text-sm font-semibold text-(--color-secondary) mb-2">Variants</p>
                 <div className="grid grid-cols-5 gap-2 max-h-[220px] overflow-y-auto">
@@ -796,7 +803,7 @@ export default function ProductDetailClient({ product, reviews: initialReviews, 
                             <Package className="h-5 w-5 text-gray-300" aria-hidden="true" />
                           </div>
                         )}
-                        <div className={`text-xs font-semibold leading-snug line-clamp-2 w-14 ${selected ? "text-white" : "text-(--color-secondary)"}`}>{variant.title}</div>
+                        <div className={`text-xs font-semibold leading-snug line-clamp-2 w-14 ${selected ? "text-white" : "text-(--color-secondary)"}`}>{toDisplayTitleCase(variant.title)}</div>
                         {variantSize ? <div className={`text-[10px] ${selected ? "text-white/80" : "text-gray-400"}`}>{variantSize}</div> : null}
                       </button>
                     );
@@ -840,7 +847,7 @@ export default function ProductDetailClient({ product, reviews: initialReviews, 
               )}
             </div>
             <div className="flex items-center flex-wrap gap-x-2 gap-y-0.5 mt-0.5">
-              <p className="text-[11px] text-gray-400">Inclusive of all taxes. GST invoice available.</p>
+              <p className="text-[11px] text-gray-400">GST excluded price shown. GST invoice available.</p>
               {customerStateName && (
                 <span className="inline-flex items-center gap-0.5 text-[11px] text-blue-600">
                   <MapPin className="h-3 w-3" aria-hidden="true" />
@@ -888,10 +895,10 @@ export default function ProductDetailClient({ product, reviews: initialReviews, 
                     <div key={group.key} className="mb-4">
                       <p className="text-sm font-semibold text-(--color-secondary) mb-2 flex items-center gap-2">
                         {isColorGroup ? <Palette className="h-4 w-4" /> : null}
-                        {group.displayKey}
+                        {toDisplayTitleCase(group.displayKey)}
                       </p>
                       <p className="text-2xl font-bold text-(--color-secondary) mb-3">
-                        {group.displayKey}: {selectedValue}
+                        {toDisplayTitleCase(group.displayKey)}: {toDisplayTitleCase(selectedValue)}
                       </p>
 
                       <div className="flex flex-wrap items-center gap-2.5">
@@ -914,10 +921,10 @@ export default function ProductDetailClient({ product, reviews: initialReviews, 
                                 }`}
                                 style={colorSwatchStyle(opt.value)}
                                 aria-pressed={selected}
-                                aria-label={`Select ${group.displayKey} ${opt.value}`}
-                                title={opt.value}
+                                aria-label={`Select ${toDisplayTitleCase(group.displayKey)} ${toDisplayTitleCase(opt.value)}`}
+                                title={toDisplayTitleCase(opt.value)}
                               >
-                                <span className="sr-only">{opt.value}</span>
+                                <span className="sr-only">{toDisplayTitleCase(opt.value)}</span>
                               </button>
                             );
                           }
@@ -929,7 +936,7 @@ export default function ProductDetailClient({ product, reviews: initialReviews, 
                               className={`px-3 py-2 min-w-[88px] text-center rounded-xl border transition-colors text-sm ${selected ? "btn-brand text-white" : "border-(--color-border) hover:border-(--color-primary)/60 text-(--color-secondary)"}`}
                               aria-pressed={selected}
                             >
-                              {opt.value}
+                              {toDisplayTitleCase(opt.value)}
                             </button>
                           );
                         })}

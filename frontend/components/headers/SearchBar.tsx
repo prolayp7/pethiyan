@@ -32,7 +32,7 @@ function resolveImageUrl(raw: string | null | undefined): string {
 function getDisplayPrice(product: RealApiProduct): string {
   const variant = product.variants?.find((v) => v.is_default) ?? product.variants?.[0];
   const pricing = variant?.store_pricing?.find((s) => s.stock_status === "in_stock") ?? variant?.store_pricing?.[0];
-  const price = pricing?.special_price || pricing?.price || 0;
+  const price = pricing?.special_price ?? pricing?.cost ?? pricing?.price ?? 0;
   if (!price) return "";
   return `₹${Number(price).toLocaleString("en-IN")}`;
 }

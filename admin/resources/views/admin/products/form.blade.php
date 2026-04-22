@@ -372,13 +372,26 @@
                     <div class="container">
                         <div class="mb-3">
                             <label class="form-label required">{{ __('labels.main_image') }}</label>
-                            <x-filepond_image name="main_image" imageUrl="{{ $product->main_image ?? '' }}"/>
+                            <x-filepond_image name="main_image"
+                                imageUrl="{{ $product->main_image ?? '' }}"
+                                data-model-id="{{ $product->id ?? '' }}"
+                                data-media-id="{{ optional($product->getFirstMedia(\App\Enums\SpatieMediaCollectionName::PRODUCT_MAIN_IMAGE()))->id ?? '' }}"
+                                data-collection="{{ \App\Enums\SpatieMediaCollectionName::PRODUCT_MAIN_IMAGE->value }}"/>
                             <small class="form-hint">Recommended: 1200 x 1200 px. Max upload size: 2 MB.</small>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">{{ __('labels.additional_images') }}</label>
+                            @php
+                                $additionalMedia = [];
+                                if (!empty($product)) {
+                                    $additionalMedia = $product->getMedia(\App\Enums\SpatieMediaCollectionName::PRODUCT_ADDITIONAL_IMAGE())->map(function($m){
+                                        return ['id' => $m->id, 'url' => $m->getUrl()];
+                                    })->toArray();
+                                }
+                            @endphp
                             <input type="file" name="additional_images[]" class="form-control"
-                                   data-images='@json($product->additional_images ?? [])' multiple>
+                                   data-model-id="{{ $product->id ?? '' }}"
+                                   data-images='@json($additionalMedia)' multiple>
                             <small class="form-hint">Recommended: 1200 x 1200 px each. Max upload size: 2 MB per image. You can select multiple images at once.</small>
                         </div>
                         <div class="mb-3">
@@ -600,7 +613,7 @@
                     <h5 class="modal-title" id="product-faq-modal-title">{{ __('labels.add_product_faq') }}</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <form class="form-submit" id="product-faq-form" method="POST" action="{{ route('admin.product_faqs.store') }}">
+                <form id="product-faq-form" method="POST" action="{{ route('admin.product_faqs.store') }}">
                     @csrf
                     <div class="modal-body">
                         <div class="row">

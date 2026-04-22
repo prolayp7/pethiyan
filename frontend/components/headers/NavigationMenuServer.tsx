@@ -11,6 +11,23 @@ function formatPrice(price: number, symbol: string): string {
   return `${symbol}${price.toFixed(2)}`;
 }
 
+function normalizeMenuProductHref(productUrl?: string | null, slug?: string | null): string {
+  const trimmedUrl = typeof productUrl === "string" ? productUrl.trim() : "";
+  if (trimmedUrl) {
+    try {
+      const url = new URL(trimmedUrl);
+      return `${url.pathname}${url.search}${url.hash}`;
+    } catch {
+      if (trimmedUrl.startsWith("/")) {
+        return trimmedUrl;
+      }
+    }
+  }
+
+  const trimmedSlug = typeof slug === "string" ? slug.trim() : "";
+  return trimmedSlug ? `/products/${trimmedSlug}` : "/shop";
+}
+
 export default async function NavigationMenuServer() {
   const menu = await getHeaderMenu();
 
@@ -60,7 +77,7 @@ export default async function NavigationMenuServer() {
         image: p.image,
         name: p.name,
         price: formatPrice(p.price, p.currency_symbol),
-        href: `/shop`,
+        href: normalizeMenuProductHref(p.product_url, p.slug),
       })),
     })) ?? [];
 
@@ -70,7 +87,7 @@ export default async function NavigationMenuServer() {
       image: p.image,
       name: p.name,
       price: formatPrice(p.price, p.currency_symbol),
-      href: `/shop`,
+      href: normalizeMenuProductHref(p.product_url, p.slug),
     })) ?? [];
 
   return (

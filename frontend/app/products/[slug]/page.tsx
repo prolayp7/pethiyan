@@ -5,7 +5,8 @@ import {
   getProductReviews,
   getProductFaqs,
   getProducts,
-  toNum,
+  selectPrimaryStorePricing,
+  resolveStorePricingDisplay,
 } from "@/lib/api";
 import {
   productSchema,
@@ -19,6 +20,7 @@ import RelatedProducts from "@/components/product/RelatedProducts";
 import RecentlyViewedProducts from "@/components/sections/RecentlyViewedProducts";
 import BrowsingHistory from "@/components/product/BrowsingHistory";
 import ProductDetailIsland from "./ProductDetailIsland";
+import { toDisplayTitleCase } from "@/lib/text";
 
 // ─── Pre-render all known product slugs at build time ─────────────────────────
 
@@ -44,8 +46,8 @@ export async function generateMetadata({
   if (!product) return { title: "Product Not Found" };
 
   const firstVariant = product.variants?.[0];
-  const firstStorePricing = firstVariant?.store_pricing?.[0];
-  const price = toNum(firstStorePricing?.special_price ?? firstStorePricing?.price ?? 0);
+  const firstStorePricing = selectPrimaryStorePricing(firstVariant?.store_pricing);
+  const price = resolveStorePricingDisplay(firstStorePricing).mainPrice;
   const rawTitle = product.title ?? "Product";
   const seo = resolveProductSeo(product);
   const inStock = firstVariant?.availability !== false;
@@ -118,7 +120,7 @@ export default async function ProductPage({
           href: `/category/${(product as unknown as { category: { slug: string } }).category.slug}`,
         }]
       : []),
-    { label: product.title, href: `/products/${slug}` },
+    { label: toDisplayTitleCase(product.title), href: `/products/${slug}` },
   ]);
   const customSchemas = getCustomJsonLdSchemas(
     seo.schemaMode,
@@ -149,7 +151,7 @@ export default async function ProductPage({
                 href: `/category/${(product as unknown as { category: { slug: string } }).category.slug}`,
               }]
             : []),
-          { label: product.title },
+          { label: toDisplayTitleCase(product.title) },
         ]}
       />
 

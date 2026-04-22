@@ -43,6 +43,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rules\Enum;
 use Illuminate\View\View;
 use phpDocumentor\Reflection\PseudoTypes\Numeric_;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 class ProductController extends Controller
 {
@@ -96,7 +97,6 @@ class ProductController extends Controller
             ['data' => 'product_type', 'name' => 'product_type', 'title' => __('labels.product_type')],
             ['data' => 'category', 'name' => 'category', 'title' => __('labels.category')],
             ['data' => 'status', 'name' => 'status', 'title' => __('labels.status')],
-            ['data' => 'admin_approval_status', 'name' => 'admin_approval_status', 'title' => __('labels.admin_approval_status')],
             ['data' => 'featured', 'name' => 'featured', 'title' => __('labels.featured')],
             ['data' => 'created_at', 'name' => 'created_at', 'title' => __('labels.created_at')],
             ['data' => 'action', 'name' => 'action', 'title' => __('labels.action'), 'orderable' => false, 'searchable' => false],
@@ -755,6 +755,55 @@ class ProductController extends Controller
                     'status' => $product->status,
                 ]
             );
+        } catch (AuthorizationException $e) {
+            return ApiResponseType::sendJsonResponse(success: false, message: 'labels.permission_denied', data: []);
+        } catch (ModelNotFoundException $e) {
+            return ApiResponseType::sendJsonResponse(success: false, message: 'labels.product_not_found', data: []);
+        } catch (\Exception $e) {
+            return ApiResponseType::sendJsonResponse(success: false, message: 'labels.something_went_wrong', data: ['error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Delete media for a product (by collection name)
+     */
+    public function deleteMedia(Request $request, string $id): JsonResponse
+    {
+        try {
+            $product = Product::findOrFail($id);
+            $this->authorize('update', $product);
+
+            $collection = $request->input('collection');
+            $mediaId = $request->input('media_id');
+
+            if (!empty($mediaId)) {
+                $media = Media::findOrFail($mediaId);
+
+                // Validate ownership via model_type/model_id
+                $mediaModelType = $media->model_type ?? null;
+                $mediaModelId = $media->model_id ?? null;
+                if (!in_array($mediaModelType, [Product::class, 'App\\Models\\Product'], true)) {
+                    return ApiResponseType::sendJsonResponse(success: false, message: 'labels.invalid_request', data: []);
+                }
+                if ((string)$mediaModelId !== (string)$product->getKey()) {
+                    return ApiResponseType::sendJsonResponse(success: false, message: 'labels.invalid_request', data: []);
+                }
+
+                $media->delete();
+            } else {
+                // Validate collection
+                $validCollections = array_map(fn($c) => $c->value, \App\Enums\SpatieMediaCollectionName::cases());
+                if (empty($collection) || !in_array($collection, $validCollections, true)) {
+                    return ApiResponseType::sendJsonResponse(success: false, message: 'labels.invalid_request', data: []);
+                }
+
+                // Clear the media collection
+                $product->clearMediaCollection($collection);
+            }
+
+            FrontendRevalidateService::revalidateProducts();
+
+            return ApiResponseType::sendJsonResponse(success: true, message: 'Media deleted', data: []);
         } catch (AuthorizationException $e) {
             return ApiResponseType::sendJsonResponse(success: false, message: 'labels.permission_denied', data: []);
         } catch (ModelNotFoundException $e) {

@@ -863,9 +863,9 @@ export default function LoginModal({ open, onClose, onSuccess, redirectTo }: Log
           <div className="px-6 pb-5 pt-2 text-center border-t border-gray-100">
             <p className="text-[11px] text-gray-400">
               By continuing you agree to our{" "}
-              <Link href="/terms" className="underline hover:text-gray-600 transition-colors">Terms</Link>{" "}
+              <Link href="/terms-and-conditions" className="underline hover:text-gray-600 transition-colors">Terms & Conditions</Link>{" "}
               &amp;{" "}
-              <Link href="/privacy" className="underline hover:text-gray-600 transition-colors">Privacy Policy</Link>
+              <Link href="/privacy-policy" className="underline hover:text-gray-600 transition-colors">Privacy Policy</Link>
             </p>
           </div>
         </div>

@@ -6,6 +6,7 @@ import type {
   RealApiProduct,
   RealApiVariant,
 } from "./api";
+import { resolveStorePricingDisplay, selectPrimaryStorePricing } from "./api";
 
 const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://pethiyan.com";
@@ -154,10 +155,9 @@ export function productSchema(
     (product as Partial<RealApiProduct>).description ??
     "";
 
-  const storePrice =
-    (product as Partial<RealApiProduct>).variants?.[0]?.store_pricing?.[0]?.special_price ??
-    (product as Partial<RealApiProduct>).variants?.[0]?.store_pricing?.[0]?.price ??
-    0;
+  const storePrice = resolveStorePricingDisplay(
+    selectPrimaryStorePricing((product as Partial<RealApiProduct>).variants?.[0]?.store_pricing)
+  ).mainPrice;
 
   const fallbackPrice =
     typeof (product as Partial<ApiProduct>).sale_price === "number" ||
@@ -165,8 +165,7 @@ export function productSchema(
       ? Number((product as Partial<ApiProduct>).sale_price) || Number((product as Partial<ApiProduct>).price)
       : Number((product as Partial<ApiProduct>).price);
 
-  const variantPrice =
-    variant?.store_pricing?.[0]?.special_price ?? variant?.store_pricing?.[0]?.price ?? 0;
+  const variantPrice = resolveStorePricingDisplay(selectPrimaryStorePricing(variant?.store_pricing)).mainPrice;
   const price = Number.isFinite(variantPrice) && variantPrice > 0
     ? variantPrice
     : Number.isFinite(storePrice) && storePrice > 0

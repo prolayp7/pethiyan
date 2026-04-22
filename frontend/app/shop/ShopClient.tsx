@@ -74,7 +74,12 @@ function getVariantAttrs(v: RealVariant): Record<string, string> {
 function getPrice(p: RealApiProduct): number {
   const v = p.variants?.find((v) => v.is_default) ?? p.variants?.[0];
   const s = v?.store_pricing?.find((s) => s.stock_status === "in_stock") ?? v?.store_pricing?.[0];
-  return s?.special_price || s?.price || 0;
+  if (!s) return 0;
+  // Prefer special_price (discounted), otherwise prefer cost (price without GST) when provided, else price
+  const special = s.special_price ?? null;
+  if (special != null) return Number(special) || 0;
+  if (s.cost != null) return Number(s.cost) || 0;
+  return Number(s.price) || 0;
 }
 
 function sortProducts(products: RealApiProduct[], sort: string): RealApiProduct[] {

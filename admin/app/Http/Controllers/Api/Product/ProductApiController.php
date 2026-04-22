@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Product\GetProductsByLocationRequest;
 use App\Http\Resources\CategoryResource;
 use App\Http\Resources\Product\ProductCatalogResource;
+use App\Http\Resources\Product\ProductFeaturedResource;
 use App\Http\Resources\Product\ProductListResource;
 use App\Http\Resources\Product\ProductResource;
 use App\Enums\Product\ProductStatusEnum;
@@ -63,8 +64,6 @@ class ProductApiController extends Controller
                 ->where('status', ProductStatusEnum::ACTIVE->value)
                 ->with([
                     'category:id,title,slug',
-                    'taxClasses:id,title',
-                    'taxClasses.taxRates:id,title,rate',
                     'variants.attributes.attribute:id,title,slug',
                     'variants.attributes.attributeValue:id,title,swatche_value',
                     'variants.storeProductVariants.store:id,name,slug,state_code,state_name',
@@ -134,7 +133,7 @@ class ProductApiController extends Controller
             };
 
             $products = $query->paginate($perPage);
-            $products->getCollection()->transform(fn($p) => new ProductCatalogResource($p));
+            $products->getCollection()->transform(fn($p) => new ProductFeaturedResource($p));
 
             return ApiResponseType::sendJsonResponse(
                 success: true,
@@ -467,7 +466,7 @@ class ProductApiController extends Controller
                 ]);
 
             $products = $query->orderByDesc('id')->get()
-                ->map(fn($product) => new ProductCatalogResource($product))
+                ->map(fn($product) => new ProductFeaturedResource($product))
                 ->values();
 
             return ApiResponseType::sendJsonResponse(

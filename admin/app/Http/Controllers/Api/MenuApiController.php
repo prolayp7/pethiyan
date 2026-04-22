@@ -260,7 +260,7 @@ class MenuApiController extends Controller
                     ->select(['id', 'product_id', 'is_default'])
                     ->orderByDesc('is_default'),
                 'variants.storeProductVariants' => fn ($query) => $query
-                    ->select(['id', 'product_variant_id', 'price', 'special_price', 'stock'])
+                    ->select(['id', 'product_variant_id', 'price', 'special_price', 'cost', 'stock'])
                     ->orderByDesc('stock'),
             ])
             ->select(['id', 'category_id', 'title', 'slug', 'featured', 'is_top_product'])
@@ -278,7 +278,7 @@ class MenuApiController extends Controller
                     ->select(['id', 'product_id', 'is_default'])
                     ->orderByDesc('is_default'),
                 'variants.storeProductVariants' => fn ($query) => $query
-                    ->select(['id', 'product_variant_id', 'price', 'special_price', 'stock'])
+                    ->select(['id', 'product_variant_id', 'price', 'special_price', 'cost', 'stock'])
                     ->orderByDesc('stock'),
             ])
             ->select(['id', 'category_id', 'title', 'slug', 'featured', 'is_top_product'])
@@ -338,9 +338,16 @@ class MenuApiController extends Controller
             return null;
         }
 
+        $frontendUrl = rtrim((string) config('app.frontend_url', config('app.frontendUrl', 'https://pethiyan.com')), '/');
         $variant = $product->variants->first();
         $storeVariant = $variant?->storeProductVariants->first();
-        $price = $storeVariant?->special_price ?? $storeVariant?->price ?? 0;
+        $cost = (float) ($storeVariant?->getRawOriginal('cost') ?? 0);
+        $rawPrice = (float) ($storeVariant?->getRawOriginal('price') ?? 0);
+        $priceExcludingTax = $cost > 0 ? $cost : $rawPrice;
+        $specialPriceExcludingTax = (float) ($storeVariant?->getRawOriginal('special_price') ?? 0);
+        $price = $specialPriceExcludingTax > 0
+            ? $specialPriceExcludingTax
+            : $priceExcludingTax;
 
         return [
             'image' => $product->main_image,
@@ -348,6 +355,8 @@ class MenuApiController extends Controller
             'price' => (float) $price,
             'currency_symbol' => $currency->getSymbol(),
             'currency_code' => $currency->getCode(),
+            'slug' => $product->slug,
+            'product_url' => $frontendUrl . '/products/' . ltrim((string) $product->slug, '/'),
         ];
     }
 }

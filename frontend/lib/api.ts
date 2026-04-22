@@ -116,6 +116,12 @@ export interface ApiResponse<T> {
   status?: boolean;
 }
 
+export interface ApiMutationResponse<T = unknown> {
+  success: boolean;
+  message?: string;
+  data?: T;
+}
+
 export interface PaginatedResponse<T> {
   data: T[];
   current_page?: number;
@@ -479,6 +485,7 @@ export interface RealApiStorePricing {
   price: number;
   special_price: number;
   cost: string;
+  discount_percent?: number | null;
   stock: number;
   stock_status: "in_stock" | "out_of_stock";
   gst: {
@@ -493,6 +500,45 @@ export interface RealApiStorePricing {
     igst_amount: number;
     total_tax_amount: number;
     total_amount: number;
+  };
+}
+
+export interface ResolvedStorePricingDisplay {
+  mainPrice: number;
+  comparePrice: number | null;
+  discountPercent: number | null;
+  hasDiscount: boolean;
+}
+
+export function selectPrimaryStorePricing<T extends Pick<RealApiStorePricing, "stock_status" | "stock">>(
+  pricingList?: T[] | null
+): T | undefined {
+  if (!pricingList || pricingList.length === 0) return undefined;
+
+  return pricingList.find((pricing) => pricing.stock_status === "in_stock" && pricing.stock > 0) ?? pricingList[0];
+}
+
+export function resolveStorePricingDisplay(pricing?: Partial<RealApiStorePricing> | null): ResolvedStorePricingDisplay {
+  const gstIncludedPrice = toNum(pricing?.price ?? 0);
+  const costPrice = toNum(pricing?.cost ?? 0);
+  const specialPrice = toNum(pricing?.special_price ?? 0);
+  const rawDiscountPercent = pricing?.discount_percent;
+  const discountPercent =
+    rawDiscountPercent === null || rawDiscountPercent === undefined
+      ? null
+      : toNum(rawDiscountPercent);
+
+  const mainPrice = specialPrice > 0
+    ? specialPrice
+    : costPrice > 0
+      ? costPrice
+      : gstIncludedPrice;
+
+  return {
+    mainPrice,
+    comparePrice: discountPercent !== null && costPrice > 0 ? costPrice : null,
+    discountPercent,
+    hasDiscount: discountPercent !== null,
   };
 }
 
@@ -543,6 +589,8 @@ export interface RealApiVariant {
   schema_mode?: "auto" | "custom" | null;
   schema_json_ld?: string | null;
   is_indexable?: boolean;
+  sku?: string | number | null;
+  options?: Array<{ value?: string } | string> | null;
 }
 
 export interface RealApiProduct {
@@ -597,6 +645,7 @@ export interface RealApiProduct {
   policies: {
     minimum_order_quantity: number;
     quantity_step_size?: number;
+    total_allowed_quantity?: number | null;
     is_returnable: boolean;
     is_cancelable: boolean;
     requires_otp?: boolean;
@@ -791,7 +840,7 @@ export async function getAvailableOrderItemsForProduct(slug: string): Promise<Ar
   }
 }
 
-export async function submitReview(formData: FormData): Promise<any | null> {
+export async function submitReview(formData: FormData): Promise<ApiMutationResponse | null> {
   const token = getToken();
   try {
     const res = await fetch(`${API_BASE}/api/reviews`, {
@@ -800,7 +849,7 @@ export async function submitReview(formData: FormData): Promise<any | null> {
       credentials: 'include',
       body: formData,
     } as RequestInit);
-    return await res.json();
+    return await res.json() as ApiMutationResponse;
   } catch {
     return null;
   }
@@ -2358,6 +2407,8 @@ export interface ApiMenuMegaProduct {
   price: number;
   currency_symbol: string;
   currency_code: string;
+  slug: string;
+  product_url: string;
 }
 
 export interface ApiMenuMegaMenuPanel {

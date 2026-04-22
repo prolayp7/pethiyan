@@ -27,7 +27,11 @@ function getPrice(product: RealApiProduct): { price: number; special: number | n
   const variant = product.variants?.find((v) => v.is_default) ?? product.variants?.[0];
   const pricing = variant?.store_pricing?.[0];
   if (!pricing) return { price: 0, special: null, variantTitle: null };
-  const price = Number(pricing.price) || 0;
+  // cost is the GST-excluded base price; prefer special_price then cost then price
+  const basePrice = pricing.special_price
+    ? Number(pricing.special_price)
+    : (pricing.cost != null ? Number(pricing.cost) : Number(pricing.price)) || 0;
+  const price = basePrice;
   const special = pricing.special_price ? Number(pricing.special_price) : null;
   const variantTitle = variant?.title && variant.title !== product.title ? variant.title : null;
   return { price, special, variantTitle };

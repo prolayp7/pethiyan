@@ -522,6 +522,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('/{id}', [ProductController::class, 'update'])->name('update');
             Route::post('/{id}/verification-status', [ProductController::class, 'updateVerificationStatus'])->name('update-verification-status');
             Route::post('/{id}/update-status', [ProductController::class, 'updateStatus'])->name('update-status');
+            Route::delete('/{id}/media', [ProductController::class, 'deleteMedia'])->name('media.delete');
             Route::delete('/{id}', [ProductController::class, 'destroy'])->name('delete');
             Route::get('/{id}', [ProductController::class, 'show'])->name('show');
         });
@@ -561,6 +562,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/', [\App\Http\Controllers\Admin\PageController::class, 'index'])->name('index');
             Route::get('/{page}/edit', [\App\Http\Controllers\Admin\PageController::class, 'edit'])->name('edit');
             Route::post('/{page}', [\App\Http\Controllers\Admin\PageController::class, 'update'])->name('update');
+            Route::post('/{page}/media', [\App\Http\Controllers\Admin\PageController::class, 'uploadMedia'])->name('media.store');
         });
 
         // blog

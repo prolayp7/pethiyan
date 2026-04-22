@@ -5,7 +5,8 @@ import {
   getProductReviews,
   getProductFaqs,
   getProducts,
-  toNum,
+  selectPrimaryStorePricing,
+  resolveStorePricingDisplay,
 } from "@/lib/api";
 import {
   productSchema,
@@ -17,6 +18,7 @@ import { getCustomJsonLdSchemas, resolveVariantSeo } from "@/lib/seo";
 import Breadcrumb from "@/components/common/Breadcrumb";
 import RelatedProducts from "@/components/product/RelatedProducts";
 import ProductDetailIsland from "../ProductDetailIsland";
+import { toDisplayTitleCase } from "@/lib/text";
 
 // ─── Pre-render all known product+variant slug pairs at build time ─────────────
 
@@ -48,8 +50,8 @@ export async function generateMetadata({
   const variant = product.variants?.find((v) => v.slug === variantSlug);
   if (!variant) return { title: "Variant Not Found" };
 
-  const firstStorePricing = variant.store_pricing?.[0];
-  const price = toNum(firstStorePricing?.special_price ?? firstStorePricing?.price ?? 0);
+  const firstStorePricing = selectPrimaryStorePricing(variant.store_pricing);
+  const price = resolveStorePricingDisplay(firstStorePricing).mainPrice;
   const productTitle = product.title ?? "Product";
   const variantTitle = variant.title ?? variantSlug;
   const seo = resolveVariantSeo(product, variant);
@@ -127,8 +129,8 @@ export default async function ProductVariantPage({
           href: `/category/${(product as unknown as { category: { slug: string } }).category.slug}`,
         }]
       : []),
-    { label: product.title, href: `/products/${slug}` },
-    { label: variant.title, href: `/products/${slug}/${variantSlug}` },
+    { label: toDisplayTitleCase(product.title), href: `/products/${slug}` },
+    { label: toDisplayTitleCase(variant.title), href: `/products/${slug}/${variantSlug}` },
   ]);
   const customSchemas = getCustomJsonLdSchemas(
     seo.schemaMode,
@@ -159,8 +161,8 @@ export default async function ProductVariantPage({
                 href: `/category/${(product as unknown as { category: { slug: string } }).category.slug}`,
               }]
             : []),
-          { label: product.title, href: `/products/${slug}` },
-          { label: variant.title },
+          { label: toDisplayTitleCase(product.title), href: `/products/${slug}` },
+          { label: toDisplayTitleCase(variant.title) },
         ]}
       />
 
