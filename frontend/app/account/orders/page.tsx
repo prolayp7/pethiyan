@@ -24,6 +24,7 @@ function fmtDate(dateStr: string) {
 
 const STATUS_MAP: Record<ApiOrder["status"], { label: string; cls: string }> = {
   pending:    { label: "Pending",    cls: "bg-amber-100 text-amber-700"  },
+  awaiting_store_response: { label: "Awaiting Confirmation", cls: "bg-yellow-100 text-yellow-700" },
   processing: { label: "Processing", cls: "bg-blue-100 text-blue-700"    },
   shipped:    { label: "Shipped",    cls: "bg-indigo-100 text-indigo-700" },
   delivered:  { label: "Delivered",  cls: "bg-green-100 text-green-700"  },
