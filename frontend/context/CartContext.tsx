@@ -250,9 +250,23 @@ export function CartProvider({
         serverCartAdd(newItem.variantId, newItem.storeId, initialQty).then((serverCartItemId) => {
           console.log(`[cart] serverCartAdd result serverCartItemId=${serverCartItemId}`);
           if (serverCartItemId) {
+            let latestQuantity = initialQty;
+
             setItems((current) =>
-              current.map((i) => i.id === newItem.id ? { ...i, serverCartItemId } : i)
+              current.map((i) => {
+                if (i.id !== newItem.id) return i;
+                latestQuantity = i.quantity;
+                return { ...i, serverCartItemId };
+              })
             );
+
+            if (latestQuantity !== initialQty) {
+              serverCartUpdateQty(serverCartItemId, latestQuantity).then((ok) => {
+                if (!ok) {
+                  console.warn(`[cart] post-add quantity sync failed for ${serverCartItemId}`);
+                }
+              });
+            }
           }
         });
 

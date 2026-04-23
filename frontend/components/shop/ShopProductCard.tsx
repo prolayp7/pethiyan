@@ -32,6 +32,15 @@ function getDefaultPricing(product: RealApiProduct) {
   return { variant, pricing };
 }
 
+function getTaxableUnitPrice(pricing: RealApiVariant["store_pricing"][number] | null | undefined): number {
+  const taxableAmount = pricing?.gst?.taxable_amount;
+  if (taxableAmount != null) return Number(taxableAmount);
+  if (pricing?.special_price != null) return Number(pricing.special_price);
+  if (pricing?.cost != null) return Number(pricing.cost);
+  if (pricing?.price != null) return Number(pricing.price);
+  return 0;
+}
+
 const QA_BTN =
   "group/qa relative h-9 w-9 rounded-full bg-white/95 text-[#0f2444] border border-gray-200 shadow-sm flex items-center justify-center transition-all hover:scale-105 hover:shadow-md hover:text-white hover:border-transparent hover:bg-[linear-gradient(135deg,_#17396f_0%,_#2f6f9f_52%,_#49ad57_100%)]";
 
@@ -59,17 +68,11 @@ export default function ShopProductCard({ product }: { product: RealApiProduct }
   // ── Derived card values ──────────────────────────────────────────────────
   const { variant: defaultVariant, pricing: defaultPricing } = getDefaultPricing(product);
   const [hoveredVariantId, setHoveredVariantId] = useState<number | null>(null);
-  const price     = defaultPricing?.special_price != null
-    ? Number(defaultPricing.special_price)
-    : defaultPricing?.cost != null
-      ? Number(defaultPricing.cost)
-      : (defaultPricing?.price != null ? Number(defaultPricing.price) : 0);
+  const price = getTaxableUnitPrice(defaultPricing);
   // compare: use cost (GST-excluded base price) as the strikethrough so it's same tax-basis as displayPrice
   const compare   = defaultPricing?.cost != null ? parseFloat(String(defaultPricing.cost)) : (defaultPricing?.price != null ? Number(defaultPricing.price) : 0);
   // Display price: prefer special_price when available, otherwise use cost (price without GST)
-  const displayPrice = defaultPricing?.special_price != null
-    ? Number(defaultPricing.special_price)
-    : (defaultPricing?.cost != null ? parseFloat(String(defaultPricing.cost)) : 0);
+  const displayPrice = getTaxableUnitPrice(defaultPricing);
   const showCompare = compare > 0 && compare > displayPrice;
   // Use discount_percent from API if available, otherwise do not show discount badge
   const discount  = defaultPricing?.discount_percent ?? null;
@@ -92,7 +95,7 @@ export default function ShopProductCard({ product }: { product: RealApiProduct }
     const pricing = (v.store_pricing?.find((s) => (matchStoreId ? s.store_id === matchStoreId : s.stock_status === "in_stock")) ?? v.store_pricing?.[0]) ?? null;
     return pricing
       ? {
-          display: pricing.special_price != null ? Number(pricing.special_price) : (pricing.cost != null ? parseFloat(String(pricing.cost)) : 0),
+          display: getTaxableUnitPrice(pricing),
           compare: pricing.cost != null ? parseFloat(String(pricing.cost)) : (pricing.price != null ? Number(pricing.price) : 0),
           raw: pricing,
         }
@@ -127,11 +130,7 @@ export default function ShopProductCard({ product }: { product: RealApiProduct }
   }, [quickViewProduct]);
 
   const stepQty       = quickViewProduct?.policies?.minimum_order_quantity ?? minQty;
-  const priceNow      = selectedPricing?.special_price != null
-    ? Number(selectedPricing.special_price)
-    : selectedPricing?.cost != null
-      ? parseFloat(String(selectedPricing.cost))
-      : (selectedPricing?.price != null ? Number(selectedPricing.price) : price);
+  const priceNow = getTaxableUnitPrice(selectedPricing) || price;
   // priceBase is the "was" price — use cost (GST-excluded) so it's on the same tax basis as priceNow
   const priceBase     = selectedPricing?.cost != null ? parseFloat(String(selectedPricing.cost)) : priceNow;
   // Use discount_percent from API; only show if there is an actual special_price discount

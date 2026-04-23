@@ -541,13 +541,16 @@ export function resolveStorePricingDisplay(pricing?: Partial<RealApiStorePricing
   const gstIncludedPrice = toNum(pricing?.price ?? 0);
   const costPrice = toNum(pricing?.cost ?? 0);
   const specialPrice = toNum(pricing?.special_price ?? 0);
+  const taxableAmount = toNum(pricing?.gst?.taxable_amount ?? 0);
   const rawDiscountPercent = pricing?.discount_percent;
   const discountPercent =
     rawDiscountPercent === null || rawDiscountPercent === undefined
       ? null
       : toNum(rawDiscountPercent);
 
-  const mainPrice = specialPrice > 0
+  const mainPrice = taxableAmount > 0
+    ? taxableAmount
+    : specialPrice > 0
     ? specialPrice
     : costPrice > 0
       ? costPrice

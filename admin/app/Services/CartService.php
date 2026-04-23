@@ -23,6 +23,11 @@ use Illuminate\Support\Str;
 
 class CartService
 {
+    public function __construct(
+        protected GstService $gstService
+    ) {
+    }
+
     /**
      * Add item to cart
      */
@@ -236,13 +241,48 @@ class CartService
         DB::beginTransaction();
 
         try {
-            foreach ($data['items'] as $item) {
+            $cart = Cart::firstOrCreate(
+                ['user_id' => $user->id],
+                ['uuid' => Str::uuid()->toString()]
+            );
 
-                $result = $this->addToCart($user, [
-                    'store_id' => $item['store_id'],
-                    'product_variant_id' => $item['product_variant_id'],
-                    'quantity' => $item['quantity'],
-                ]);
+            $desiredKeys = collect($data['items'])
+                ->map(fn ($item) => $item['store_id'] . ':' . $item['product_variant_id'])
+                ->all();
+
+            CartItem::where('cart_id', $cart->id)
+                ->where('save_for_later', '0')
+                ->get()
+                ->each(function (CartItem $cartItem) use ($desiredKeys) {
+                    $itemKey = $cartItem->store_id . ':' . $cartItem->product_variant_id;
+                    if (!in_array($itemKey, $desiredKeys, true)) {
+                        $cartItem->delete();
+                    }
+                });
+
+            foreach ($data['items'] as $item) {
+                $matchingItems = CartItem::where('cart_id', $cart->id)
+                    ->where('store_id', $item['store_id'])
+                    ->where('product_variant_id', $item['product_variant_id'])
+                    ->where('save_for_later', '0')
+                    ->orderBy('id')
+                    ->get();
+
+                $primaryItem = $matchingItems->first();
+
+                if ($matchingItems->count() > 1 && $primaryItem) {
+                    CartItem::whereIn('id', $matchingItems->slice(1)->pluck('id'))->delete();
+                }
+
+                if ($primaryItem) {
+                    $result = $this->updateCartItemQuantity($user, $primaryItem->id, $item['quantity']);
+                } else {
+                    $result = $this->addToCart($user, [
+                        'store_id' => $item['store_id'],
+                        'product_variant_id' => $item['product_variant_id'],
+                        'quantity' => $item['quantity'],
+                    ]);
+                }
 
                 // Load product resource for the provided store and variant
                 $storeProductVariant = StoreProductVariant::with([
@@ -323,6 +363,7 @@ class CartService
     private function calculateCartTotals(Cart $cart): array
     {
         $itemsTotal = 0;
+        $totalGst = 0;
         $storeIds = [];
 
         foreach ($cart->items as $key => $item) {
@@ -336,16 +377,37 @@ class CartService
             }
 
             $storeVariant = $item->variant->storeProductVariants->where('store_id', $item->store->id)->first();
-            $cart->items[$key]->price = $item->quantity * $storeVariant->price;
-            $cart->items[$key]->special_price = $item->quantity * $storeVariant->special_price;
+            if (!$storeVariant) {
+                continue;
+            }
 
-            $itemsTotal += $item->quantity * $storeVariant->special_price;
+            $product = $item->product;
+            $specialPrice = (float) ($storeVariant->special_price_exclude_tax ?? $storeVariant->getRawOriginal('special_price') ?? 0);
+            $basePrice = (float) ($storeVariant->price_exclude_tax ?? $storeVariant->getRawOriginal('price') ?? 0);
+            $unitPrice = $specialPrice > 0 ? $specialPrice : $basePrice;
+            $gstRatePct = $product ? $this->gstService->resolveProductGstRate($product) : 0;
+            $gstData = $this->gstService->calculateLineItem(
+                unitPrice: $unitPrice,
+                quantity: (int) $item->quantity,
+                gstRatePct: $gstRatePct,
+                supplyType: 'intra',
+                priceInclusive: (bool) ($product->is_inclusive_tax ?? false)
+            );
+
+            $cart->items[$key]->price = $gstData['taxable_amount'];
+            $cart->items[$key]->special_price = $gstData['total_amount'];
+            $cart->items[$key]->total_tax_amount = $gstData['total_tax_amount'];
+
+            $itemsTotal += $gstData['taxable_amount'];
+            $totalGst += $gstData['total_tax_amount'];
         }
 
         $cart->items_total = $itemsTotal;
+        $cart->total_gst = $totalGst;
 
         return [
             'items_total' => $itemsTotal,
+            'total_gst' => $totalGst,
             'store_ids' => $storeIds
         ];
     }
@@ -630,11 +692,12 @@ class CartService
         try {
             $totalsResult = $this->calculateCartTotals($cart);
             $itemsTotal   = $totalsResult['items_total'];
+            $totalGst     = $totalsResult['total_gst'] ?? 0;
 
             $totalDeliveryCharges = $deliveryCharge;
 
             // Calculate payable amount
-            $payableAmount = $itemsTotal + $totalDeliveryCharges;
+            $payableAmount = $itemsTotal + $totalGst + $totalDeliveryCharges;
 
             // Apply promo code discount if provided
             $promoDiscount      = 0;
@@ -666,6 +729,7 @@ class CartService
 
             return [
                 'items_total'              => (float) $itemsTotal,
+                'total_gst'                => (float) $totalGst,
                 'per_store_drop_off_fee'   => 0.0,
                 'is_rush_delivery'         => $isRushDelivery,
                 'is_rush_delivery_available' => false,
@@ -806,21 +870,23 @@ class CartService
     {
         $totalsResult = $this->calculateCartTotals($cart);
         $itemsTotal = $totalsResult['items_total'] ?? 0;
+        $totalGst = $totalsResult['total_gst'] ?? 0;
         $walletBalance = 0;
         $walletAmountUsed = 0;
-        $remainingPayable = $itemsTotal;
+        $remainingPayable = $itemsTotal + $totalGst;
         $orderTotal = $remainingPayable;
         $wallet = $cart->user->wallet()->first();
         $walletBalance = !empty($wallet) ? $wallet->balance : 0;
         if ($useWallet && $cart->user) {
             if ($wallet) {
-                $walletAmountUsed = min($walletBalance, $itemsTotal);
-                $remainingPayable = $itemsTotal - $walletAmountUsed;
+                $walletAmountUsed = min($walletBalance, $remainingPayable);
+                $remainingPayable = $remainingPayable - $walletAmountUsed;
             }
         }
 
         return [
             'items_total' => $itemsTotal,
+            'total_gst' => $totalGst,
             'per_store_drop_off_fee' => 0,
             'is_rush_delivery' => $isRushDelivery,
             'is_rush_delivery_available' => false,

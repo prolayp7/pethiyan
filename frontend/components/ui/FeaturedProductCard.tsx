@@ -15,6 +15,15 @@ import { API_BASE, addToWishlist, getProduct, getWishlistItems, removeWishlistIt
 import { normalizeImageUrl } from "@/lib/image";
 import toast from "react-hot-toast";
 
+function getTaxableUnitPrice(pricing: RealApiVariant["store_pricing"][number] | null | undefined, fallback = 0): number {
+  const taxableAmount = pricing?.gst?.taxable_amount;
+  if (taxableAmount != null) return Number(taxableAmount);
+  if (pricing?.special_price != null) return Number(pricing.special_price);
+  if (pricing?.cost != null) return Number(pricing.cost);
+  if (pricing?.price != null) return Number(pricing.price);
+  return fallback;
+}
+
 export interface FallbackProduct {
   id: string;
   name: string;
@@ -162,11 +171,7 @@ export default function FeaturedProductCard({ p }: { p: FallbackProduct }) {
   }, [quickViewOpen]);
 
   const stepQty = quickViewProduct?.policies?.minimum_order_quantity || p.minQty || 1;
-  const priceNow = selectedPricing?.special_price != null
-    ? Number(selectedPricing.special_price)
-    : selectedPricing?.cost != null
-      ? parseFloat(String(selectedPricing.cost))
-      : (selectedPricing?.price != null ? Number(selectedPricing.price) : p.price);
+  const priceNow = getTaxableUnitPrice(selectedPricing, p.price);
   const priceBase = selectedPricing?.cost != null ? parseFloat(String(selectedPricing.cost)) : priceNow;
   const modalDiscount = selectedPricing?.discount_percent ?? 0;
 

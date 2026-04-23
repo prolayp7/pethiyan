@@ -23,16 +23,22 @@ const COLOR_MAP: Record<string, string> = {
 
 // use shared normalizeImageUrl from '@/lib/image'
 
+function getTaxableUnitPrice(pricing: RealApiProduct["variants"][number]["store_pricing"][number] | null | undefined): number {
+  const taxableAmount = pricing?.gst?.taxable_amount;
+  if (taxableAmount != null) return Number(taxableAmount);
+  if (pricing?.special_price != null) return Number(pricing.special_price);
+  if (pricing?.cost != null) return Number(pricing.cost);
+  if (pricing?.price != null) return Number(pricing.price);
+  return 0;
+}
+
 function getPrice(product: RealApiProduct): { price: number; special: number | null; variantTitle: string | null } {
   const variant = product.variants?.find((v) => v.is_default) ?? product.variants?.[0];
   const pricing = variant?.store_pricing?.[0];
   if (!pricing) return { price: 0, special: null, variantTitle: null };
-  // cost is the GST-excluded base price; prefer special_price then cost then price
-  const basePrice = pricing.special_price
-    ? Number(pricing.special_price)
-    : (pricing.cost != null ? Number(pricing.cost) : Number(pricing.price)) || 0;
+  const basePrice = getTaxableUnitPrice(pricing);
   const price = basePrice;
-  const special = pricing.special_price ? Number(pricing.special_price) : null;
+  const special = pricing.special_price != null ? Number(pricing.special_price) : null;
   const variantTitle = variant?.title && variant.title !== product.title ? variant.title : null;
   return { price, special, variantTitle };
 }
@@ -70,7 +76,11 @@ function HistoryCard({ product }: { product: RealApiProduct }) {
     const chosen = v ?? variant;
     const pricing = chosen?.store_pricing?.[0];
     if (!pricing) return { price: 0, special: null, variantTitle: chosen?.title && chosen.title !== product.title ? chosen.title : null };
-    return { price: Number(pricing.price) || 0, special: pricing.special_price ? Number(pricing.special_price) : null, variantTitle: chosen?.title && chosen.title !== product.title ? chosen.title : null };
+    return {
+      price: getTaxableUnitPrice(pricing),
+      special: pricing.special_price != null ? Number(pricing.special_price) : null,
+      variantTitle: chosen?.title && chosen.title !== product.title ? chosen.title : null,
+    };
   };
 
   const { price, special } = pricingSource(hoveredVariant);
