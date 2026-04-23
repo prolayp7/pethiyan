@@ -1026,8 +1026,8 @@ export default function ProductDetailClient({ product, reviews: initialReviews, 
                   // Normalise to grams first, then display in kg if ≥ 1000g
                   const inGrams = unit === "kg" ? totalGrams * 1000 : totalGrams;
                   const display = inGrams >= 1000
-                    ? `${(inGrams / 1000).toFixed(2).replace(/\.?0+$/, "")} kg`
-                    : `${inGrams} g`;
+                    ? `${(inGrams / 1000).toFixed(2)} kg`
+                    : `${inGrams.toFixed(2)} g`;
                   return <span className="ml-2 text-gray-400">· Total weight: <strong className="text-gray-600">{display}</strong></span>;
                 })()}
               </p>

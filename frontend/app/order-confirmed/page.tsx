@@ -6,7 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import {
   CheckCircle2, Package, ArrowRight, Home, ShoppingBag,
-  MapPin, CreditCard, Clock, Truck, Loader2,
+  MapPin, CreditCard, Clock, Truck,
 } from "lucide-react";
 import { flushPurchaseEvent } from "@/lib/analytics";
 import { getOrder, type ApiOrder } from "@/lib/api";
@@ -29,6 +29,64 @@ const PAYMENT_LABELS: Record<string, string> = {
   easepay:  "Easepay",
   cod:      "Cash on Delivery",
 };
+
+function OrderConfirmedHeroSkeleton() {
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 text-center animate-pulse">
+      <div className="w-24 h-24 rounded-full bg-gray-100 mx-auto mb-6" />
+      <div className="h-8 w-72 max-w-full bg-gray-200 rounded-xl mx-auto mb-3" />
+      <div className="h-4 w-96 max-w-full bg-gray-100 rounded-full mx-auto mb-2" />
+      <div className="h-4 w-80 max-w-full bg-gray-100 rounded-full mx-auto" />
+      <div className="mt-5 w-64 max-w-full mx-auto rounded-xl bg-blue-50 border border-blue-100 px-6 py-3">
+        <div className="h-3 w-24 bg-blue-100 rounded-full mx-auto mb-2" />
+        <div className="h-7 w-44 bg-blue-200 rounded-lg mx-auto mb-2" />
+        <div className="h-3 w-32 bg-blue-100 rounded-full mx-auto" />
+      </div>
+    </div>
+  );
+}
+
+function OrderConfirmedDetailsSkeleton() {
+  return (
+    <>
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden animate-pulse">
+        <div className="px-5 py-4 border-b border-gray-100">
+          <div className="h-4 w-36 bg-gray-200 rounded-full" />
+        </div>
+        <div className="divide-y divide-gray-50">
+          {Array.from({ length: 2 }).map((_, index) => (
+            <div key={index} className="flex gap-3 px-5 py-4">
+              <div className="w-14 h-14 rounded-xl bg-gray-100 border border-gray-100 shrink-0" />
+              <div className="flex-1 min-w-0 space-y-2">
+                <div className="h-4 w-3/4 bg-gray-200 rounded-full" />
+                <div className="h-3 w-1/2 bg-gray-100 rounded-full" />
+                <div className="h-3 w-20 bg-gray-100 rounded-full" />
+              </div>
+              <div className="w-24 shrink-0 space-y-2">
+                <div className="h-4 w-full bg-gray-200 rounded-full" />
+                <div className="h-3 w-16 ml-auto bg-gray-100 rounded-full" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+        {Array.from({ length: 2 }).map((_, index) => (
+          <div key={index} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 animate-pulse">
+            <div className="h-4 w-32 bg-gray-200 rounded-full mb-4" />
+            <div className="space-y-3">
+              <div className="h-3 w-full bg-gray-100 rounded-full" />
+              <div className="h-3 w-5/6 bg-gray-100 rounded-full" />
+              <div className="h-3 w-2/3 bg-gray-100 rounded-full" />
+              <div className="h-3 w-3/4 bg-gray-100 rounded-full" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </>
+  );
+}
 
 // ─── Inner component (uses useSearchParams) ───────────────────────────────────
 
@@ -53,37 +111,39 @@ function OrderConfirmedInner() {
       <div className="max-w-2xl mx-auto space-y-5">
 
         {/* ── Hero card ── */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 text-center">
-          <div className="relative inline-flex mb-6">
-            <div className="w-24 h-24 rounded-full bg-green-100 flex items-center justify-center">
-              <CheckCircle2 className="h-14 w-14 text-green-500" />
+        {loading ? (
+          <OrderConfirmedHeroSkeleton />
+        ) : (
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 text-center">
+            <div className="relative inline-flex mb-6">
+              <div className="w-24 h-24 rounded-full bg-green-100 flex items-center justify-center">
+                <CheckCircle2 className="h-14 w-14 text-green-500" />
+              </div>
+              <div className="absolute inset-0 rounded-full border-4 border-green-200 animate-ping opacity-30" />
             </div>
-            <div className="absolute inset-0 rounded-full border-4 border-green-200 animate-ping opacity-30" />
+
+            <h1 className="text-2xl font-extrabold text-(--color-secondary) mb-1">
+              Thank You for Your Order!
+            </h1>
+            <p className="text-gray-500 text-sm">
+              Your order has been placed successfully. We&apos;ll start processing it right away.
+            </p>
+
+            {orderNumber && (
+              <div className="mt-5 inline-block px-6 py-3 rounded-xl bg-blue-50 border border-blue-100">
+                <p className="text-[11px] text-gray-500 mb-0.5">Order Number</p>
+                <p className="text-lg font-extrabold text-(--color-primary) tracking-wider font-mono">
+                  {orderNumber}
+                </p>
+                <p className="text-[11px] text-gray-400 mt-0.5">Save this for tracking your order</p>
+              </div>
+            )}
           </div>
-
-          <h1 className="text-2xl font-extrabold text-(--color-secondary) mb-1">
-            Thank You for Your Order!
-          </h1>
-          <p className="text-gray-500 text-sm">
-            Your order has been placed successfully. We&apos;ll start processing it right away.
-          </p>
-
-          {orderNumber && (
-            <div className="mt-5 inline-block px-6 py-3 rounded-xl bg-blue-50 border border-blue-100">
-              <p className="text-[11px] text-gray-500 mb-0.5">Order Number</p>
-              <p className="text-lg font-extrabold text-(--color-primary) tracking-wider font-mono">
-                {orderNumber}
-              </p>
-              <p className="text-[11px] text-gray-400 mt-0.5">Save this for tracking your order</p>
-            </div>
-          )}
-        </div>
+        )}
 
         {/* ── Order detail cards ── */}
         {loading ? (
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-10 flex items-center justify-center">
-            <Loader2 className="h-7 w-7 animate-spin text-(--color-primary)" />
-          </div>
+          <OrderConfirmedDetailsSkeleton />
         ) : order ? (
           <>
             {/* Items list */}
@@ -319,8 +379,11 @@ function OrderConfirmedInner() {
 export default function OrderConfirmedPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--background)" }}>
-        <div className="w-16 h-16 rounded-full border-4 border-(--color-primary) border-t-transparent animate-spin" />
+      <div className="min-h-screen py-10 px-4" style={{ background: "var(--background)" }}>
+        <div className="max-w-2xl mx-auto space-y-5">
+          <OrderConfirmedHeroSkeleton />
+          <OrderConfirmedDetailsSkeleton />
+        </div>
       </div>
     }>
       <OrderConfirmedInner />

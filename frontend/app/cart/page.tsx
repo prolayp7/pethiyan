@@ -28,8 +28,8 @@ function formatWeightDisplay(weight?: number, weightUnit?: string, quantity = 1)
   const totalGrams = unitGrams * quantity;
   const formatGrams = (grams: number) =>
     grams >= 1000
-      ? `${(grams / 1000).toFixed(2).replace(/\.?0+$/, "")} kg`
-      : `${grams} g`;
+      ? `${(grams / 1000).toFixed(2)} kg`
+      : `${grams.toFixed(2)} g`;
 
   return `Total weight: ${formatGrams(totalGrams)} (${formatGrams(unitGrams)} x ${quantity})`;
 }
