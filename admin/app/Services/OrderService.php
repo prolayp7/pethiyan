@@ -449,7 +449,9 @@ class OrderService
         }
 
         $cart->items()->delete();
-        event(new OrderPlaced($order));
+        DB::afterCommit(function () use ($order) {
+            event(new OrderPlaced($order));
+        });
 
         return [
             'success' => true,
