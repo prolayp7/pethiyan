@@ -28,7 +28,14 @@ export default function CartDrawer() {
 
   return (
     <Sheet open={isOpen} onOpenChange={(open) => !open && closeCart()} modal={false}>
-      <SheetContent side="right" className="flex flex-col w-full max-w-sm p-0" hideOverlay>
+      <SheetContent
+        side="right"
+        className="flex flex-col w-full max-w-sm p-0"
+        hideOverlay
+        onInteractOutside={(event) => event.preventDefault()}
+        onPointerDownOutside={(event) => event.preventDefault()}
+        onFocusOutside={(event) => event.preventDefault()}
+      >
         {/* Header */}
         <SheetHeader className="px-6 py-4 border-b border-gray-100">
           <SheetTitle className="flex items-center gap-2">

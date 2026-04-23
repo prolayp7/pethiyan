@@ -57,6 +57,7 @@ import { pushRecentlyViewedId } from "@/lib/recently-viewed";
 import { pushBrowsingHistory } from "@/lib/browsingHistory";
 import ReviewForm from "./ReviewForm";
 import { toDisplayTitleCase } from "@/lib/text";
+import { resolveProductSeo, resolveVariantSeo } from "@/lib/seo";
 
 function formatCurrency(amount: number | null | undefined, symbol = "₹"): string {
   const value = toNum(amount);
@@ -117,6 +118,36 @@ function colorSwatchStyle(color: string): CSSProperties {
   }
 
   return { background: palette[normalized] ?? "#94a3b8" };
+}
+
+function upsertMetaTag(attribute: "name" | "property", key: string, content?: string) {
+  if (typeof document === "undefined") return;
+  let tag = document.head.querySelector(`meta[${attribute}="${key}"]`) as HTMLMetaElement | null;
+  const value = content?.trim();
+
+  if (!value) {
+    tag?.remove();
+    return;
+  }
+
+  if (!tag) {
+    tag = document.createElement("meta");
+    tag.setAttribute(attribute, key);
+    document.head.appendChild(tag);
+  }
+
+  tag.setAttribute("content", value);
+}
+
+function upsertCanonicalLink(href: string) {
+  if (typeof document === "undefined") return;
+  let link = document.head.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
+  if (!link) {
+    link = document.createElement("link");
+    link.setAttribute("rel", "canonical");
+    document.head.appendChild(link);
+  }
+  link.setAttribute("href", href);
 }
 
 
@@ -384,13 +415,9 @@ export default function ProductDetailClient({ product, reviews: initialReviews, 
     if (match) setSelectedVariantId(match.id);
   }, [initialVariantSlug, variantList]);
 
-  // Navigate to variant URL when user selects a variant (updates canonical URL)
   const navigateToVariant = useCallback((variant: RealApiVariant) => {
     setSelectedVariantId(variant.id);
-    if (variant.slug) {
-      router.push(`/products/${product.slug}/${variant.slug}`, { scroll: false });
-    }
-  }, [product.slug, router]);
+  }, []);
 
   useEffect(() => {
     if (initialReviews.length === 0) {
@@ -456,6 +483,23 @@ export default function ProductDetailClient({ product, reviews: initialReviews, 
     return variantList.find((v) => v.is_default) ?? variantList[0];
   }, [selectedVariantId, variantList]);
 
+  const selectedSeo = useMemo(
+    () => (selectedVariant ? resolveVariantSeo(product, selectedVariant) : resolveProductSeo(product)),
+    [product, selectedVariant],
+  );
+
+  const selectedPath = useMemo(() => {
+    if (selectedVariantId == null) {
+      return `/products/${product.slug}`;
+    }
+
+    if (selectedVariant?.slug) {
+      return `/products/${product.slug}/${selectedVariant.slug}`;
+    }
+
+    return `/products/${product.slug}`;
+  }, [product.slug, selectedVariant, selectedVariantId]);
+
   // Fire view_item whenever the selected variant changes (initial load + variant switch).
   useEffect(() => {
     if (!selectedVariant) return;
@@ -472,6 +516,35 @@ export default function ProductDetailClient({ product, reviews: initialReviews, 
     recordBrowsingHistory(product.id);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedVariant]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (selectedVariantId == null) return;
+
+    const nextUrl = new URL(selectedPath, window.location.origin);
+    const currentPathWithQuery = `${window.location.pathname}${window.location.search}`;
+    const nextPathWithQuery = `${nextUrl.pathname}${window.location.search}`;
+
+    if (currentPathWithQuery !== nextPathWithQuery) {
+      window.history.replaceState(window.history.state, "", nextPathWithQuery);
+    }
+
+    document.title = /pethiyan/i.test(selectedSeo.title)
+      ? selectedSeo.title
+      : `${selectedSeo.title} | Pethiyan`;
+    upsertCanonicalLink(nextUrl.toString());
+    upsertMetaTag("name", "description", selectedSeo.description);
+    upsertMetaTag("name", "keywords", selectedSeo.keywords);
+    upsertMetaTag("name", "robots", selectedSeo.indexable ? "index,follow" : "noindex,nofollow");
+    upsertMetaTag("property", "og:title", selectedSeo.openGraphTitle);
+    upsertMetaTag("property", "og:description", selectedSeo.openGraphDescription);
+    upsertMetaTag("property", "og:url", nextUrl.toString());
+    upsertMetaTag("property", "og:image", selectedSeo.openGraphImage);
+    upsertMetaTag("name", "twitter:title", selectedSeo.twitterTitle);
+    upsertMetaTag("name", "twitter:description", selectedSeo.twitterDescription);
+    upsertMetaTag("name", "twitter:image", selectedSeo.twitterImage);
+    upsertMetaTag("name", "twitter:card", selectedSeo.twitterCard);
+  }, [selectedPath, selectedSeo, selectedVariant, selectedVariantId]);
 
   const selectedVariantStorePricing = useMemo(
     () => selectedVariant?.store_pricing ?? [],
@@ -657,7 +730,11 @@ export default function ProductDetailClient({ product, reviews: initialReviews, 
 
   const handleWishlist = async () => {
     if (!isLoggedIn) {
-      router.push(`/login?redirect=${encodeURIComponent(pathname || `/products/${product.slug}`)}`);
+      const redirectPath =
+        typeof window !== "undefined"
+          ? `${window.location.pathname}${window.location.search}`
+          : pathname || `/products/${product.slug}`;
+      router.push(`/login?redirect=${encodeURIComponent(redirectPath)}`);
       return;
     }
     if (wishlistBusy) return;

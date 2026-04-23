@@ -262,7 +262,6 @@ export default function ShopProductCard({ product }: { product: RealApiProduct }
     });
     setTimeout(() => updateQuantity(itemId, qty), 0);
     openCart();
-    closeQuickView();
   };
 
 
