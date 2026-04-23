@@ -24,11 +24,17 @@ function fmtDate(dateStr: string) {
 
 const STATUS_MAP: Record<ApiOrder["status"], { label: string; cls: string }> = {
   pending:    { label: "Pending",    cls: "bg-amber-100 text-amber-700"  },
-  awaiting_store_response: { label: "Awaiting Confirmation", cls: "bg-yellow-100 text-yellow-700" },
+  awaiting_store_response: { label: "Awaiting Store Response", cls: "bg-yellow-100 text-yellow-700" },
+  accepted_by_seller: { label: "Order Accepted", cls: "bg-blue-100 text-blue-700" },
+  preparing: { label: "Order Start Packing", cls: "bg-blue-100 text-blue-700" },
+  ready_for_pickup: { label: "Order Packing Done", cls: "bg-indigo-100 text-indigo-700" },
+  assigned: { label: "Order Ready for Pickup", cls: "bg-purple-100 text-purple-700" },
+  collected: { label: "Order Collected", cls: "bg-indigo-100 text-indigo-700" },
   processing: { label: "Processing", cls: "bg-blue-100 text-blue-700"    },
   shipped:    { label: "Shipped",    cls: "bg-indigo-100 text-indigo-700" },
-  delivered:  { label: "Delivered",  cls: "bg-green-100 text-green-700"  },
-  cancelled:  { label: "Cancelled",  cls: "bg-red-100 text-red-700"      },
+  delivered:  { label: "Order Completed",  cls: "bg-green-100 text-green-700"  },
+  cancelled:  { label: "Order Cancelled",  cls: "bg-red-100 text-red-700"      },
+  failed:  { label: "Order Failed",  cls: "bg-red-100 text-red-700"      },
 };
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
