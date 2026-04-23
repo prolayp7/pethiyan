@@ -133,6 +133,16 @@ export default function LoginModal({ open, onClose, onSuccess, redirectTo }: Log
 
   // UI state
   const [loading, setLoading] = useState(false);
+  const [loadingAction, setLoadingAction] = useState<"form" | "google" | "resend" | "none">("none");
+
+  const startLoading = (action: "form" | "google" | "resend") => {
+    setLoadingAction(action);
+    setLoading(true);
+  };
+  const stopLoading = () => {
+    setLoadingAction("none");
+    setLoading(false);
+  };
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [shaking, setShaking] = useState<Set<string>>(new Set());
   const [apiError, setApiError] = useState("");
@@ -207,6 +217,21 @@ export default function LoginModal({ open, onClose, onSuccess, redirectTo }: Log
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [otp]);
+
+  // Auto-submit for forgot password reset when all conditions meet
+  useEffect(() => {
+    if (
+      forgotStep === "reset" &&
+      forgotOtp.length === 6 &&
+      forgotNewPassword &&
+      forgotConfirmPassword === forgotNewPassword &&
+      !validatePassword(forgotNewPassword) &&
+      !loading
+    ) {
+      handleForgotReset();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [forgotOtp, forgotNewPassword, forgotConfirmPassword]);
 
   if (!open) return null;
 
@@ -304,20 +329,20 @@ export default function LoginModal({ open, onClose, onSuccess, redirectTo }: Log
     e.preventDefault();
     setApiError("");
     if (!validatePasswordLoginForm()) return;
-    setLoading(true);
+    startLoading("form");
     try {
       const res = await loginWithPassword(loginIdentifier, loginPassword);
       if (res.success && res.user) { completeLogin(res.user); }
       else setApiError(res.message ?? "Invalid credentials. Please try again.");
     } catch { setApiError("Something went wrong. Please try again."); }
-    finally { setLoading(false); }
+    finally { stopLoading(); }
   }
 
   async function handleLoginSendOtp(e: React.SyntheticEvent) {
     e.preventDefault();
     setApiError("");
     if (!validateOtpLoginForm()) return;
-    setLoading(true);
+    startLoading("form");
     try {
       const mobile = smsOtpEnabled && isValidIndianMobile(loginMobile) ? loginMobile : null;
       const email  = emailOtpEnabled && loginEmail.trim() ? loginEmail.trim() : null;
@@ -331,7 +356,7 @@ export default function LoginModal({ open, onClose, onSuccess, redirectTo }: Log
         setApiError(res.message ?? "Failed to send OTP. Please try again.");
       }
     } catch { setApiError("Something went wrong. Please try again."); }
-    finally { setLoading(false); }
+    finally { stopLoading(); }
   }
 
   async function handleLoginVerifyOtp(e?: React.SyntheticEvent) {
@@ -339,7 +364,7 @@ export default function LoginModal({ open, onClose, onSuccess, redirectTo }: Log
     setApiError("");
     if (otp.length !== 6) { setErrors({ otp: "Enter the 6-digit OTP" }); return; }
     setErrors({});
-    setLoading(true);
+    startLoading("form");
     try {
       const mobile = smsOtpEnabled && isValidIndianMobile(loginMobile) ? loginMobile : null;
       const email  = emailOtpEnabled && loginEmail.trim() ? loginEmail.trim() : undefined;
@@ -347,7 +372,7 @@ export default function LoginModal({ open, onClose, onSuccess, redirectTo }: Log
       if (res.success && res.user) { completeLogin(res.user); }
       else setApiError(res.message ?? "Invalid OTP. Please try again.");
     } catch { setApiError("Something went wrong. Please try again."); }
-    finally { setLoading(false); }
+    finally { stopLoading(); }
   }
 
   // ── Register handlers ─────────────────────────────────────────────────────────
@@ -356,7 +381,7 @@ export default function LoginModal({ open, onClose, onSuccess, redirectTo }: Log
     e.preventDefault();
     setApiError("");
     if (!validateRegisterForm()) return;
-    setLoading(true);
+    startLoading("form");
     try {
       const res = await registerUser({
         name: regName.trim(),
@@ -375,7 +400,7 @@ export default function LoginModal({ open, onClose, onSuccess, redirectTo }: Log
         startCountdown();
       } else setApiError(res.message ?? "Registration failed. Please try again.");
     } catch { setApiError("Something went wrong. Please try again."); }
-    finally { setLoading(false); }
+    finally { stopLoading(); }
   }
 
   async function handleRegisterVerifyOtp(e?: React.SyntheticEvent) {
@@ -383,20 +408,20 @@ export default function LoginModal({ open, onClose, onSuccess, redirectTo }: Log
     setApiError("");
     if (otp.length !== 6) { setErrors({ otp: "Enter the 6-digit OTP" }); return; }
     setErrors({});
-    setLoading(true);
+    startLoading("form");
     try {
       const res = await verifyMobile(regMobile, otp);
       if (res.success && pendingAuth.current) { completeLogin(pendingAuth.current.user); }
       else setApiError(res.message ?? "Invalid OTP. Please try again.");
     } catch { setApiError("Something went wrong. Please try again."); }
-    finally { setLoading(false); }
+    finally { stopLoading(); }
   }
 
   // ── Google Sign-In ───────────────────────────────────────────────────────────
 
   async function handleGoogleSignIn() {
     setApiError("");
-    setLoading(true);
+    startLoading("google");
     try {
       const { idToken } = await signInWithGoogle();
       const res = await googleCallback(idToken);
@@ -438,7 +463,7 @@ export default function LoginModal({ open, onClose, onSuccess, redirectTo }: Log
 
       console.error("Google sign-in error:", err);
     } finally {
-      setLoading(false);
+      stopLoading();
     }
   }
 
@@ -452,7 +477,7 @@ export default function LoginModal({ open, onClose, onSuccess, redirectTo }: Log
     if (googleNewUserPassword !== googleNewUserConfirm) errs.googleConfirm = "Passwords do not match";
     if (Object.keys(errs).length) { setErrors(errs); triggerShake(Object.keys(errs)); return; }
 
-    setLoading(true);
+    startLoading("form");
     try {
       const res = await googleCallback(googleIdToken!, {
         mobile: googleNewUserMobile,
@@ -465,7 +490,7 @@ export default function LoginModal({ open, onClose, onSuccess, redirectTo }: Log
         setApiError(res.message ?? "Registration failed. Please try again.");
       }
     } catch { setApiError("Something went wrong. Please try again."); }
-    finally { setLoading(false); }
+    finally { stopLoading(); }
   }
 
   // ── Resend OTP ────────────────────────────────────────────────────────────────
@@ -473,7 +498,7 @@ export default function LoginModal({ open, onClose, onSuccess, redirectTo }: Log
   async function handleResend() {
     if (countdown > 0) return;
     setApiError("");
-    setLoading(true);
+    startLoading("resend");
     try {
       let res;
       if (tab === "login") {
@@ -486,7 +511,7 @@ export default function LoginModal({ open, onClose, onSuccess, redirectTo }: Log
       if (res.success) { setOtp(""); setDemoOtp(res.demoOtp); startCountdown(); }
       else setApiError(res.message ?? "Could not resend OTP.");
     } catch { setApiError("Something went wrong. Please try again."); }
-    finally { setLoading(false); }
+    finally { stopLoading(); }
   }
 
   // ── Forgot Password Handlers ──────────────────────────────────────────────────
@@ -510,11 +535,11 @@ export default function LoginModal({ open, onClose, onSuccess, redirectTo }: Log
     }
     if (Object.keys(errs).length) { setErrors(errs); triggerShake(Object.keys(errs)); return; }
 
-    setLoading(true);
+    startLoading("form");
     try {
       const mobile = smsOtpEnabled && isValidIndianMobile(forgotMobile) ? forgotMobile : null;
       const email = emailOtpEnabled && forgotEmail.trim() ? forgotEmail.trim() : null;
-      const res = await forgotPasswordSendOtp(mobile, email);
+      const res = await forgotPasswordSendOtp(email, mobile);
       if (res.success) {
         setForgotDemoOtp(res.demoOtp);
         setForgotStep("reset");
@@ -523,11 +548,11 @@ export default function LoginModal({ open, onClose, onSuccess, redirectTo }: Log
         setApiError(res.message ?? "Could not send OTP. Please try again.");
       }
     } catch { setApiError("Something went wrong. Please try again."); }
-    finally { setLoading(false); }
+    finally { stopLoading(); }
   }
 
-  async function handleForgotReset(e: React.SyntheticEvent) {
-    e.preventDefault();
+  async function handleForgotReset(e?: React.SyntheticEvent) {
+    if (e) e.preventDefault();
     setApiError("");
     const errs: Record<string, string> = {};
     if (forgotOtp.length !== 6) errs.forgotOtp = "Enter the 6-digit OTP";
@@ -537,7 +562,7 @@ export default function LoginModal({ open, onClose, onSuccess, redirectTo }: Log
     
     if (Object.keys(errs).length) { setErrors(errs); triggerShake(Object.keys(errs)); return; }
 
-    setLoading(true);
+    startLoading("form");
     try {
       const mobile = smsOtpEnabled && isValidIndianMobile(forgotMobile) ? forgotMobile : null;
       const email = emailOtpEnabled && forgotEmail.trim() ? forgotEmail.trim() : null;
@@ -548,17 +573,17 @@ export default function LoginModal({ open, onClose, onSuccess, redirectTo }: Log
         setApiError(res.message ?? "Failed to reset password. Please try again.");
       }
     } catch { setApiError("Something went wrong. Please try again."); }
-    finally { setLoading(false); }
+    finally { stopLoading(); }
   }
 
   async function handleForgotResend() {
     if (forgotCountdown > 0) return;
     setApiError("");
-    setLoading(true);
+    startLoading("resend");
     try {
       const mobile = smsOtpEnabled && isValidIndianMobile(forgotMobile) ? forgotMobile : null;
       const email = emailOtpEnabled && forgotEmail.trim() ? forgotEmail.trim() : null;
-      const res = await forgotPasswordResendOtp(mobile, email);
+      const res = await forgotPasswordResendOtp(email, mobile);
       if (res.success) {
         setForgotOtp("");
         setForgotDemoOtp(res.demoOtp);
@@ -567,7 +592,7 @@ export default function LoginModal({ open, onClose, onSuccess, redirectTo }: Log
         setApiError(res.message ?? "Could not resend OTP.");
       }
     } catch { setApiError("Something went wrong. Please try again."); }
-    finally { setLoading(false); }
+    finally { stopLoading(); }
   }
 
   function handleBackdrop(e: React.MouseEvent<HTMLDivElement>) {
@@ -778,7 +803,7 @@ export default function LoginModal({ open, onClose, onSuccess, redirectTo }: Log
 
                 {apiError && <ApiError msg={apiError} />}
 
-                <PrimaryButton loading={loading} label="Complete Sign Up" loadingLabel="Creating account…" />
+                <PrimaryButton loading={loadingAction === "form"} disabled={loading} label="Complete Sign Up" loadingLabel="Creating account…" />
               </form>
 
             ) : isOtpStep ? (
@@ -810,7 +835,7 @@ export default function LoginModal({ open, onClose, onSuccess, redirectTo }: Log
 
                 {apiError && <ApiError msg={apiError} />}
 
-                <PrimaryButton loading={loading} label="Verify & Continue" loadingLabel="Verifying…" disabled={otp.length !== 6} />
+                <PrimaryButton loading={loadingAction === "form"} label="Verify & Continue" loadingLabel="Verifying…" disabled={loading || otp.length !== 6} />
 
                 <p className="text-center text-xs text-gray-500">
                   Didn&apos;t receive it?{" "}
@@ -886,9 +911,9 @@ export default function LoginModal({ open, onClose, onSuccess, redirectTo }: Log
 
                   {apiError && <ApiError msg={apiError} />}
 
-                  <PrimaryButton loading={loading} label="Sign In" loadingLabel="Signing in…" />
+                  <PrimaryButton loading={loadingAction === "form"} disabled={loading} label="Sign In" loadingLabel="Signing in…" />
 
-                  <GoogleButton onClick={handleGoogleSignIn} loading={loading} label="Sign in with Google" />
+                  <GoogleButton onClick={handleGoogleSignIn} loading={loadingAction === "google"} disabled={loading} label="Sign in with Google" />
 
                   <p className="text-center text-xs text-gray-500 pt-1">
                     Don&apos;t have an account?{" "}
@@ -956,7 +981,7 @@ export default function LoginModal({ open, onClose, onSuccess, redirectTo }: Log
 
                   {apiError && <ApiError msg={apiError} />}
 
-                  <PrimaryButton loading={loading} label="Send OTP" loadingLabel="Sending OTP…" />
+                  <PrimaryButton loading={loadingAction === "form"} disabled={loading} label="Send OTP" loadingLabel="Sending OTP…" />
 
                   <div className="text-center space-y-1 pt-1">
                     <p className="text-xs text-gray-500">
@@ -1044,7 +1069,7 @@ export default function LoginModal({ open, onClose, onSuccess, redirectTo }: Log
                     )}
 
                     {apiError && <ApiError msg={apiError} />}
-                    <PrimaryButton loading={loading} label="Send OTP" loadingLabel="Sending…" />
+                    <PrimaryButton loading={loadingAction === "form"} disabled={loading} label="Send OTP" loadingLabel="Sending…" />
                   </form>
                 ) : forgotStep === "reset" ? (
                   <form onSubmit={handleForgotReset} className="space-y-4">
@@ -1095,7 +1120,7 @@ export default function LoginModal({ open, onClose, onSuccess, redirectTo }: Log
 
                     {apiError && <ApiError msg={apiError} />}
                     
-                    <PrimaryButton loading={loading} label="Reset Password" loadingLabel="Resetting…" disabled={forgotOtp.length !== 6} />
+                    <PrimaryButton loading={loadingAction === "form"} label="Reset Password" loadingLabel="Resetting…" disabled={loading || forgotOtp.length !== 6} />
 
                     <p className="text-center text-xs text-gray-500">
                       Didn&apos;t receive it?{" "}
@@ -1206,9 +1231,9 @@ export default function LoginModal({ open, onClose, onSuccess, redirectTo }: Log
 
                 {apiError && <ApiError msg={apiError} />}
 
-                <PrimaryButton loading={loading} label="Create Account & Verify" loadingLabel="Creating account…" />
+                <PrimaryButton loading={loadingAction === "form"} disabled={loading} label="Create Account & Verify" loadingLabel="Creating account…" />
 
-                <GoogleButton onClick={handleGoogleSignIn} loading={loading} label="Sign up with Google" />
+                <GoogleButton onClick={handleGoogleSignIn} loading={loadingAction === "google"} disabled={loading} label="Sign up with Google" />
 
                 <p className="text-center text-xs text-gray-500 pt-1">
                   Already have an account?{" "}
@@ -1340,7 +1365,7 @@ function ApiError({ msg }: { msg: string }) {
   );
 }
 
-function GoogleButton({ onClick, loading, label }: { onClick: () => void; loading: boolean; label: string }) {
+function GoogleButton({ onClick, loading, disabled, label }: { onClick: () => void; loading: boolean; disabled?: boolean; label: string }) {
   return (
     <>
       <div className="flex items-center gap-3">
@@ -1355,12 +1380,16 @@ function GoogleButton({ onClick, loading, label }: { onClick: () => void; loadin
         className="w-full flex items-center justify-center gap-3 py-2.5 px-4 rounded-xl border text-sm font-medium text-gray-700 transition-all duration-200 disabled:opacity-60 hover:bg-gray-50"
         style={{ borderColor: "#e2e8f0", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}
       >
-        <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
+        {loading ? (
+          <span className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin shrink-0" />
+        ) : (
+          <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true" className="shrink-0">
           <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
           <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
           <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
           <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
         </svg>
+        )}
         {label}
       </button>
     </>

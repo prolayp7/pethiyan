@@ -1,6 +1,6 @@
 import { Fragment } from "react";
 import type { Metadata } from "next";
-import { getCategories, getFeaturedProductsSection, getHeroSection, getNewsletterSection, getPromoBannerSection, getSocialProofSection, getVideoStorySection, getWhyChooseUsSection, type HomeSectionPlacement } from "@/lib/api";
+import { getCategories, getFeaturedProductsSection, getHeroSection, getNewsletterSection, getPromoBannerSection, getSocialProofSection, getVideoStorySection, getWebSettings, getWhyChooseUsSection, type HomeSectionPlacement } from "@/lib/api";
 import HeroSection10 from "@/components/hero/HeroSection10";
 import CategoryGrid from "@/components/sections/CategoryGrid";
 import VideoCarouselGrid from "@/components/sections/VideoCarouselGrid";
@@ -37,19 +37,44 @@ const MOVABLE_SECTION_ORDER: MovableSectionId[] = [
   "newsletter",
 ];
 
-export const metadata: Metadata = {
-  title: "Pethiyan — The Power of Perfect Packaging",
-  description:
-    "Shop premium packaging products — pouches, jars, ziplock bags, and custom packaging for modern brands. GST invoice, fast shipping across India.",
-  alternates: { canonical: "/" },
-  openGraph: {
-    title: "Pethiyan — The Power of Perfect Packaging",
-    description:
-      "Premium packaging products for modern brands. Custom pouches, eco-friendly bags, standup pouches and more.",
-    url: "/",
-    images: [{ url: "/images/banners/1.jpg", width: 1200, height: 630, alt: "Pethiyan Packaging" }],
-  },
-};
+const DEFAULT_TITLE = "Pethiyan — The Power of Perfect Packaging";
+const DEFAULT_DESCRIPTION =
+  "Shop premium packaging products — pouches, jars, ziplock bags, and custom packaging for modern brands. GST invoice, fast shipping across India.";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const web = await getWebSettings().catch(() => null);
+
+  const title       = web?.metaTitle       || DEFAULT_TITLE;
+  const description = web?.metaDescription || DEFAULT_DESCRIPTION;
+  const keywords    = web?.metaKeywords    || undefined;
+  const canonical   = web?.metaCanonicalUrl || "/";
+  const ogTitle     = web?.ogTitle         || title;
+  const ogDesc      = web?.ogDescription   || description;
+  const ogImage     = web?.ogImage         || "/images/banners/1.jpg";
+  const twTitle     = web?.twitterTitle    || ogTitle;
+  const twDesc      = web?.twitterDescription || ogDesc;
+  const twImage     = web?.twitterImage    || ogImage;
+  const twCard      = (web?.twitterCard as "summary" | "summary_large_image" | "app" | "player") || "summary_large_image";
+
+  return {
+    title,
+    description,
+    ...(keywords ? { keywords } : {}),
+    alternates: { canonical },
+    openGraph: {
+      title: ogTitle,
+      description: ogDesc,
+      url: canonical,
+      images: [{ url: ogImage, width: 1200, height: 630, alt: ogTitle }],
+    },
+    twitter: {
+      card: twCard,
+      title: twTitle,
+      description: twDesc,
+      images: [twImage],
+    },
+  };
+}
 
 /** Caps any server-side fetch at `ms` ms; returns `fallback` on timeout or error. */
 function withTimeout<T>(p: Promise<T>, fallback: T, ms = 5000): Promise<T> {

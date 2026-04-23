@@ -47,6 +47,10 @@ export const viewport: Viewport = {
   maximumScale: 5,
 };
 
+const FALLBACK_TITLE       = "Pethiyan — The Power of Perfect Packaging";
+const FALLBACK_DESCRIPTION = "High-quality packaging products — pouches, jars, delivery boxes and custom packaging for modern brands. Shop online with GST invoice, fast shipping across India.";
+const FALLBACK_OG_IMAGE    = "/opengraph-image.png";
+
 export async function generateMetadata(): Promise<Metadata> {
   const [webSettings, siteSettings] = await Promise.all([
     getWebSettings(),
@@ -54,29 +58,31 @@ export async function generateMetadata(): Promise<Metadata> {
   ]);
   const faviconVersion = siteSettings?.favicon ? encodeURIComponent(siteSettings.favicon) : "default";
   const faviconUrl = `/api/site-icon?v=${faviconVersion}`;
+
+  const defaultTitle = webSettings?.metaTitle       || FALLBACK_TITLE;
+  const description  = webSettings?.metaDescription || FALLBACK_DESCRIPTION;
+  const keywords     = webSettings?.metaKeywords    || undefined;
+  const author       = webSettings?.metaAuthor      || "Pethiyan";
+  const publisher    = webSettings?.metaPublisher   || "Pethiyan";
+  const ogTitle      = webSettings?.ogTitle         || defaultTitle;
+  const ogDesc       = webSettings?.ogDescription   || description;
+  const ogImage      = webSettings?.ogImage         || FALLBACK_OG_IMAGE;
+  const twCard       = (webSettings?.twitterCard as "summary" | "summary_large_image" | "app" | "player") || "summary_large_image";
+  const twTitle      = webSettings?.twitterTitle    || ogTitle;
+  const twDesc       = webSettings?.twitterDescription || ogDesc;
+  const twImage      = webSettings?.twitterImage    || ogImage;
+
   return {
     metadataBase: new URL(SITE_URL),
     title: {
-      default: "Pethiyan — The Power of Perfect Packaging",
+      default: defaultTitle,
       template: "%s | Pethiyan",
     },
-    description:
-      "High-quality packaging products — pouches, jars, delivery boxes and custom packaging for modern brands. Shop online with GST invoice, fast shipping across India.",
-    keywords: [
-      "packaging",
-      "pouches",
-      "bags",
-      "custom packaging",
-      "ziplock bags",
-      "standup pouches",
-      "packaging products india",
-      "wholesale packaging",
-      "jars",
-      "delivery boxes",
-    ],
-    authors: [{ name: "Pethiyan" }],
-    creator: "Pethiyan",
-    publisher: "Pethiyan",
+    description,
+    ...(keywords ? { keywords } : {}),
+    authors: [{ name: author }],
+    creator: author,
+    publisher,
     robots: {
       index: true,
       follow: true,
@@ -87,24 +93,15 @@ export async function generateMetadata(): Promise<Metadata> {
       locale: "en_IN",
       url: SITE_URL,
       siteName: "Pethiyan",
-      title: "Pethiyan — The Power of Perfect Packaging",
-      description:
-        "High-quality packaging products — pouches, jars, delivery boxes and custom packaging for modern brands.",
-      images: [
-        {
-          url: "/opengraph-image.png",
-          width: 1200,
-          height: 630,
-          alt: "Pethiyan — The Power of Perfect Packaging",
-        },
-      ],
+      title: ogTitle,
+      description: ogDesc,
+      images: [{ url: ogImage, width: 1200, height: 630, alt: ogTitle }],
     },
     twitter: {
-      card: "summary_large_image",
-      title: "Pethiyan — The Power of Perfect Packaging",
-      description:
-        "High-quality packaging products — pouches, jars, delivery boxes and custom packaging for modern brands.",
-      images: ["/opengraph-image.png"],
+      card: twCard,
+      title: twTitle,
+      description: twDesc,
+      images: [twImage],
     },
     alternates: {
       canonical: SITE_URL,

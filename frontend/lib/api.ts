@@ -327,8 +327,22 @@ export interface ApiWebSettings {
   metaTitle: string;
   metaDescription: string;
   metaKeywords: string;
+  metaCanonicalUrl: string;
+  metaRobots: string;
+  metaAuthor: string;
+  metaPublisher: string;
   googleSiteVerification: string;
   bingSiteVerification: string;
+  ogTitle: string;
+  ogDescription: string;
+  ogImage: string;
+  twitterCard: string;
+  twitterSite: string;
+  twitterCreator: string;
+  twitterTitle: string;
+  twitterDescription: string;
+  twitterImage: string;
+  seoSchemaJson: string;
 }
 
 export interface ApiFooterLink {
@@ -1772,14 +1786,28 @@ export async function getWebSettings(): Promise<ApiWebSettings | null> {
   const str = (key: string) => (typeof s[key] === "string" ? (s[key] as string).trim() : "");
 
   return {
-    googleAnalyticsId:   str("googleAnalyticsId"),
-    googleTagManagerId:  str("googleTagManagerId"),
-    facebookPixelId:     str("facebookPixelId"),
-    metaTitle:           str("metaTitle"),
-    metaDescription:     str("metaDescription"),
-    metaKeywords:        str("metaKeywords"),
+    googleAnalyticsId:      str("googleAnalyticsId"),
+    googleTagManagerId:     str("googleTagManagerId"),
+    facebookPixelId:        str("facebookPixelId"),
+    metaTitle:              str("metaTitle"),
+    metaDescription:        str("metaDescription"),
+    metaKeywords:           str("metaKeywords"),
+    metaCanonicalUrl:       str("metaCanonicalUrl"),
+    metaRobots:             str("metaRobots") || "index,follow",
+    metaAuthor:             str("metaAuthor"),
+    metaPublisher:          str("metaPublisher"),
     googleSiteVerification: str("googleSiteVerification"),
     bingSiteVerification:   str("bingSiteVerification"),
+    ogTitle:                str("ogTitle"),
+    ogDescription:          str("ogDescription"),
+    ogImage:                str("ogImage"),
+    twitterCard:            str("twitterCard") || "summary_large_image",
+    twitterSite:            str("twitterSite"),
+    twitterCreator:         str("twitterCreator"),
+    twitterTitle:           str("twitterTitle"),
+    twitterDescription:     str("twitterDescription"),
+    twitterImage:           str("twitterImage"),
+    seoSchemaJson:          str("seoSchemaJson"),
   };
 }
 
