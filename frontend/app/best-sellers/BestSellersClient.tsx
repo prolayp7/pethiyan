@@ -59,18 +59,8 @@ export default function BestSellersClient({ initialProducts }: Props) {
             </div>
           ) : (
             <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
-              {initialProducts.map((product, index) => (
-                <div key={product.id} className="relative">
-                  {index < 3 && (
-                    <span
-                      className="absolute top-2.5 right-2.5 z-10 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full text-white"
-                      style={{ background: "linear-gradient(135deg,#17396f 0%,#2f6f9f 52%,#49ad57 100%)" }}
-                    >
-                      #{index + 1} Best Seller
-                    </span>
-                  )}
-                  <ShopProductCard product={product} />
-                </div>
+              {initialProducts.map((product) => (
+                <ShopProductCard key={product.id} product={product} />
               ))}
             </div>
           )}
