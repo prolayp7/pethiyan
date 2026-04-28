@@ -114,10 +114,9 @@ function CategoryCheckbox({
       <span
         className={`flex-shrink-0 h-4 w-4 rounded border-2 flex items-center justify-center transition-all ${
           checked
-            ? "border-transparent"
+            ? "border-transparent bg-brand"
             : "border-gray-300 group-hover:border-[#2f6f9f]"
         }`}
-        style={checked ? { background: "linear-gradient(135deg,#17396f 0%,#2f6f9f 52%,#49ad57 100%)" } : undefined}
         aria-hidden="true"
       >
         {checked && (
@@ -345,8 +344,7 @@ export default function ShopClient({
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <span
-                className="flex items-center justify-center h-10 w-10 rounded-xl shrink-0"
-                style={{ background: "linear-gradient(135deg,#17396f 0%,#2f6f9f 52%,#49ad57 100%)" }}
+                className="flex items-center justify-center h-10 w-10 rounded-xl shrink-0 bg-brand"
               >
                 <Layers className="h-5 w-5 text-white" />
               </span>
@@ -401,7 +399,7 @@ export default function ShopClient({
 
               {/* ── Category filter ── */}
               <div className="rounded-xl overflow-hidden border border-[#17396f]/15">
-                <div className="px-4 py-2.5 flex items-center justify-between" style={{ background: "linear-gradient(135deg,#17396f 0%,#2f6f9f 52%,#49ad57 100%)" }}>
+                <div className="px-4 py-2.5 flex items-center justify-between bg-brand">
                   <h3 className="text-xs font-bold text-white uppercase tracking-wider">Category</h3>
                   {selectedIds.size > 0 && (
                     <button onClick={() => setSelectedIds(new Set())} className="text-[11px] text-white/80 hover:text-white transition-colors">
@@ -482,7 +480,7 @@ export default function ShopClient({
 
                 return (
                   <div key={attrKey} className="rounded-xl overflow-hidden border border-[#17396f]/15">
-                    <div className="px-4 py-2.5 flex items-center justify-between" style={{ background: "linear-gradient(135deg,#17396f 0%,#2f6f9f 52%,#49ad57 100%)" }}>
+                    <div className="px-4 py-2.5 flex items-center justify-between bg-brand">
                       <h3 className="text-xs font-bold text-white uppercase tracking-wider">{label}</h3>
                       {selectedForKey.size > 0 && (
                         <button onClick={() => clearAttrGroup(attrKey)} className="text-[11px] text-white/80 hover:text-white transition-colors">
@@ -506,7 +504,7 @@ export default function ShopClient({
                                   }`}
                                   style={isGradient ? { background: css } : { backgroundColor: css }}
                                   aria-label={value}
-                                  aria-pressed={isSelected ? "true" : "false"}
+                                  aria-pressed={isSelected}
                                 >
                                   {isSelected && (
                                     <span className="absolute inset-0 flex items-center justify-center">
@@ -533,10 +531,9 @@ export default function ShopClient({
                                 key={value}
                                 onClick={() => toggleAttr(attrKey, value)}
                                 className={`px-2.5 py-1 text-xs rounded-full border transition-all focus:outline-none focus:ring-2 focus:ring-[#2f6f9f]/40 ${
-                                  isSelected ? "text-white border-transparent font-semibold" : "text-gray-600 border-gray-200 hover:border-[#2f6f9f] hover:text-[#17396f]"
+                                  isSelected ? "bg-brand text-white border-transparent font-semibold" : "text-gray-600 border-gray-200 hover:border-[#2f6f9f] hover:text-[#17396f]"
                                 }`}
-                                style={isSelected ? { background: "linear-gradient(135deg,#17396f 0%,#2f6f9f 52%,#49ad57 100%)" } : undefined}
-                                aria-pressed={isSelected ? "true" : "false"}
+                                aria-pressed={isSelected}
                               >
                                 {value}
                               </button>
@@ -552,7 +549,7 @@ export default function ShopClient({
               {/* ── Min. Quantity filter ── */}
               {minQtyOptions.length > 0 && (
                 <div className="rounded-xl overflow-hidden border border-[#17396f]/15">
-                  <div className="px-4 py-2.5 flex items-center justify-between" style={{ background: "linear-gradient(135deg,#17396f 0%,#2f6f9f 52%,#49ad57 100%)" }}>
+                  <div className="px-4 py-2.5 flex items-center justify-between bg-brand">
                     <h3 className="text-xs font-bold text-white uppercase tracking-wider">Min. Quantity</h3>
                     {selectedMinQtys.size > 0 && (
                       <button onClick={() => setSelectedMinQtys(new Set())} className="text-[11px] text-white/80 hover:text-white transition-colors">
@@ -569,10 +566,9 @@ export default function ShopClient({
                             key={qty}
                             onClick={() => toggleMinQty(qty)}
                             className={`px-2.5 py-1 text-xs rounded-full border transition-all focus:outline-none focus:ring-2 focus:ring-[#2f6f9f]/40 ${
-                              isSelected ? "text-white border-transparent font-semibold" : "text-gray-600 border-gray-200 hover:border-[#2f6f9f] hover:text-[#17396f]"
+                              isSelected ? "bg-brand text-white border-transparent font-semibold" : "text-gray-600 border-gray-200 hover:border-[#2f6f9f] hover:text-[#17396f]"
                             }`}
-                            style={isSelected ? { background: "linear-gradient(135deg,#17396f 0%,#2f6f9f 52%,#49ad57 100%)" } : undefined}
-                            aria-pressed={isSelected ? "true" : "false"}
+                            aria-pressed={isSelected}
                           >
                             {qty}
                           </button>
@@ -606,8 +602,7 @@ export default function ShopClient({
                 <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
                 Filters
                 {hasActiveFilters && (
-                  <span className="ml-1 h-5 w-5 rounded-full text-white text-[10px] font-bold flex items-center justify-center"
-                    style={{ background: "linear-gradient(135deg,#17396f,#49ad57)" }}>
+                  <span className="ml-1 h-5 w-5 rounded-full text-white text-[10px] font-bold flex items-center justify-center bg-brand">
                     {totalActiveCount}
                   </span>
                 )}

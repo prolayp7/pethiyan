@@ -82,6 +82,10 @@ body {
 }
 
 /* Shared brand CTA style for primary buttons */
+.bg-brand {
+  background: var(--brand-gradient);
+}
+
 .btn-brand {
   background: var(--brand-gradient);
   color: #ffffff;

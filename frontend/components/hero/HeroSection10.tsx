@@ -209,7 +209,7 @@ export default function HeroSection10({ slides: apiSlides, badges: apiBadges, se
           >
             <span
               className="font-bold uppercase"
-              style={{ color: "rgba(255,255,255,0.38)", fontSize: eyebrowFontSize, letterSpacing: "0.28em" }}
+              style={{ color: "#ffffff", fontSize: eyebrowFontSize, letterSpacing: "0.28em" }}
             >
               {slide.eyebrow}
             </span>
@@ -233,11 +233,7 @@ export default function HeroSection10({ slides: apiSlides, badges: apiBadges, se
             style={{
               width: "100%",
               fontSize: headingFontSize,
-              backgroundImage:
-                "linear-gradient(135deg, #6ea8d8 0%, #2e7c8a 42%, #4ea85f 100%)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-              backgroundClip: "text",
+              color: "#ffffff",
               animationDelay: "55ms",
               marginBottom: contentGapHeading,
             }}
@@ -267,7 +263,7 @@ export default function HeroSection10({ slides: apiSlides, badges: apiBadges, se
             className="hero-mobile-description leading-relaxed animate-in fade-in-0 slide-in-from-top-2"
             style={{
               width: descriptionSpanWidth,
-              color: "rgba(255,255,255,0.45)",
+              color: "#ffffff",
               animationDelay: "110ms",
               marginBottom: contentGapDescription,
               fontSize: descFontSize,
@@ -304,7 +300,7 @@ export default function HeroSection10({ slides: apiSlides, badges: apiBadges, se
               className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full font-semibold transition-all duration-300 hover:bg-white/8 sm:gap-2"
               style={{
                 border: "1px solid rgba(255,255,255,0.18)",
-                color: "rgba(255,255,255,0.58)",
+                color: "#ffffff",
                 padding: `${buttonPadY} ${buttonPadX}`,
                 fontSize: buttonFontSize,
               }}
@@ -337,7 +333,7 @@ export default function HeroSection10({ slides: apiSlides, badges: apiBadges, se
                     <span
                       className="font-semibold uppercase"
                       style={{
-                        color: "rgba(255,255,255,0.38)",
+                        color: "#ffffff",
                         fontSize: "clamp(7px, 0.75vw, 9px)",
                         letterSpacing: "0.15em",
                       }}
@@ -362,7 +358,7 @@ export default function HeroSection10({ slides: apiSlides, badges: apiBadges, se
               className="rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95"
               style={{
                 border: "1px solid rgba(255,255,255,0.14)",
-                color: "rgba(255,255,255,0.35)",
+                color: "#ffffff",
                 width: navSize,
                 height: navSize,
               }}
@@ -382,9 +378,7 @@ export default function HeroSection10({ slides: apiSlides, badges: apiBadges, se
                   border: i === activeIndex
                     ? "1.5px solid #4ea85f"
                     : "1px solid rgba(255,255,255,0.12)",
-                  color: i === activeIndex
-                    ? "#4ea85f"
-                    : "rgba(255,255,255,0.28)",
+                  color: "#ffffff",
                   background: i === activeIndex
                     ? "rgba(78,168,95,0.1)"
                     : "transparent",
@@ -406,7 +400,7 @@ export default function HeroSection10({ slides: apiSlides, badges: apiBadges, se
               className="rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95"
               style={{
                 border: "1px solid rgba(255,255,255,0.14)",
-                color: "rgba(255,255,255,0.35)",
+                color: "#ffffff",
                 width: navSize,
                 height: navSize,
               }}
