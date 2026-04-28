@@ -76,6 +76,8 @@ class ProductCatalogResource extends JsonResource
                 ];
             })->values()->all();
 
+            $meta = $variant->metadata ?? [];
+
             return [
                 'id' => $variant->id,
                 'title' => $variant->title,
@@ -97,6 +99,20 @@ class ProductCatalogResource extends JsonResource
                 'length_unit' => $variant->length_unit,
                 'attributes' => $attributes,
                 'store_pricing' => $storePricing,
+                'metadata' => $meta ?: null,
+                'is_indexable' => $meta['is_indexable'] ?? true,
+                'seo_title' => $meta['seo_title'] ?? null,
+                'seo_description' => $meta['seo_description'] ?? null,
+                'seo_keywords' => $meta['seo_keywords'] ?? null,
+                'og_title' => $meta['og_title'] ?? null,
+                'og_description' => $meta['og_description'] ?? null,
+                'og_image' => !empty($meta['og_image']) ? url('storage/' . ltrim($meta['og_image'], '/')) : null,
+                'twitter_title' => $meta['twitter_title'] ?? null,
+                'twitter_description' => $meta['twitter_description'] ?? null,
+                'twitter_card' => $meta['twitter_card'] ?? null,
+                'twitter_image' => !empty($meta['twitter_image']) ? url('storage/' . ltrim($meta['twitter_image'], '/')) : null,
+                'schema_mode' => $meta['schema_mode'] ?? 'auto',
+                'schema_json_ld' => $meta['schema_json_ld'] ?? null,
             ];
         })->values()->all();
 
@@ -173,6 +189,20 @@ class ProductCatalogResource extends JsonResource
                 'code' => $currency->getCode(),
             ],
             'variants' => $variants,
+            'faqs' => $this->whenLoaded('faqs', fn() => $this->faqs->map(fn($faq) => [
+                'id'       => $faq->id,
+                'question' => $faq->question,
+                'answer'   => $faq->answer,
+            ])->values()->all()),
+            'reviews' => $this->whenLoaded('reviews', fn() => $this->reviews->map(fn($review) => [
+                'id'             => $review->id,
+                'rating'         => $review->rating,
+                'title'          => $review->title,
+                'comment'        => $review->comment,
+                'images'         => $review->review_images ?? [],
+                'reviewer_name'  => $review->user->name ?? 'Anonymous',
+                'created_at'     => $review->created_at,
+            ])->values()->all()),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

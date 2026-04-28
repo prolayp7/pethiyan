@@ -33,11 +33,12 @@ export default async function Page({ params }: Props) {
   const slug = params.slug;
   let page: CmsPage | null = null;
   try {
-    page = await fetchPageBySlug(slug) as CmsPage;
+    page = await fetchPageBySlug(slug) as CmsPage | null;
   } catch {
-    // fallback: render not found
     return <div className="container mx-auto py-16">Page not found</div>;
   }
+
+  if (!page) return <div className="container mx-auto py-16">Page not found</div>;
 
   const doc = page.content_blocks ?? page.content ?? null;
 

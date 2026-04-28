@@ -1,0 +1,81 @@
+"use client";
+
+import Link from "next/link";
+import { Package, TrendingUp, Home, ChevronRight } from "lucide-react";
+import Container from "@/components/layout/Container";
+import ShopProductCard from "@/components/shop/ShopProductCard";
+import { type RealApiProduct } from "@/lib/api";
+
+interface Props {
+  initialProducts: RealApiProduct[];
+}
+
+export default function BestSellersClient({ initialProducts }: Props) {
+  return (
+    <div className="min-h-screen bg-(--background)">
+      {/* Page header */}
+      <div className="bg-white border-b border-(--color-border) py-5">
+        <Container>
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <span
+                className="flex items-center justify-center h-10 w-10 rounded-xl shrink-0"
+                style={{ background: "linear-gradient(135deg,#17396f 0%,#2f6f9f 52%,#49ad57 100%)" }}
+              >
+                <TrendingUp className="h-5 w-5 text-white" />
+              </span>
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-extrabold text-(--color-secondary)">Best Sellers</h1>
+                <p className="mt-0.5 text-gray-500 text-sm">
+                  {initialProducts.length} product{initialProducts.length !== 1 ? "s" : ""} · Most ordered by our customers
+                </p>
+              </div>
+            </div>
+            <nav className="hidden sm:flex items-center gap-1.5 text-sm text-gray-500 shrink-0" aria-label="Breadcrumb">
+              <Link href="/" className="flex items-center gap-1 hover:text-(--color-primary) transition-colors">
+                <Home className="h-3.5 w-3.5" aria-hidden="true" />
+                <span>Home</span>
+              </Link>
+              <ChevronRight className="h-3.5 w-3.5 text-gray-300" aria-hidden="true" />
+              <span className="text-(--color-secondary) font-medium">Best Sellers</span>
+            </nav>
+          </div>
+        </Container>
+      </div>
+
+      <Container>
+        <div className="py-8">
+          {initialProducts.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-24 text-center">
+              <Package className="h-16 w-16 text-gray-200 mb-4" aria-hidden="true" />
+              <h2 className="text-lg font-semibold text-(--color-secondary) mb-1">No products found</h2>
+              <p className="text-sm text-gray-500 mb-6">Check back soon for our top-selling products.</p>
+              <Link
+                href="/shop"
+                className="btn-brand px-5 py-2 rounded-full text-sm font-semibold"
+              >
+                Browse All Products
+              </Link>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
+              {initialProducts.map((product, index) => (
+                <div key={product.id} className="relative">
+                  {index < 3 && (
+                    <span
+                      className="absolute top-2.5 right-2.5 z-10 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full text-white"
+                      style={{ background: "linear-gradient(135deg,#17396f 0%,#2f6f9f 52%,#49ad57 100%)" }}
+                    >
+                      #{index + 1} Best Seller
+                    </span>
+                  )}
+                  <ShopProductCard product={product} />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </Container>
+    </div>
+  );
+}

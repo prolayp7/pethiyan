@@ -1,15 +1,17 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import {
-  Package, Search, Phone, Loader2, CheckCircle2, XCircle,
+  Package, Search, Loader2, CheckCircle2, XCircle,
   Circle, Truck, MapPin, ShoppingBag, ArrowRight, Home,
-  AlertCircle, ChevronRight,
+  AlertCircle, ChevronRight, Tag, MessageSquare, LogIn, FileText,
 } from "lucide-react";
 import { trackOrder, type ApiOrder, type ApiTrackingStep } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
+import LoginModal from "@/components/auth/LoginModal";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -32,39 +34,48 @@ function fmtDateTime(dateStr: string) {
   });
 }
 
-const STATUS_MAP: Record<ApiOrder["status"], { label: string; cls: string; bg: string }> = {
-  pending:    { label: "Order Placed",  cls: "text-amber-700",  bg: "bg-amber-100"  },
-  processing: { label: "Processing",   cls: "text-blue-700",   bg: "bg-blue-100"   },
-  shipped:    { label: "Shipped",      cls: "text-indigo-700", bg: "bg-indigo-100" },
-  delivered:  { label: "Delivered",   cls: "text-green-700",  bg: "bg-green-100"  },
-  cancelled:  { label: "Cancelled",   cls: "text-red-700",    bg: "bg-red-100"    },
+const STATUS_MAP: Record<string, { label: string; cls: string; bg: string }> = {
+  pending:                 { label: "Order Placed",           cls: "text-amber-700",  bg: "bg-amber-100"  },
+  awaiting_store_response: { label: "Awaiting Confirmation",  cls: "text-yellow-700", bg: "bg-yellow-100" },
+  partially_accepted:      { label: "Partially Accepted",     cls: "text-orange-700", bg: "bg-orange-100" },
+  accepted_by_seller:      { label: "Order Accepted",         cls: "text-blue-700",   bg: "bg-blue-100"   },
+  ready_for_pickup:        { label: "Order Packing Done",     cls: "text-indigo-700", bg: "bg-indigo-100" },
+  assigned:                { label: "Ready for Pickup",       cls: "text-purple-700", bg: "bg-purple-100" },
+  preparing:               { label: "Packing",                cls: "text-blue-700",   bg: "bg-blue-100"   },
+  collected:               { label: "Order Collected",        cls: "text-indigo-700", bg: "bg-indigo-100" },
+  out_for_delivery:        { label: "Out for Delivery",       cls: "text-indigo-700", bg: "bg-indigo-100" },
+  processing:              { label: "Processing",             cls: "text-blue-700",   bg: "bg-blue-100"   },
+  shipped:                 { label: "Shipped",                cls: "text-indigo-700", bg: "bg-indigo-100" },
+  delivered:               { label: "Delivered",              cls: "text-green-700",  bg: "bg-green-100"  },
+  cancelled:               { label: "Cancelled",              cls: "text-red-700",    bg: "bg-red-100"    },
+  failed:                  { label: "Order Failed",           cls: "text-red-700",    bg: "bg-red-100"    },
+  rejected_by_seller:      { label: "Rejected",               cls: "text-red-700",    bg: "bg-red-100"    },
 };
 
 // ─── Build default tracking steps ─────────────────────────────────────────────
 
-function buildTracking(status: ApiOrder["status"], createdAt: string): ApiTrackingStep[] {
-  const pipeline: ApiOrder["status"][] = ["pending", "processing", "shipped", "delivered"];
-  const idx = pipeline.indexOf(status);
-
-  if (status === "cancelled") {
+function buildTracking(status: string, createdAt: string): ApiTrackingStep[] {
+  if (status === "cancelled" || status === "failed" || status === "rejected_by_seller") {
     return [
-      { status: "pending",   label: "Order Placed",  description: "Order was placed.",   completed: true, timestamp: createdAt },
-      { status: "cancelled", label: "Cancelled",     description: "This order was cancelled.", completed: true },
+      { status: "pending",  label: "Order Placed",  description: "Order was placed.",         completed: true, timestamp: createdAt },
+      { status,             label: STATUS_MAP[status]?.label ?? status, description: "This order was cancelled.", completed: true },
     ];
   }
 
+  const CONFIRMED_STATUSES  = ["awaiting_store_response", "partially_accepted", "accepted_by_seller", "ready_for_pickup", "assigned", "preparing", "collected", "out_for_delivery", "processing", "shipped", "delivered"];
+  const DISPATCHED_STATUSES = ["out_for_delivery", "shipped", "delivered"];
+
   return [
-    { status: "pending",    label: "Order Placed",    description: "Your order has been received.",           completed: idx >= 0, timestamp: createdAt },
-    { status: "processing", label: "Order Confirmed", description: "We're preparing your items for dispatch.", completed: idx >= 1 },
-    { status: "shipped",    label: "Dispatched",      description: "Your package is on its way.",             completed: idx >= 2 },
-    { status: "delivered",  label: "Delivered",       description: "Your order has been delivered.",          completed: idx >= 3 },
+    { status: "pending",          label: "Order Placed",    description: "Your order has been received.",            completed: true,                               timestamp: createdAt },
+    { status: "confirmed",        label: "Order Confirmed", description: "We're preparing your items for dispatch.", completed: CONFIRMED_STATUSES.includes(status)  },
+    { status: "out_for_delivery", label: "Dispatched",      description: "Your package is on its way.",              completed: DISPATCHED_STATUSES.includes(status) },
   ];
 }
 
 // ─── Tracking Timeline ────────────────────────────────────────────────────────
 
-function TrackingTimeline({ steps, status }: { steps: ApiTrackingStep[]; status: ApiOrder["status"] }) {
-  const isCancelled = status === "cancelled";
+function TrackingTimeline({ steps, status }: { steps: ApiTrackingStep[]; status: string }) {
+  const isCancelled = status === "cancelled" || status === "failed" || status === "rejected_by_seller";
 
   return (
     <div className="relative">
@@ -97,7 +108,6 @@ function TrackingTimeline({ steps, status }: { steps: ApiTrackingStep[]; status:
                   className={`w-0.5 flex-1 my-1 rounded-full ${
                     step.completed && steps[i + 1]?.completed ? "bg-green-300" : "bg-gray-100"
                   }`}
-                  style={{ minHeight: "2.5rem" }}
                 />
               )}
             </div>
@@ -130,7 +140,7 @@ function TrackingTimeline({ steps, status }: { steps: ApiTrackingStep[]; status:
 
 // ─── Order Result ─────────────────────────────────────────────────────────────
 
-function OrderResult({ order }: { order: ApiOrder }) {
+function OrderResult({ order, onViewDetails, isLoggedIn }: { order: ApiOrder; onViewDetails: () => void; isLoggedIn: boolean }) {
   const status = STATUS_MAP[order.status] ?? { label: order.status, cls: "text-gray-600", bg: "bg-gray-100" };
   const steps  = order.tracking?.length
     ? order.tracking
@@ -141,9 +151,7 @@ function OrderResult({ order }: { order: ApiOrder }) {
     <div className="mt-6 space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-400">
 
       {/* Summary banner */}
-      <div
-        className="btn-brand rounded-2xl p-5 text-white"
-      >
+      <div className="btn-brand rounded-2xl p-5 text-white">
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div>
             <p className="text-blue-200 text-xs font-semibold mb-1">Order Number</p>
@@ -160,13 +168,39 @@ function OrderResult({ order }: { order: ApiOrder }) {
 
       <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
 
-        {/* ── Tracking timeline ── */}
-        <div className="sm:col-span-3 bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-          <div className="flex items-center gap-2 mb-5">
-            <Truck className="h-4 w-4 text-(--color-primary)" />
-            <h2 className="text-sm font-extrabold text-gray-900">Live Tracking</h2>
+        {/* ── Left: Tracking timeline ── */}
+        <div className="sm:col-span-3 space-y-4">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+            <div className="flex items-center gap-2 mb-5">
+              <Truck className="h-4 w-4 text-(--color-primary)" />
+              <h2 className="text-sm font-extrabold text-gray-900">Live Tracking</h2>
+            </div>
+            <TrackingTimeline steps={steps} status={order.status} />
           </div>
-          <TrackingTimeline steps={steps} status={order.status} />
+
+          {/* Tracking code */}
+          {order.tracking_code && (
+            <div className="bg-blue-50 rounded-2xl border border-blue-100 p-4">
+              <div className="flex items-center gap-2 mb-1.5">
+                <Tag className="h-4 w-4 text-(--color-primary)" />
+                <h2 className="text-sm font-extrabold text-gray-900">Tracking Code</h2>
+              </div>
+              <p className="text-sm font-mono font-semibold text-gray-800 tracking-wide break-all">
+                {order.tracking_code}
+              </p>
+            </div>
+          )}
+
+          {/* Admin note */}
+          {order.admin_note && (
+            <div className="bg-amber-50 rounded-2xl border border-amber-100 p-4">
+              <div className="flex items-center gap-2 mb-1.5">
+                <MessageSquare className="h-4 w-4 text-amber-500" />
+                <h2 className="text-sm font-extrabold text-gray-900">Note from our team</h2>
+              </div>
+              <p className="text-sm text-gray-600 leading-relaxed">{order.admin_note}</p>
+            </div>
+          )}
         </div>
 
         {/* ── Right column ── */}
@@ -182,7 +216,7 @@ function OrderResult({ order }: { order: ApiOrder }) {
                 <div key={item.id} className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-lg overflow-hidden border border-gray-100 bg-gray-50 relative shrink-0">
                     {item.image ? (
-                      <Image src={item.image} alt={item.product_name} fill className="object-cover" />
+                      <Image src={item.image} alt={item.product_name} fill className="object-cover" unoptimized={/^https?:\/\//i.test(item.image)} />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
                         <ShoppingBag className="h-4 w-4 text-gray-300" />
@@ -193,10 +227,13 @@ function OrderResult({ order }: { order: ApiOrder }) {
                     <p className="text-xs font-semibold text-gray-800 line-clamp-1">
                       {item.product_name}
                     </p>
+                    {item.variant_label && (
+                      <p className="text-[10px] text-gray-400">{item.variant_label}</p>
+                    )}
                     <p className="text-[11px] text-gray-400">Qty: {item.quantity}</p>
                   </div>
                   <p className="text-xs font-bold text-gray-700 shrink-0">
-                    Total: {fmt(item.subtotal ?? item.price * item.quantity)}
+                    {fmt(item.subtotal ?? item.price * item.quantity)}
                   </p>
                 </div>
               ))}
@@ -212,7 +249,7 @@ function OrderResult({ order }: { order: ApiOrder }) {
             </div>
           </div>
 
-          {/* Delivery address */}
+          {/* Delivery city */}
           {order.address && (
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
               <div className="flex items-center gap-2 mb-3">
@@ -225,16 +262,19 @@ function OrderResult({ order }: { order: ApiOrder }) {
             </div>
           )}
 
-          {/* Sign in CTA */}
-          <div className="bg-blue-50 rounded-2xl border border-blue-100 p-4 text-center">
-            <p className="text-xs font-semibold text-gray-700 mb-1">Want full order details?</p>
-            <Link
-              href="/login?redirect=/account/orders"
-              className="text-xs font-bold text-(--color-primary) hover:underline flex items-center justify-center gap-1"
-            >
-              Sign in to your account <ArrowRight className="h-3 w-3" />
-            </Link>
-          </div>
+          {/* View full order details CTA */}
+          <button
+            type="button"
+            onClick={onViewDetails}
+            className="btn-brand w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-bold transition-all hover:-translate-y-0.5"
+          >
+            {isLoggedIn ? (
+              <><FileText className="h-4 w-4" /> View Full Order Details</>
+            ) : (
+              <><LogIn className="h-4 w-4" /> Sign In to View Details</>
+            )}
+            <ArrowRight className="h-4 w-4" />
+          </button>
         </div>
       </div>
     </div>
@@ -245,22 +285,33 @@ function OrderResult({ order }: { order: ApiOrder }) {
 
 export default function TrackOrderClient() {
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const { isLoggedIn } = useAuth();
 
-  const [orderNumber, setOrderNumber] = useState(searchParams.get("order_number") ?? "");
-  const [phone,       setPhone]       = useState("");
-  const [loading,     setLoading]     = useState(false);
-  const [result,      setResult]      = useState<ApiOrder | null>(null);
-  const [notFound,    setNotFound]    = useState(false);
-  const [hasSearched, setHasSearched] = useState(false);
+  const [query,          setQuery]          = useState(searchParams.get("order_number") ?? searchParams.get("query") ?? "");
+  const [loading,        setLoading]        = useState(false);
+  const [result,         setResult]         = useState<ApiOrder | null>(null);
+  const [notFound,       setNotFound]       = useState(false);
+  const [hasSearched,    setHasSearched]    = useState(false);
+  const [loginModalOpen, setLoginModalOpen] = useState(false);
+
+  const handleViewDetails = useCallback(() => {
+    if (!result) return;
+    if (isLoggedIn) {
+      router.push(`/account/orders/${result.slug}`);
+    } else {
+      setLoginModalOpen(true);
+    }
+  }, [isLoggedIn, result, router]);
 
   const handleTrack = useCallback(async () => {
-    if (!orderNumber.trim() || phone.trim().length < 10) return;
+    if (!query.trim()) return;
     setLoading(true);
     setNotFound(false);
     setResult(null);
     setHasSearched(true);
 
-    const order = await trackOrder(orderNumber.trim().toUpperCase(), phone.trim());
+    const order = await trackOrder(query.trim());
     setLoading(false);
 
     if (order) {
@@ -268,14 +319,14 @@ export default function TrackOrderClient() {
     } else {
       setNotFound(true);
     }
-  }, [orderNumber, phone]);
+  }, [query]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") handleTrack();
   };
 
   return (
-    <div style={{ background: "var(--background)", minHeight: "100vh" }}>
+    <div className="bg-background min-h-screen">
       <div className="max-w-3xl mx-auto px-4 py-10 lg:py-16">
 
         {/* Breadcrumb */}
@@ -294,7 +345,7 @@ export default function TrackOrderClient() {
           </div>
           <h1 className="text-3xl font-extrabold text-(--color-secondary)">Track Your Order</h1>
           <p className="text-gray-500 text-sm mt-2 max-w-sm mx-auto">
-            Enter your order number and mobile number to get real-time delivery updates.
+            Enter your order number or tracking code to get real-time delivery updates.
           </p>
         </div>
 
@@ -302,19 +353,19 @@ export default function TrackOrderClient() {
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
           <div className="space-y-4">
 
-            {/* Order number */}
+            {/* Order number / tracking code */}
             <div>
               <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block">
-                Order Number
+                Order Number or Tracking Code
               </label>
               <div className="relative">
                 <Package className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="e.g. ORD-20240001"
-                  value={orderNumber}
+                  placeholder="e.g. PET2026042300013 or tracking code"
+                  value={query}
                   onChange={(e) => {
-                    setOrderNumber(e.target.value.toUpperCase());
+                    setQuery(e.target.value.toUpperCase());
                     setNotFound(false);
                   }}
                   onKeyDown={handleKeyDown}
@@ -323,44 +374,19 @@ export default function TrackOrderClient() {
               </div>
             </div>
 
-            {/* Phone */}
-            <div>
-              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block">
-                Registered Mobile Number
-              </label>
-              <div className="flex items-center rounded-xl border border-gray-200 bg-gray-50 overflow-hidden focus-within:border-(--color-primary) focus-within:bg-white transition-colors">
-                <div className="flex items-center gap-1.5 pl-4 pr-3 shrink-0 border-r border-gray-200">
-                  <Phone className="h-4 w-4 text-gray-400" />
-                  <span className="text-sm font-semibold text-gray-500 select-none">+91</span>
-                </div>
-                <input
-                  type="tel"
-                  inputMode="numeric"
-                  placeholder="10-digit mobile number"
-                  value={phone}
-                  onChange={(e) => {
-                    setPhone(e.target.value.replace(/\D/g, "").slice(0, 10));
-                    setNotFound(false);
-                  }}
-                  onKeyDown={handleKeyDown}
-                  maxLength={10}
-                  className="flex-1 px-4 py-3 text-sm bg-transparent outline-none placeholder-gray-400 tabular-nums tracking-wider"
-                />
-              </div>
-            </div>
-
             {/* Error */}
             {notFound && (
               <div className="flex items-center gap-2 p-3 rounded-xl bg-red-50 border border-red-100 text-sm text-red-600">
                 <AlertCircle className="h-4 w-4 shrink-0" />
-                No order found. Please check your order number and mobile number.
+                No order found. Please check your order number or tracking code.
               </div>
             )}
 
             {/* Submit */}
             <button
+              type="button"
               onClick={handleTrack}
-              disabled={loading || !orderNumber.trim() || phone.trim().length < 10}
+              disabled={loading || !query.trim()}
               className="btn-brand w-full flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-bold transition-all hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:translate-y-0"
             >
               {loading ? (
@@ -381,18 +407,15 @@ export default function TrackOrderClient() {
         {/* Skeleton while loading */}
         {loading && (
           <div className="mt-6 space-y-4 animate-pulse">
-            {/* Summary banner skeleton */}
             <div className="rounded-2xl p-5 bg-gray-200 h-24" />
-
             <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
-              {/* Tracking timeline skeleton */}
               <div className="sm:col-span-3 bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-5">
                 <div className="h-4 w-28 bg-gray-200 rounded" />
-                {[0, 1, 2, 3].map((i) => (
+                {[0, 1, 2].map((i) => (
                   <div key={i} className="flex gap-4">
                     <div className="flex flex-col items-center">
                       <div className="w-9 h-9 rounded-full bg-gray-200 shrink-0" />
-                      {i < 3 && <div className="w-0.5 flex-1 my-1 bg-gray-100 rounded-full min-h-10" />}
+                      {i < 2 && <div className="w-0.5 flex-1 my-1 bg-gray-100 rounded-full min-h-10" />}
                     </div>
                     <div className="pb-7 flex-1 space-y-2">
                       <div className="h-3.5 w-32 bg-gray-200 rounded" />
@@ -401,10 +424,7 @@ export default function TrackOrderClient() {
                   </div>
                 ))}
               </div>
-
-              {/* Right column skeleton */}
               <div className="sm:col-span-2 space-y-4">
-                {/* Items skeleton */}
                 <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-3">
                   <div className="h-4 w-20 bg-gray-200 rounded" />
                   {[0, 1, 2].map((i) => (
@@ -422,13 +442,10 @@ export default function TrackOrderClient() {
                     <div className="h-4 w-20 bg-gray-200 rounded" />
                   </div>
                 </div>
-
-                {/* Address skeleton */}
                 <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-2">
                   <div className="h-4 w-24 bg-gray-200 rounded mb-3" />
                   <div className="h-3.5 w-36 bg-gray-200 rounded" />
                   <div className="h-3 w-28 bg-gray-100 rounded" />
-                  <div className="h-3 w-16 bg-gray-100 rounded" />
                 </div>
               </div>
             </div>
@@ -436,7 +453,19 @@ export default function TrackOrderClient() {
         )}
 
         {/* Result */}
-        {!loading && result && <OrderResult order={result} />}
+        {!loading && result && (
+          <OrderResult order={result} onViewDetails={handleViewDetails} isLoggedIn={isLoggedIn} />
+        )}
+
+        {/* Login modal — opens when guest clicks "Sign In to View Details" */}
+        <LoginModal
+          open={loginModalOpen}
+          onClose={() => setLoginModalOpen(false)}
+          onSuccess={() => {
+            setLoginModalOpen(false);
+            if (result) router.push(`/account/orders/${result.slug}`);
+          }}
+        />
 
         {/* Logged in user shortcut */}
         {!hasSearched && (

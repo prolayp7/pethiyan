@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SEO Proposal – Pethiyan.com</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      color: #1a1a2e;
+      background: #f4f6f9;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .page {
+      max-width: 860px;
+      margin: 40px auto;
+      background: #fff;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    }
+
+    /* Header */
+    .header {
+      background: linear-gradient(135deg, #0f3460 0%, #16213e 100%);
+      padding: 48px 52px 40px;
+      color: #fff;
+    }
+    .header .badge {
+      display: inline-block;
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.3);
+      color: #e0e7ff;
+      font-size: 11px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      padding: 4px 12px;
+      border-radius: 20px;
+      margin-bottom: 16px;
+    }
+    .header h1 {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      margin-bottom: 8px;
+    }
+    .header .subtitle {
+      font-size: 15px;
+      color: #a5b4fc;
+      margin-bottom: 28px;
+    }
+    .header-meta {
+      display: flex;
+      gap: 32px;
+      flex-wrap: wrap;
+    }
+    .header-meta div {
+      font-size: 12px;
+      color: #c7d2fe;
+    }
+    .header-meta div span {
+      display: block;
+      font-size: 14px;
+      color: #fff;
+      font-weight: 600;
+      margin-top: 2px;
+    }
+
+    /* Body */
+    .body { padding: 44px 52px; }
+
+    /* Section */
+    .section { margin-bottom: 40px; }
+    .section-title {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #6366f1;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .section-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: #e5e7eb;
+    }
+
+    /* Executive Summary */
+    .summary-box {
+      background: #f0f4ff;
+      border-left: 4px solid #6366f1;
+      border-radius: 0 8px 8px 0;
+      padding: 20px 24px;
+      font-size: 14px;
+      color: #374151;
+      line-height: 1.7;
+    }
+    .summary-box strong { color: #1a1a2e; }
+
+    /* Gap Cards */
+    .gap-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .gap-card {
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 14px 18px;
+    }
+    .gap-card .gap-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: #1a1a2e;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .gap-card p {
+      font-size: 12.5px;
+      color: #6b7280;
+      line-height: 1.5;
+    }
+    .badge-high { background: #fee2e2; color: #dc2626; font-size: 10px; padding: 1px 7px; border-radius: 10px; font-weight: 600; }
+    .badge-med  { background: #fef3c7; color: #d97706; font-size: 10px; padding: 1px 7px; border-radius: 10px; font-weight: 600; }
+
+    /* Keyword table */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    table th {
+      background: #f9fafb;
+      text-align: left;
+      padding: 10px 14px;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #6b7280;
+      border-bottom: 2px solid #e5e7eb;
+    }
+    table td {
+      padding: 10px 14px;
+      border-bottom: 1px solid #f3f4f6;
+      color: #374151;
+      vertical-align: top;
+    }
+    table tr:last-child td { border-bottom: none; }
+    .intent-commercial { color: #059669; font-weight: 600; font-size: 11px; }
+    .intent-local      { color: #6366f1; font-weight: 600; font-size: 11px; }
+    .intent-info       { color: #d97706; font-weight: 600; font-size: 11px; }
+    .vol-high   { color: #dc2626; font-weight: 700; }
+    .vol-med    { color: #d97706; font-weight: 700; }
+    .vol-low    { color: #059669; font-weight: 600; }
+
+    /* Deliverables */
+    .deliverable-list { list-style: none; }
+    .deliverable-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 12px 0;
+      border-bottom: 1px solid #f3f4f6;
+      font-size: 13.5px;
+      color: #374151;
+    }
+    .deliverable-list li:last-child { border-bottom: none; }
+    .deliverable-list li .check {
+      width: 20px;
+      height: 20px;
+      background: #6366f1;
+      color: #fff;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .deliverable-list li .dl-title { font-weight: 600; color: #1a1a2e; }
+    .deliverable-list li .dl-desc  { font-size: 12px; color: #6b7280; margin-top: 2px; }
+
+    /* Pricing Box */
+    .pricing-box {
+      background: linear-gradient(135deg, #0f3460 0%, #16213e 100%);
+      border-radius: 12px;
+      padding: 32px 36px;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 24px;
+    }
+    .pricing-left .price-label {
+      font-size: 11px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: #a5b4fc;
+      margin-bottom: 6px;
+    }
+    .pricing-left .price {
+      font-size: 42px;
+      font-weight: 800;
+      letter-spacing: -1px;
+      color: #fff;
+      line-height: 1;
+    }
+    .pricing-left .price sub {
+      font-size: 18px;
+      font-weight: 400;
+      vertical-align: baseline;
+      color: #c7d2fe;
+    }
+    .pricing-left .price-note {
+      font-size: 12px;
+      color: #a5b4fc;
+      margin-top: 6px;
+    }
+    .pricing-right { text-align: right; }
+    .pricing-right .breakdown { font-size: 13px; color: #c7d2fe; line-height: 2; }
+    .pricing-right .breakdown strong { color: #fff; }
+    .pricing-right .breakdown strong.free { color: #86efac; }
+
+    /* Timeline */
+    .timeline { display: flex; gap: 0; }
+    .tl-item {
+      flex: 1;
+      text-align: center;
+      position: relative;
+    }
+    .tl-item:not(:last-child)::after {
+      content: '';
+      position: absolute;
+      top: 16px;
+      right: 0;
+      width: 50%;
+      height: 2px;
+      background: #e5e7eb;
+      z-index: 0;
+    }
+    .tl-item:not(:first-child)::before {
+      content: '';
+      position: absolute;
+      top: 16px;
+      left: 0;
+      width: 50%;
+      height: 2px;
+      background: #e5e7eb;
+      z-index: 0;
+    }
+    .tl-dot {
+      width: 32px;
+      height: 32px;
+      background: #6366f1;
+      color: #fff;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 12px;
+      margin: 0 auto 10px;
+      position: relative;
+      z-index: 1;
+    }
+    .tl-week   { font-size: 11px; font-weight: 700; color: #6366f1; margin-bottom: 4px; }
+    .tl-task   { font-size: 12px; color: #374151; font-weight: 600; }
+    .tl-sub    { font-size: 11px; color: #6b7280; margin-top: 2px; }
+
+    /* Not Included */
+    .excl-list {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .excl-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12.5px;
+      color: #6b7280;
+      padding: 8px 12px;
+      background: #f9fafb;
+      border-radius: 6px;
+    }
+    .excl-item .x { color: #dc2626; font-weight: 700; font-size: 13px; }
+
+    /* Footer */
+    .footer {
+      background: #f9fafb;
+      border-top: 1px solid #e5e7eb;
+      padding: 24px 52px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .footer .prepared-by { font-size: 12px; color: #6b7280; }
+    .footer .prepared-by strong { color: #1a1a2e; }
+    .footer .validity {
+      font-size: 12px;
+      color: #6b7280;
+      background: #e5e7eb;
+      padding: 4px 12px;
+      border-radius: 20px;
+    }
+
+    /* Free badge */
+    .badge-free {
+      display: inline-block;
+      background: #dcfce7;
+      color: #16a34a;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      padding: 2px 8px;
+      border-radius: 10px;
+      margin-left: 8px;
+      vertical-align: middle;
+      border: 1px solid #bbf7d0;
+    }
+    .check-free {
+      background: #16a34a !important;
+    }
+
+    /* Utility */
+    .mt-4 { margin-top: 4px; }
+    .mt-8 { margin-top: 8px; }
+    .highlight { color: #6366f1; font-weight: 600; }
+
+    @media print {
+      body { background: #fff; }
+      .page { box-shadow: none; margin: 0; border-radius: 0; }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="badge">SEO Proposal</div>
+    <h1>Search Engine Optimization Plan</h1>
+    <div class="subtitle">Pethiyan.com — Packaging Products Supplier, India</div>
+    <div class="header-meta">
+      <div>Prepared For <span>Pethiyan</span></div>
+      <div>Website <span>pethiyan.com</span></div>
+      <div>Date <span>28 April 2026</span></div>
+      <div>Budget <span>₹30,000</span></div>
+    </div>
+  </div>
+
+  <div class="body">
+
+    <!-- EXECUTIVE SUMMARY -->
+    <div class="section">
+      <div class="section-title">Executive Summary</div>
+      <div class="summary-box">
+        Within a <strong>₹30,000 one-time engagement</strong>,
+        this proposal covers all high-ROI fixes: technical SEO audit &amp; schema markup
+        (both complimentary), all admin panel &amp; frontend SEO system updates (free of cost),
+        keyword mapping, on-page optimisation, and Google Business Profile setup — giving
+        the site a complete SEO foundation to build on.
+      </div>
+    </div>
+
+    <!-- SEO GAPS -->
+    <div class="section">
+      <div class="section-title">Identified SEO Gaps</div>
+      <div class="gap-grid">
+
+        <div class="gap-card">
+          <div class="gap-label"><span class="badge-high">HIGH</span> No Schema Markup</div>
+          <p>Zero structured data on the site. No Product, Organization, FAQ, BreadcrumbList, or LocalBusiness schema — means no rich snippets in Google results.</p>
+        </div>
+
+        <div class="gap-card">
+          <div class="gap-label"><span class="badge-high">HIGH</span> Missing Meta Descriptions</div>
+          <p>Homepage and most category/product pages lack meta descriptions, directly reducing click-through rates from search results.</p>
+        </div>
+
+        <div class="gap-card">
+          <div class="gap-label"><span class="badge-high">HIGH</span> Weak H1 / On-Page Copy</div>
+          <p>H1 is brand-generic ("Pethiyan – Packaging Products Supplier in India"). Category pages have no body copy — Google has nothing to rank.</p>
+        </div>
+
+        <div class="gap-card">
+          <div class="gap-label"><span class="badge-high">HIGH</span> Google Business Profile</div>
+          <p>No verified GBP listing found. Critical for "packaging supplier near me" and city-based searches which carry high commercial intent.</p>
+        </div>
+
+        <div class="gap-card">
+          <div class="gap-label"><span class="badge-med">MED</span> No Geo-Targeted Pages</div>
+          <p>Zero city-specific landing pages (Mumbai, Delhi, Bangalore, etc.) despite being an India-wide supplier. High-intent local searches are being missed entirely.</p>
+        </div>
+
+        <div class="gap-card">
+          <div class="gap-label"><span class="badge-med">MED</span> Unoptimised Image Alt Texts</div>
+          <p>Product images lack descriptive alt text, losing image-search traffic and hurting accessibility signals.</p>
+        </div>
+
+        <div class="gap-card">
+          <div class="gap-label"><span class="badge-med">MED</span> No Internal Linking Strategy</div>
+          <p>Blog posts do not link to related product or category pages. Pagerank flows out of content without benefiting commercial pages.</p>
+        </div>
+
+        <div class="gap-card">
+          <div class="gap-label"><span class="badge-med">MED</span> FAQ Page Not Schema-Marked</div>
+          <p>FAQ exists in navigation but has no FAQ schema — missing the "People Also Ask" rich result opportunity in SERPs.</p>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- KEYWORD OPPORTUNITIES -->
+    <div class="section">
+      <div class="section-title">Target Keyword Opportunities</div>
+      <table>
+        <thead>
+          <tr>
+            <th>Keyword</th>
+            <th>Intent</th>
+            <th>Est. Volume</th>
+            <th>Difficulty</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>buy stand up pouches online india</td>
+            <td><span class="intent-commercial">Commercial</span></td>
+            <td class="vol-high">2,400/mo</td>
+            <td>Medium</td>
+          </tr>
+          <tr>
+            <td>corrugated boxes wholesale india</td>
+            <td><span class="intent-commercial">Commercial</span></td>
+            <td class="vol-high">1,900/mo</td>
+            <td>Medium</td>
+          </tr>
+          <tr>
+            <td>packaging supplier for small business india</td>
+            <td><span class="intent-commercial">Commercial</span></td>
+            <td class="vol-med">880/mo</td>
+            <td>Low</td>
+          </tr>
+          <tr>
+            <td>food grade plastic jars india</td>
+            <td><span class="intent-commercial">Commercial</span></td>
+            <td class="vol-med">720/mo</td>
+            <td>Low</td>
+          </tr>
+          <tr>
+            <td>custom printed courier bags india</td>
+            <td><span class="intent-commercial">Commercial</span></td>
+            <td class="vol-med">590/mo</td>
+            <td>Low</td>
+          </tr>
+          <tr>
+            <td>packaging supplier Mumbai / Delhi / Bangalore</td>
+            <td><span class="intent-local">Local</span></td>
+            <td class="vol-high">3,200/mo combined</td>
+            <td>Low-Med</td>
+          </tr>
+          <tr>
+            <td>bulk packaging supplier near me</td>
+            <td><span class="intent-local">Local</span></td>
+            <td class="vol-med">1,100/mo</td>
+            <td>Low</td>
+          </tr>
+          <tr>
+            <td>how to choose packaging for food products</td>
+            <td><span class="intent-info">Informational</span></td>
+            <td class="vol-med">880/mo</td>
+            <td>Low</td>
+          </tr>
+          <tr>
+            <td>eco friendly packaging india</td>
+            <td><span class="intent-info">Informational</span></td>
+            <td class="vol-high">1,600/mo</td>
+            <td>Medium</td>
+          </tr>
+          <tr>
+            <td>kraft paper pouch vs aluminum foil pouch</td>
+            <td><span class="intent-info">Informational</span></td>
+            <td class="vol-low">390/mo</td>
+            <td>Very Low</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- DELIVERABLES -->
+    <div class="section">
+      <div class="section-title">What's Included in ₹30,000</div>
+      <ul class="deliverable-list">
+
+        <li>
+          <div class="check check-free">1</div>
+          <div>
+            <div class="dl-title">Full Technical SEO Audit &amp; Fixes <span class="badge-free">Free of Cost</span></div>
+            <div class="dl-desc">Sitemap.xml generation, robots.txt configuration, canonical tags on all pages, fix crawl errors, verify Core Web Vitals, and configure proper URL structure for filter pages. Provided complimentary as part of this engagement.</div>
+          </div>
+        </li>
+
+        <li>
+          <div class="check check-free">2</div>
+          <div>
+            <div class="dl-title">Schema Markup Implementation (All Key Schemas) <span class="badge-free">Free of Cost</span></div>
+            <div class="dl-desc">Product schema on all product pages, Organization + LocalBusiness schema on homepage, FAQ schema on FAQ page, BreadcrumbList on all pages, and Review/Rating schema where applicable. Provided complimentary as part of this engagement.</div>
+          </div>
+        </li>
+
+        <li>
+          <div class="check check-free">3</div>
+          <div>
+            <div class="dl-title">All Admin Panel &amp; Frontend SEO System Updates <span class="badge-free">Free of Cost</span></div>
+            <div class="dl-desc">All technical SEO-related updates within the existing admin panel and frontend codebase — including dynamic meta tag fields, SEO settings panel, sitemap generation hooks, robots configuration, and canonical URL logic — are implemented at no additional charge.</div>
+          </div>
+        </li>
+
+        <li>
+          <div class="check">4</div>
+          <div>
+            <div class="dl-title">Keyword Research &amp; Page Mapping (30 Keywords)</div>
+            <div class="dl-desc">Full keyword research for the packaging niche in India. Every keyword mapped to a specific page — no keyword cannibalisation, clear content hierarchy.</div>
+          </div>
+        </li>
+
+        <li>
+          <div class="check">5</div>
+          <div>
+            <div class="dl-title">On-Page Optimisation — 15 Key Pages</div>
+            <div class="dl-desc">Rewrite title tags, H1/H2 headings, and meta descriptions for Homepage, 6 category pages, and 8 top product pages. Add 100–150 words of SEO copy to each category page.</div>
+          </div>
+        </li>
+
+        <li>
+          <div class="check">6</div>
+          <div>
+            <div class="dl-title">Image Alt Text Optimisation</div>
+            <div class="dl-desc">Write keyword-rich, descriptive alt text for all product and banner images across the site — covering image search traffic and accessibility.</div>
+          </div>
+        </li>
+
+        <li>
+          <div class="check">7</div>
+          <div>
+            <div class="dl-title">Internal Linking Strategy</div>
+            <div class="dl-desc">Create a structured internal linking plan across all 6 existing blog posts → relevant product/category pages. Improves PageRank flow and crawl depth.</div>
+          </div>
+        </li>
+
+        <li>
+          <div class="check">8</div>
+          <div>
+            <div class="dl-title">Google Business Profile Setup &amp; Optimisation</div>
+            <div class="dl-desc">Create or claim and fully optimise GBP listing — business category, description, services, photos, Q&amp;A, and NAP consistency across the web.</div>
+          </div>
+        </li>
+
+        <li>
+          <div class="check">9</div>
+          <div>
+            <div class="dl-title">SEO Audit Report &amp; Recommendations Doc</div>
+            <div class="dl-desc">Detailed written report of all findings, changes made, and a prioritised roadmap for ongoing SEO activities (content, link building, city pages) for the next 6 months.</div>
+          </div>
+        </li>
+
+      </ul>
+    </div>
+
+    <!-- TIMELINE -->
+    <div class="section">
+      <div class="section-title">Delivery Timeline — 3 Weeks</div>
+      <div class="timeline">
+        <div class="tl-item">
+          <div class="tl-dot">1</div>
+          <div class="tl-week">Week 1</div>
+          <div class="tl-task">Audit &amp; Research</div>
+          <div class="tl-sub">Technical audit, keyword research, page mapping</div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot">2</div>
+          <div class="tl-week">Week 2</div>
+          <div class="tl-task">Implementation</div>
+          <div class="tl-sub">Schema, meta tags, on-page copy, alt texts, internal links</div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot">3</div>
+          <div class="tl-week">Week 3</div>
+          <div class="tl-task">GBP &amp; Handover</div>
+          <div class="tl-sub">GBP setup, final QA, audit report &amp; roadmap delivery</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PRICING -->
+    <div class="section">
+      <div class="section-title">Investment</div>
+      <div class="pricing-box">
+        <div class="pricing-left">
+          <div class="price-label">One-Time Fixed Fee</div>
+          <div class="price"><sub>₹</sub>30,000</div>
+          <div class="price-note">All deliverables included · No hidden charges ·</div>
+        </div>
+        <div class="pricing-right">
+          <div class="breakdown">
+            Technical SEO Audit &amp; Fixes &nbsp;<strong class="free">FREE</strong><br/>
+            Schema Markup Implementation &nbsp;<strong class="free">FREE</strong><br/>
+            Admin Panel &amp; Frontend SEO Updates &nbsp;<strong class="free">FREE</strong><br/>
+            Keyword Research (30 Keywords) &nbsp;<strong>₹8,000</strong><br/>
+            On-Page Optimisation (15 pages) &nbsp;<strong>₹13,000</strong><br/>
+            Image Alt Texts + Internal Links &nbsp;<strong>₹4,000</strong><br/>
+            Google Business Profile Setup &nbsp;<strong>₹3,000</strong><br/>
+            SEO Audit Report &amp; Roadmap &nbsp;<strong>₹2,000</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- NOT INCLUDED -->
+    <div class="section">
+      <div class="section-title">Not Included in This Package</div>
+      <div class="excl-list">
+        <div class="excl-item"><span class="x">✕</span> Blog / Content Writing</div>
+        <div class="excl-item"><span class="x">✕</span> Link Building / Backlinks</div>
+        <div class="excl-item"><span class="x">✕</span> City-Specific Landing Pages</div>
+        <div class="excl-item"><span class="x">✕</span> Monthly SEO Management</div>
+        <div class="excl-item"><span class="x">✕</span> Paid Ads / Google Ads</div>
+        <div class="excl-item"><span class="x">✕</span> Social Media Marketing</div>
+      </div>
+      <p style="font-size:12px; color:#6b7280; margin-top:12px;">
+        The above can be quoted separately as optional add-ons or a monthly retainer starting at <strong>₹20,000/month</strong> once the foundation work is complete.
+      </p>
+    </div>
+
+    <!-- EXPECTED RESULTS -->
+    <div class="section">
+      <div class="section-title">Expected Results After Implementation</div>
+      <table>
+        <thead>
+          <tr>
+            <th>Timeframe</th>
+            <th>Expected Milestone</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Week 3–4</strong></td>
+            <td>All technical fixes live; Google re-indexes improved pages; GBP appears in local search</td>
+          </tr>
+          <tr>
+            <td><strong>Month 2</strong></td>
+            <td>Rich snippets (schema) start appearing in SERPs; CTR improvement on optimised pages</td>
+          </tr>
+          <tr>
+            <td><strong>Month 3–4</strong></td>
+            <td>Category pages begin ranking for mid-tail keywords; organic sessions increase 20–35%</td>
+          </tr>
+          <tr>
+            <td><strong>Month 5–6</strong></td>
+            <td>Commercial keywords entering top 10; measurable leads / orders from organic traffic</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div><!-- /body -->
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <div class="prepared-by">
+      Prepared by <strong>Prolay Kumar Panda</strong> &nbsp;·&nbsp; prolaypanda7@gmail.com
+    </div>
+    <div class="validity">Proposal valid for 15 days from date of issue</div>
+  </div>
+
+</div>
+</body>
+</html>

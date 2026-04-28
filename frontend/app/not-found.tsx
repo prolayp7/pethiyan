@@ -1,9 +1,11 @@
 import Link from "next/link";
-import { Home, Search, ShoppingBag, ArrowRight } from "lucide-react";
+import { Home, Search, ShoppingBag } from "lucide-react";
 import Container from "@/components/layout/Container";
+import RecentlyViewedProducts from "@/components/sections/RecentlyViewedProducts";
 
 export default function NotFound() {
   return (
+    <>
     <div style={{ background: "var(--background)", minHeight: "70vh" }} className="flex items-center">
       <Container className="py-20 text-center">
 
@@ -58,32 +60,15 @@ export default function NotFound() {
           </Link>
         </div>
 
-        {/* Helpful links */}
-        <div className="max-w-md mx-auto">
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">
-            Popular Pages
-          </p>
-          <div className="grid grid-cols-2 gap-3">
-            {[
-              { href: "/category/pouches",  label: "Pouches" },
-              { href: "/category/bags",     label: "Kraft Bags" },
-              { href: "/faq",              label: "FAQs" },
-              { href: "/track-order",      label: "Track Order" },
-              { href: "/about",            label: "About Us" },
-              { href: "/contact",          label: "Contact" },
-            ].map(({ href, label }) => (
-              <Link
-                key={href}
-                href={href}
-                className="flex items-center justify-between px-4 py-2.5 rounded-xl bg-white border border-gray-100 text-sm font-semibold text-gray-600 hover:text-(--color-primary) hover:border-(--color-primary) transition-all group"
-              >
-                {label}
-                <ArrowRight className="h-3.5 w-3.5 text-gray-300 group-hover:text-(--color-primary) transition-colors" />
-              </Link>
-            ))}
-          </div>
-        </div>
       </Container>
     </div>
+
+    <RecentlyViewedProducts
+      title="Recently Viewed"
+      eyebrow="Pick up where you left off"
+      description="Products you've browsed recently."
+      showClearAction={false}
+    />
+    </>
   );
 }

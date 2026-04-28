@@ -168,7 +168,7 @@ export default function PageRenderer({ doc }: Props) {
               ) : null}
               {block.body_html ? (
                 <div
-                  className="text-base leading-7 text-gray-700 [&_a]:text-(--color-primary) [&_a]:underline [&_blockquote]:border-l-4 [&_blockquote]:border-(--color-primary)/20 [&_blockquote]:pl-4 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-4 [&_ul]:list-disc [&_ul]:pl-5"
+                  className="text-base leading-7 text-gray-700 wrap-break-word overflow-x-hidden **:max-w-full [&_a]:text-(--color-primary) [&_a]:underline [&_blockquote]:border-l-4 [&_blockquote]:border-(--color-primary)/20 [&_blockquote]:pl-4 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-4 [&_ul]:list-disc [&_ul]:pl-5 [&_img]:h-auto [&_table]:w-full [&_pre]:overflow-x-auto"
                   dangerouslySetInnerHTML={{ __html: block.body_html }}
                 />
               ) : null}

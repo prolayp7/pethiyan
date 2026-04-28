@@ -51,6 +51,7 @@ a, button, [role="button"], select, label[for],
 html {
   scroll-behavior: smooth;
   -webkit-text-size-adjust: 100%;
+  scrollbar-gutter: stable;
 }
 
 /* Portal root — above app-root (z:0) because portal-root is z:99999 in body stacking context */
@@ -353,6 +354,16 @@ body {
     0 0 100px rgba(31, 79, 138, 0.2),
     0 0 200px rgba(31, 79, 138, 0.1),
     0 0 400px rgba(31, 79, 138, 0.05);
+}
+
+/* =============================================
+   RADIX SCROLL-LOCK — prevent body shift
+   scrollbar-gutter:stable on html already reserves scrollbar space,
+   so Radix's margin/padding compensation must be zeroed out.
+   ============================================= */
+body[data-scroll-locked] {
+  margin-right: 0 !important;
+  padding-right: 0 !important;
 }
 
 /* =============================================

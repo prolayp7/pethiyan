@@ -85,7 +85,10 @@ function HistoryCard({ product }: { product: RealApiProduct }) {
 
   const { price, special } = pricingSource(hoveredVariant);
   const defaultVariant = product.variants.find((v) => v.is_default) ?? product.variants[0];
-  const displayTitle = hoveredVariant?.title ?? (product.type === "variant" ? (defaultVariant?.title ?? product.title) : product.title);
+  const activeVariantTitle = hoveredVariant?.title ?? defaultVariant?.title ?? null;
+  const displayTitle = (product.type === "variant" && activeVariantTitle)
+    ? `${product.title} - ${activeVariantTitle}`
+    : product.title;
   const symbol = "₹";
   const hasDiscount = special !== null && special < price;
   const fmt = (n: number) => n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });

@@ -963,7 +963,7 @@ class OrderService
         try {
             $order = Order::where('user_id', $user->id)
                 ->where('slug', $orderSlug)
-                ->with(['items.product', 'items.variant', 'items.store', 'sellerFeedbacks', 'sellerOrders', 'items.returns', 'promoLine'])
+                ->with(['items.product', 'items.variant', 'items.store', 'sellerFeedbacks', 'sellerOrders', 'items.returns', 'promoLine', 'managementHistories'])
                 ->first();
 
             if (!$order) {
@@ -1254,6 +1254,25 @@ class OrderService
                 'tracking_code' => $incomingTrackingCode !== '' ? $incomingTrackingCode : null,
             ]);
 
+            // Record history for every save (captures what actually changed)
+            $changedFields = [];
+            if ($data['status'] !== $currentStatus) $changedFields[] = 'status';
+            if ($newPaymentStatus !== $currentPaymentStatus) $changedFields[] = 'payment_status';
+            if ($incomingAdminNote !== $currentAdminNote) $changedFields[] = 'admin_note';
+            if ($incomingTrackingCode !== $currentTrackingCode) $changedFields[] = 'tracking_code';
+
+            \App\Models\OrderManagementHistory::create([
+                'order_id'                => $order->id,
+                'admin_user_id'           => $adminUserId,
+                'previous_status'         => $currentStatus,
+                'new_status'              => $data['status'],
+                'previous_payment_status' => $currentPaymentStatus,
+                'new_payment_status'      => $newPaymentStatus,
+                'tracking_code'           => $incomingTrackingCode !== '' ? $incomingTrackingCode : null,
+                'admin_note'              => $incomingAdminNote !== '' ? $incomingAdminNote : null,
+                'changed_fields'          => $changedFields,
+            ]);
+
             $this->syncOrderItemsStatusForAdmin($order, $data['status']);
 
             if ($isCodOrder && ($newPaymentStatus !== $currentPaymentStatus || $incomingAdminNote !== $currentAdminNote || $incomingTrackingCode !== $currentTrackingCode)) {
@@ -1291,21 +1310,32 @@ class OrderService
                 }
             }
 
-            if ($statusChanged || $paymentStatusChanged) {
+            $adminNoteChanged = $incomingAdminNote !== $currentAdminNote;
+            $trackingCodeChanged = $incomingTrackingCode !== $currentTrackingCode;
+
+            if ($statusChanged || $paymentStatusChanged || $adminNoteChanged || $trackingCodeChanged) {
                 $order->loadMissing('user');
 
                 DB::afterCommit(function () use ($order, $currentStatus, $currentPaymentStatus) {
                     $customer = $order->user;
 
-                    if (!$customer?->email) {
-                        return;
+                    if ($customer?->email) {
+                        $this->emailService->send(
+                            new AdminOrderManagementUpdatedMail($order, $currentStatus, $currentPaymentStatus),
+                            $customer->email,
+                            $customer->name
+                        );
                     }
 
-                    $this->emailService->send(
-                        new AdminOrderManagementUpdatedMail($order, $currentStatus, $currentPaymentStatus),
-                        $customer->email,
-                        $customer->name
-                    );
+                    $systemSettings     = app(SettingService::class)->getSettingByVariable(SettingTypeEnum::SYSTEM())?->value ?? [];
+                    $sellerSupportEmail = trim($systemSettings['sellerSupportEmail'] ?? '');
+                    if ($sellerSupportEmail) {
+                        $this->emailService->send(
+                            new AdminOrderManagementUpdatedMail($order, $currentStatus, $currentPaymentStatus),
+                            $sellerSupportEmail,
+                            'Seller Support'
+                        );
+                    }
                 });
             }
 
@@ -2312,6 +2342,40 @@ class OrderService
                 'data' => ['error' => $e->getMessage()]
             ];
         }
+    }
+
+    public static function canCustomerDownloadInvoice(?string $currentStatus, array $systemSettings): bool
+    {
+        $enabled = (bool)($systemSettings['customerInvoiceDownloadEnabled'] ?? true);
+        if (!$enabled) {
+            return false;
+        }
+
+        $requiredStatus = $systemSettings['customerInvoiceDownloadMinStatus'] ?? 'out_for_delivery';
+        $statusOrder = [
+            'pending',
+            'awaiting_store_response',
+            'partially_accepted',
+            'accepted_by_seller',
+            'ready_for_pickup',
+            'assigned',
+            'preparing',
+            'collected',
+            'out_for_delivery',
+            'delivered',
+        ];
+
+        $requiredIndex = array_search($requiredStatus, $statusOrder, true);
+        if ($requiredIndex === false) {
+            $requiredIndex = array_search('out_for_delivery', $statusOrder, true);
+        }
+
+        $currentIndex = array_search((string)$currentStatus, $statusOrder, true);
+        if ($currentIndex === false) {
+            return false;
+        }
+
+        return $currentIndex >= $requiredIndex;
     }
 
     public static function checkUserReviewExistByOrderItemId($id): bool

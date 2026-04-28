@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import { submitReview, getAvailableOrderItemsForProduct } from "@/lib/api";
 
@@ -9,20 +9,24 @@ export default function ReviewForm({ productSlug, onSubmitting, onDone }: { prod
   const [title, setTitle] = useState("");
   const [comment, setComment] = useState("");
   const [orderItemId, setOrderItemId] = useState<number | null>(null);
-  const [loadingItems, setLoadingItems] = useState(false);
+  const [loadingItems, setLoadingItems] = useState(true);
+  const [noEligibleItems, setNoEligibleItems] = useState(false);
 
-  async function loadItems() {
-    setLoadingItems(true);
-    const items = await getAvailableOrderItemsForProduct(productSlug);
-    setLoadingItems(false);
-    if (items.length > 0) setOrderItemId(items[0].id);
-  }
+  useEffect(() => {
+    getAvailableOrderItemsForProduct(productSlug).then((items) => {
+      if (items.length > 0) {
+        setOrderItemId(items[0].id);
+      } else {
+        setNoEligibleItems(true);
+      }
+      setLoadingItems(false);
+    });
+  }, [productSlug]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!orderItemId) {
-      await loadItems();
-      toast.error("Select an order item delivered to you before submitting a review.");
+      toast.error("You need a delivered order for this product to submit a review.");
       return;
     }
     onSubmitting();
@@ -40,7 +44,6 @@ export default function ReviewForm({ productSlug, onSubmitting, onDone }: { prod
     }
 
     if (res.success) {
-      // Review will be pending approval
       onDone('Thanks — your review has been submitted and will appear after approval.');
       toast.success('Review submitted');
       return;
@@ -48,6 +51,18 @@ export default function ReviewForm({ productSlug, onSubmitting, onDone }: { prod
 
     toast.error(res.message || 'Failed to submit review');
     onDone(null);
+  }
+
+  if (loadingItems) {
+    return <p className="mt-4 text-sm text-gray-500">Checking your orders…</p>;
+  }
+
+  if (noEligibleItems) {
+    return (
+      <p className="mt-4 text-sm text-gray-500">
+        You can only review products from a delivered order.
+      </p>
+    );
   }
 
   return (
@@ -66,7 +81,6 @@ export default function ReviewForm({ productSlug, onSubmitting, onDone }: { prod
       </div>
       <div className="flex items-center gap-2">
         <button type="submit" className="btn-brand px-4 py-2 rounded">Submit Review</button>
-        <button type="button" onClick={loadItems} className="px-3 py-2 border rounded">Load my delivered items</button>
       </div>
     </form>
   );

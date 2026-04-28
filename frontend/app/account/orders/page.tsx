@@ -32,7 +32,7 @@ const STATUS_MAP: Record<ApiOrder["status"], { label: string; cls: string }> = {
   collected: { label: "Order Collected", cls: "bg-indigo-100 text-indigo-700" },
   processing: { label: "Processing", cls: "bg-blue-100 text-blue-700"    },
   shipped:    { label: "Shipped",    cls: "bg-indigo-100 text-indigo-700" },
-  delivered:  { label: "Order Completed",  cls: "bg-green-100 text-green-700"  },
+  delivered:  { label: "Order Dispatched", cls: "bg-green-100 text-green-700"  },
   cancelled:  { label: "Order Cancelled",  cls: "bg-red-100 text-red-700"      },
   failed:  { label: "Order Failed",  cls: "bg-red-100 text-red-700"      },
 };

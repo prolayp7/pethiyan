@@ -27,14 +27,11 @@ export default function CartDrawer() {
   const grandTotal = total + totalGst;
 
   return (
-    <Sheet open={isOpen} onOpenChange={(open) => !open && closeCart()} modal={false}>
+    <Sheet open={isOpen} onOpenChange={(open) => !open && closeCart()}>
       <SheetContent
         side="right"
-        className="flex flex-col w-full max-w-sm p-0"
-        hideOverlay
-        onInteractOutside={(event) => event.preventDefault()}
-        onPointerDownOutside={(event) => event.preventDefault()}
-        onFocusOutside={(event) => event.preventDefault()}
+        className="z-[10001] flex h-full w-full max-w-sm flex-col p-0"
+        overlayClassName="z-[10000] bg-black/45"
       >
         {/* Header */}
         <SheetHeader className="px-6 py-4 border-b border-gray-100">

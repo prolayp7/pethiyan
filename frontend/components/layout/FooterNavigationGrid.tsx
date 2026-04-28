@@ -113,16 +113,16 @@ export default function FooterNavigationGrid({
                 </p>
               )}
               {brand?.companyGstin && (
-                <div className="inline-flex items-center gap-2 rounded-md bg-gray-50 border border-gray-100 px-3 py-2">
+                <div className="inline-flex items-baseline gap-2 rounded-md bg-gray-50 border border-gray-100 px-3 py-2">
                   <span className="text-xs font-semibold text-gray-700">GSTIN:</span>
-                  <span className="text-sm font-medium text-gray-900 uppercase tracking-widest">{brand.companyGstin}</span>
+                  <span className="text-xs font-medium text-gray-900 uppercase tracking-widest">{brand.companyGstin}</span>
                 </div>
               )}
             </div>
           )}
 
           {/* Nav columns */}
-          <div className="pt-8 lg:pt-0 lg:pl-10 border-t lg:border-t-0 lg:border-l border-gray-100 ml-auto grid grid-cols-2 md:grid-cols-4 gap-8 flex-grow">
+          <div className="pt-8 lg:pt-0 lg:pl-10 border-t lg:border-t-0 lg:border-l border-gray-100 lg:ml-auto w-full lg:w-auto grid grid-cols-2 md:grid-cols-4 gap-8 lg:grow">
             {navColumns.slice(0, 4).map((col) => (
               <div key={col.title}>
                 <h3 className="font-bold text-[15px] mb-4 text-gray-900">

@@ -10,10 +10,9 @@ const userLinks = {
   title: "Users",
   links: [
     { label: "Login / Register", href: "/login" },
-    { label: "Wishlist", href: "/wishlist" },
-    { label: "Orders", href: "/orders" },
+    { label: "Wishlist", href: "/account/wishlist" },
+    { label: "Orders", href: "/account/orders" },
     { label: "My Account", href: "/account" },
-    { label: "Payments", href: "/account/payments" },
   ],
 };
 
@@ -77,7 +76,6 @@ export default async function Footer() {
     </footer>
   );
 }
-
 
 
 

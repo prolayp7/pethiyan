@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ChevronRight, Home, Phone, Mail, MapPin, Clock, MessageCircle } from "lucide-react";
 import Container from "@/components/layout/Container";
 import ContactForm from "./ContactForm";
+import RecentlyViewedProducts from "@/components/sections/RecentlyViewedProducts";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -240,6 +241,13 @@ export default async function ContactPage() {
           </div>
         )}
       </Container>
+
+      <RecentlyViewedProducts
+        title="Recently Viewed Products"
+        eyebrow="Continue exploring"
+        description="Reconnect with the packaging products you checked before reaching out to us."
+        viewAllLabel="See all products"
+      />
     </div>
   );
 }

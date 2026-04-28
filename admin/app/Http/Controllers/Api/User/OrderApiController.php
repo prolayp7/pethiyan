@@ -8,6 +8,7 @@ use App\Http\Requests\User\Order\CreateItemReturnRequest;
 use App\Http\Requests\User\Order\CreateOrderRequest;
 use App\Http\Resources\User\OrderPaymentResource;
 use App\Http\Resources\User\OrderResource;
+use App\Models\Order;
 use App\Models\SellerOrder;
 use App\Models\User;
 use App\Services\OrderService;
@@ -333,7 +334,7 @@ class OrderApiController extends Controller
             'items.variant',
             'items.orderItem'
         )
-            ->whereHas('order', fn($q) => $q->where('uuid', $orderSlug)->where('user_id', $user->id))
+            ->whereHas('order', fn($q) => $q->where(fn($s) => $s->where('slug', $orderSlug)->orWhere('uuid', $orderSlug))->where('user_id', $user->id))
             ->get();
 
         if ($sellerOrders->isEmpty()) {
@@ -371,36 +372,7 @@ class OrderApiController extends Controller
 
     private function canCustomerDownloadInvoice(?string $currentStatus, array $systemSettings): bool
     {
-        $enabled = (bool)($systemSettings['customerInvoiceDownloadEnabled'] ?? true);
-        if (!$enabled) {
-            return false;
-        }
-
-        $requiredStatus = $systemSettings['customerInvoiceDownloadMinStatus'] ?? 'out_for_delivery';
-        $statusOrder = [
-            'pending',
-            'awaiting_store_response',
-            'partially_accepted',
-            'accepted_by_seller',
-            'ready_for_pickup',
-            'assigned',
-            'preparing',
-            'collected',
-            'out_for_delivery',
-            'delivered',
-        ];
-
-        $requiredIndex = array_search($requiredStatus, $statusOrder, true);
-        if ($requiredIndex === false) {
-            $requiredIndex = array_search('out_for_delivery', $statusOrder, true);
-        }
-
-        $currentIndex = array_search((string)$currentStatus, $statusOrder, true);
-        if ($currentIndex === false) {
-            return false;
-        }
-
-        return $currentIndex >= $requiredIndex;
+        return $this->orderService::canCustomerDownloadInvoice($currentStatus, $systemSettings);
     }
 
     /**
@@ -428,5 +400,41 @@ class OrderApiController extends Controller
             $result['message'],
             $result['data'] ?? []
         );
+    }
+
+    // ─── POST /api/orders/track (public — no auth required) ──────────────────────
+
+    public function trackPublicOrder(Request $request): JsonResponse
+    {
+        $query = trim((string) $request->input('query', ''));
+
+        if (empty($query)) {
+            return ApiResponseType::sendJsonResponse(false, 'Please provide an order number or tracking code.', []);
+        }
+
+        // order_number is a computed attribute (PET + Ymd + zero-padded ID),
+        // so we derive the ID from the string when the format matches.
+        $orderId = null;
+        if (preg_match('/^PET(\d{8})(\d{5})$/', strtoupper($query), $m)) {
+            $orderId = (int) $m[2];
+        }
+
+        $order = Order::query()
+            ->where(function ($q) use ($query, $orderId) {
+                $q->where('tracking_code', $query)
+                  ->orWhere('uuid', $query)
+                  ->orWhere('slug', $query);
+                if ($orderId) {
+                    $q->orWhere('id', $orderId);
+                }
+            })
+            ->with(['items.product', 'items.variant', 'managementHistories'])
+            ->first();
+
+        if (!$order) {
+            return ApiResponseType::sendJsonResponse(false, 'Order not found.', []);
+        }
+
+        return ApiResponseType::sendJsonResponse(true, 'Order found.', new OrderResource($order));
     }
 }

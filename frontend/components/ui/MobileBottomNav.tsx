@@ -2,14 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, User, Grid3X3, Heart, ShoppingBag } from "lucide-react";
+import { Home, User, Store, Heart, ShoppingBag } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCart } from "@/context/CartContext";
 
 const navItems = [
   { label: "Home", href: "/", icon: Home },
   { label: "Account", href: "/account", icon: User },
-  { label: "Categories", href: "/categories", icon: Grid3X3 },
+  { label: "Shop", href: "/shop", icon: Store },
   { label: "Wishlist", href: "/wishlist", icon: Heart },
 ];
 

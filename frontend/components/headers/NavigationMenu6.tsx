@@ -470,12 +470,16 @@ export default function NavigationMenu6({
                   className="w-[220px] shrink-0 py-6 px-5"
                   style={{ borderRight: "1px solid #f0f4f8" }}
                 >
-                  <div className="relative w-full h-[160px] rounded-xl overflow-hidden mb-4">
+                  <Link
+                    href={active.href}
+                    className="group relative block w-full h-40 rounded-xl overflow-hidden mb-4"
+                    onClick={() => setMegaOpen(false)}
+                  >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={active.image}
                       alt={active.label}
-                      className="absolute inset-0 w-full h-full object-cover"
+                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                     />
                     <div
                       className="absolute inset-0"
@@ -496,7 +500,7 @@ export default function NavigationMenu6({
                       style={{ background: active.accent }}
                       aria-hidden="true"
                     />
-                  </div>
+                  </Link>
 
                   <Link
                     href={active.href}

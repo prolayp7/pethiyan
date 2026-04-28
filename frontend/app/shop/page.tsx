@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getProducts, getCategories, getSubCategories, type RealApiProduct } from "@/lib/api";
+import { getProductsPage, getCategories, getSubCategories } from "@/lib/api";
 import { breadcrumbSchema, jsonLd } from "@/lib/structured-data";
 import ShopClient from "./ShopClient";
 
@@ -13,8 +13,8 @@ export const metadata: Metadata = {
 export const revalidate = 300;
 
 export default async function ShopPage() {
-  const [products, categories, subCategories] = await Promise.all([
-    getProducts() as Promise<RealApiProduct[]>,
+  const [firstPage, categories, subCategories] = await Promise.all([
+    getProductsPage(1, 24),
     getCategories(),
     getSubCategories(),
   ]);
@@ -28,9 +28,11 @@ export default async function ShopPage() {
     <>
       <script {...jsonLd(bcSchema)} key="breadcrumb-schema" />
       <ShopClient
-        initialProducts={products}
+        initialProducts={firstPage.products}
         initialCategories={categories}
         initialSubCategories={subCategories}
+        initialPage={firstPage.currentPage}
+        initialHasMore={firstPage.hasMore}
       />
     </>
   );

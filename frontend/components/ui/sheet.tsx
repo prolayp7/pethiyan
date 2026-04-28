@@ -29,14 +29,15 @@ interface SheetContentProps
   extends React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> {
   side?: "top" | "bottom" | "left" | "right";
   hideOverlay?: boolean;
+  overlayClassName?: string;
 }
 
 const SheetContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   SheetContentProps
->(({ side = "right", className, children, hideOverlay, ...props }, ref) => (
+>(({ side = "right", className, children, hideOverlay, overlayClassName, ...props }, ref) => (
   <SheetPortal>
-    {!hideOverlay && <SheetOverlay />}
+    {!hideOverlay && <SheetOverlay className={overlayClassName} />}
     <DialogPrimitive.Content
       ref={ref}
       className={cn(

@@ -107,6 +107,10 @@ export default function FeaturedProductCard({ p }: { p: FallbackProduct }) {
     e.preventDefault();
     e.stopPropagation();
     if (!p.inStock) return;
+    if (p.variantCount > 1 || p.defaultVariantId != null) {
+      void openQuickView(e);
+      return;
+    }
     addItem({
       id: p.id,
       productId: Number.isFinite(numericProductId) ? numericProductId : undefined,
@@ -118,6 +122,7 @@ export default function FeaturedProductCard({ p }: { p: FallbackProduct }) {
       variantId: p.defaultVariantId,
       storeId: p.defaultStoreId,
     });
+    toast.success("Product added to cart");
     openCart();
   };
 
@@ -215,6 +220,7 @@ export default function FeaturedProductCard({ p }: { p: FallbackProduct }) {
       weight: selectedVariant.weight ?? undefined,
       weightUnit: selectedVariant.weight_unit ?? undefined,
     });
+    toast.success("Product added to cart");
     openCart();
     closeQuickView();
   };

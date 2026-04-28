@@ -177,6 +177,7 @@ type ApiAddressInput = Omit<ApiAddress, "id" | "is_default"> & {
 
 export interface ApiOrder {
   id: number;
+  uuid: string;
   slug: string;
   order_number: string;
   status: "pending" | "awaiting_store_response" | "partially_accepted" | "accepted_by_seller" | "ready_for_pickup" | "assigned" | "preparing" | "collected" | "out_for_delivery" | "processing" | "shipped" | "delivered" | "cancelled" | "failed" | "rejected_by_seller" | string;
@@ -192,11 +193,26 @@ export interface ApiOrder {
   currency_code?: string;
   payment_method?: string;
   payment_status?: string;
+  tracking_code?: string;
+  admin_note?: string;
+  invoice_downloadable?: boolean;
+  management_history?: ApiOrderManagementHistory[];
   created_at: string;
   updated_at: string;
   items: ApiOrderItem[];
   address?: ApiAddress;
   tracking?: ApiTrackingStep[];
+}
+
+export interface ApiOrderManagementHistory {
+  changed_fields: string[];
+  previous_status?: string;
+  new_status?: string;
+  previous_payment_status?: string;
+  new_payment_status?: string;
+  tracking_code?: string | null;
+  admin_note?: string | null;
+  created_at: string;
 }
 
 export interface ApiOrderItem {
@@ -689,6 +705,8 @@ export interface RealApiProduct {
   category_id?: number | null;
   category?: { id: number; title: string; slug: string } | null;
   variants: RealApiVariant[];
+  faqs?: ApiFaq[];
+  reviews?: ApiReview[];
 }
 
 // ─── API calls ────────────────────────────────────────────────────────────────
@@ -710,6 +728,40 @@ export async function getProducts(params?: Record<string, string>): Promise<Real
     return [];
   } catch {
     return [];
+  }
+}
+
+export interface ProductsPageResult {
+  products: RealApiProduct[];
+  currentPage: number;
+  lastPage: number;
+  hasMore: boolean;
+  total: number;
+}
+
+export async function getProductsPage(page = 1, perPage = 24): Promise<ProductsPageResult> {
+  const empty: ProductsPageResult = { products: [], currentPage: page, lastPage: page, hasMore: false, total: 0 };
+  try {
+    const res = await fetch(
+      `${API_BASE}/api/products?page=${page}&perPage=${perPage}`,
+      { headers: { Accept: "application/json" }, next: { revalidate: 60 } } as RequestInit,
+    );
+    if (!res.ok) return empty;
+    const json = await res.json();
+    const d = json?.data;
+    if (!d || !Array.isArray(d.data)) return empty;
+    // API returns: { page, lastPage, hasNext, perPage, total, data: [...] }
+    const currentPage = Number(d.page     ?? page);
+    const lastPage    = Number(d.lastPage ?? page);
+    return {
+      products:  d.data as RealApiProduct[],
+      currentPage,
+      lastPage,
+      hasMore:   Boolean(d.hasNext),
+      total:     Number(d.total ?? 0),
+    };
+  } catch {
+    return empty;
   }
 }
 
@@ -785,6 +837,24 @@ export async function getNewArrivals(days = 30, limit = 40): Promise<RealApiProd
   }
 }
 
+export async function getBestSellers(limit = 40): Promise<RealApiProduct[]> {
+  try {
+    const res = await fetch(
+      `${API_BASE}/api/products/best-sellers?limit=${limit}`,
+      {
+        headers: { Accept: "application/json" },
+        cache: "no-store",
+      } as RequestInit
+    );
+    if (!res.ok) return [];
+    const json = await res.json();
+    if ("data" in json && Array.isArray(json.data)) return json.data;
+    return [];
+  } catch {
+    return [];
+  }
+}
+
 export async function searchProducts(keywords: string): Promise<ApiProduct[]> {
   const res = await apiFetch<ApiResponse<ApiProduct[]> | ApiProduct[]>(
     `/api/products/search-by-keywords?keywords=${encodeURIComponent(keywords)}`
@@ -842,6 +912,13 @@ export async function getProductReviews(slug: string): Promise<ApiReview[]> {
   );
   if (!res) return [];
   if (Array.isArray(res)) return res;
+  // Paginated wrapper: { data: { data: { reviews: [...] } } }
+  const raw = res as unknown as Record<string, unknown>;
+  const outer = raw.data as Record<string, unknown> | undefined;
+  const inner = outer?.data as Record<string, unknown> | undefined;
+  if (inner && Array.isArray(inner.reviews)) return inner.reviews as ApiReview[];
+  // Simple array at data.data
+  if (outer && Array.isArray(outer.data)) return outer.data as ApiReview[];
   if ("data" in res && Array.isArray(res.data)) return res.data;
   return [];
 }
@@ -883,6 +960,10 @@ export async function getProductFaqs(slug: string): Promise<ApiFaq[]> {
   );
   if (!res) return [];
   if (Array.isArray(res)) return res;
+  // Paginated wrapper: { data: { data: [...] } }
+  const raw = res as unknown as Record<string, unknown>;
+  const outer = raw.data as Record<string, unknown> | undefined;
+  if (outer && Array.isArray(outer.data)) return outer.data as ApiFaq[];
   if ("data" in res && Array.isArray(res.data)) return res.data;
   return [];
 }
@@ -1090,7 +1171,7 @@ export async function loginWithPassword(
 export async function sendOtp(
   mobile: string | null,
   email?: string | null
-): Promise<{ success: boolean; message?: string; demoOtp?: string; smsOtpSent?: boolean; emailOtpSent?: boolean }> {
+): Promise<{ success: boolean; message?: string; demoOtp?: string; smsOtpSent?: boolean; emailOtpSent?: boolean; emailSentTo?: string }> {
   const body: Record<string, string> = {};
   if (mobile) { body.mobile = mobile; body.country_code = "+91"; }
   if (email)  { body.email = email; }
@@ -1098,7 +1179,7 @@ export async function sendOtp(
   const res = await apiFetch<{
     success: boolean;
     message?: string;
-    data?: { demo_otp?: string; sms_otp_sent?: boolean; email_otp_sent?: boolean };
+    data?: { demo_otp?: string; sms_otp_sent?: boolean; email_otp_sent?: boolean; email_sent_to?: string };
   }>("/api/auth/otp/send", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -1111,6 +1192,7 @@ export async function sendOtp(
     demoOtp: res.data?.demo_otp,
     smsOtpSent: res.data?.sms_otp_sent,
     emailOtpSent: res.data?.email_otp_sent,
+    emailSentTo: res.data?.email_sent_to,
   };
 }
 
@@ -1196,12 +1278,12 @@ export async function forgotPasswordResendOtp(
 export async function resendOtp(
   mobile: string | null,
   email?: string | null
-): Promise<{ success: boolean; message?: string; demoOtp?: string }> {
+): Promise<{ success: boolean; message?: string; demoOtp?: string; emailSentTo?: string }> {
   const body: Record<string, string> = {};
   if (mobile) { body.mobile = mobile; body.country_code = "+91"; }
   if (email)  { body.email = email; }
 
-  const res = await apiFetch<{ success: boolean; message?: string; data?: { demo_otp?: string } }>(
+  const res = await apiFetch<{ success: boolean; message?: string; data?: { demo_otp?: string; email_sent_to?: string } }>(
     "/api/auth/otp/resend",
     {
       method: "POST",
@@ -1210,7 +1292,7 @@ export async function resendOtp(
     }
   );
   if (!res) return { success: false, message: "Request failed" };
-  return { success: res.success, message: res.message, demoOtp: res.data?.demo_otp };
+  return { success: res.success, message: res.message, demoOtp: res.data?.demo_otp, emailSentTo: res.data?.email_sent_to };
 }
 
 export async function getProfile(): Promise<import("@/context/AuthContext").AuthUser | null> {
@@ -1224,6 +1306,23 @@ export async function updateProfile(
 ): Promise<{ success: boolean; message?: string }> {
   const res = await apiAuth<{ success: boolean; message?: string }>(
     "/api/user/profile",
+    "POST",
+    data
+  );
+  if (!res) return { success: false, message: "Request failed" };
+  return {
+    success: res.success ?? false,
+    message: getApiErrorMessage(res) ?? res.message,
+  };
+}
+
+export async function changePassword(data: {
+  current_password: string;
+  password: string;
+  password_confirmation: string;
+}): Promise<{ success: boolean; message?: string }> {
+  const res = await apiAuth<{ success?: boolean; message?: string; errors?: Record<string, string[]> }>(
+    "/api/user/password-update",
     "POST",
     data
   );
@@ -1495,6 +1594,7 @@ function normalizeOrder(raw: Record<string, unknown>): ApiOrder {
 
   return {
     ...(raw as object),
+    uuid: (raw.uuid as string) ?? (raw.slug as string) ?? String(raw.id),
     order_number: (raw.order_number as string) ?? (raw.slug as string) ?? String(raw.id),
     total: parseFloat(String(raw.final_total ?? raw.total_payable ?? 0)),
     final_total: parseFloat(String(raw.final_total ?? raw.total_payable ?? 0)),
@@ -1505,6 +1605,7 @@ function normalizeOrder(raw: Record<string, unknown>): ApiOrder {
     gst_amount: parseFloat(String(raw.gst_amount ?? raw.total_gst ?? 0)),
     promo_discount: parseFloat(String(raw.promo_discount ?? 0)),
     gift_card_discount: parseFloat(String(raw.gift_card_discount ?? 0)),
+    invoice_downloadable: raw.invoice_downloadable === true,
     items,
   } as ApiOrder;
 }
@@ -1530,17 +1631,31 @@ export async function getOrders(): Promise<ApiOrder[]> {
   return rows.map(normalizeOrder);
 }
 
-export async function trackOrder(
-  orderNumber: string,
-  phone: string
-): Promise<ApiOrder | null> {
-  const res = await apiFetch<ApiResponse<ApiOrder>>("/api/orders/track", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ order_number: orderNumber, phone }),
-  });
-  if (res && "data" in res) return res.data;
-  return null;
+export async function trackOrder(query: string): Promise<ApiOrder | null> {
+  const res = await apiFetch<{ success: boolean; data: Record<string, unknown> }>(
+    "/api/orders/track",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query }),
+    }
+  );
+  if (!res?.success || !res.data || typeof res.data !== "object" || Array.isArray(res.data)) return null;
+  return normalizeOrder(res.data as Record<string, unknown>);
+}
+
+export async function downloadOrderInvoice(slug: string): Promise<Blob | null> {
+  const token = getToken();
+  try {
+    const res = await fetch(`${API_BASE}/api/user/orders/${encodeURIComponent(slug)}/invoice`, {
+      headers: { Accept: "application/pdf", ...getAuthHeaders(token) },
+      credentials: "include",
+    });
+    if (!res.ok) return null;
+    return res.blob();
+  } catch {
+    return null;
+  }
 }
 
 // ─── Coupons ──────────────────────────────────────────────────────────────────

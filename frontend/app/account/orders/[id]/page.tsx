@@ -1,13 +1,14 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
+import { useState, useEffect, use, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
   ArrowLeft, Loader2, Package, MapPin, ShoppingBag,
-  CheckCircle2, Circle, Truck, Clock, XCircle,
+  CheckCircle2, Circle, Truck, Clock, XCircle, Tag, MessageSquare,
+  FileDown,
 } from "lucide-react";
-import { getOrder, type ApiOrder, type ApiTrackingStep } from "@/lib/api";
+import { getOrder, downloadOrderInvoice, type ApiOrder, type ApiTrackingStep, type ApiOrderManagementHistory } from "@/lib/api";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -28,6 +29,17 @@ function shouldBypassOptimizer(src?: string | null): boolean {
   return /^https?:\/\//i.test(src);
 }
 
+const PAYMENT_STATUS_MAP: Record<string, { label: string; cls: string }> = {
+  paid:        { label: "Paid",       cls: "bg-green-100 text-green-700"   },
+  success:     { label: "Paid",       cls: "bg-green-100 text-green-700"   },
+  completed:   { label: "Paid",       cls: "bg-green-100 text-green-700"   },
+  pending:     { label: "Pending",    cls: "bg-yellow-100 text-yellow-700" },
+  cod:         { label: "Pending",    cls: "bg-yellow-100 text-yellow-700" },
+  failed:      { label: "Failed",     cls: "bg-red-100 text-red-700"       },
+  cancelled:   { label: "Cancelled",  cls: "bg-red-100 text-red-700"       },
+  refunded:    { label: "Refunded",   cls: "bg-purple-100 text-purple-700" },
+};
+
 const STATUS_MAP: Record<string, { label: string; cls: string }> = {
   pending:                  { label: "Pending",               cls: "bg-amber-100 text-amber-700"   },
   awaiting_store_response:  { label: "Awaiting Store Response", cls: "bg-yellow-100 text-yellow-700" },
@@ -40,7 +52,7 @@ const STATUS_MAP: Record<string, { label: string; cls: string }> = {
   out_for_delivery:         { label: "Out for Delivery",      cls: "bg-indigo-100 text-indigo-700" },
   processing:               { label: "Processing",            cls: "bg-blue-100 text-blue-700"     },
   shipped:                  { label: "Shipped",               cls: "bg-indigo-100 text-indigo-700" },
-  delivered:                { label: "Order Completed",       cls: "bg-green-100 text-green-700"   },
+  delivered:                { label: "Order Dispatched",      cls: "bg-green-100 text-green-700"   },
   cancelled:                { label: "Order Cancelled",       cls: "bg-red-100 text-red-700"       },
   failed:                   { label: "Order Failed",          cls: "bg-red-100 text-red-700"       },
   rejected_by_seller:       { label: "Rejected",              cls: "bg-red-100 text-red-700"       },
@@ -56,16 +68,14 @@ function buildDefaultTracking(status: string, createdAt: string): ApiTrackingSte
     ];
   }
 
-  // Map detailed backend statuses → 4 simplified frontend steps
-  const CONFIRMED_STATUSES = ["awaiting_store_response", "partially_accepted", "accepted_by_seller", "ready_for_pickup", "assigned", "preparing", "collected", "out_for_delivery", "processing", "shipped", "delivered"];
+  // Map detailed backend statuses → 3 simplified frontend steps
+  const CONFIRMED_STATUSES  = ["awaiting_store_response", "partially_accepted", "accepted_by_seller", "ready_for_pickup", "assigned", "preparing", "collected", "out_for_delivery", "processing", "shipped", "delivered"];
   const DISPATCHED_STATUSES = ["out_for_delivery", "shipped", "delivered"];
-  const DELIVERED_STATUSES  = ["delivered"];
 
   const steps: ApiTrackingStep[] = [
-    { status: "pending",        label: "Order Placed",    description: "Your order has been placed successfully.", completed: true,                              timestamp: createdAt },
-    { status: "confirmed",      label: "Order Confirmed", description: "We're preparing your items for dispatch.", completed: CONFIRMED_STATUSES.includes(status) },
-    { status: "out_for_delivery", label: "Dispatched",   description: "Your package is on its way.",              completed: DISPATCHED_STATUSES.includes(status) },
-    { status: "delivered",      label: "Delivered",       description: "Your order has been delivered.",           completed: DELIVERED_STATUSES.includes(status)  },
+    { status: "pending",          label: "Order Placed",    description: "Your order has been placed successfully.", completed: true,                               timestamp: createdAt },
+    { status: "confirmed",        label: "Order Confirmed", description: "We're preparing your items for dispatch.", completed: CONFIRMED_STATUSES.includes(status)  },
+    { status: "out_for_delivery", label: "Dispatched",      description: "",                                         completed: DISPATCHED_STATUSES.includes(status) },
   ];
 
   return steps;
@@ -107,9 +117,9 @@ function TrackingTimeline({ steps, status }: { steps: ApiTrackingStep[]; status:
                 )}
               </div>
               {!isLast && (
-                <div className={`w-0.5 flex-1 my-1 rounded-full ${
+                <div className={`w-0.5 flex-1 my-1 rounded-full min-h-8 ${
                   step.completed && steps[i + 1]?.completed ? "bg-green-300" : "bg-gray-100"
-                }`} style={{ minHeight: "2rem" }} />
+                }`} />
               )}
             </div>
 
@@ -134,13 +144,91 @@ function TrackingTimeline({ steps, status }: { steps: ApiTrackingStep[]; status:
   );
 }
 
+// ─── Management History Timeline ─────────────────────────────────────────────
+
+function statusLabel(s?: string | null): string {
+  if (!s) return "—";
+  return STATUS_MAP[s]?.label ?? s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function paymentLabel(s?: string | null): string {
+  if (!s) return "—";
+  return s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function hasVisibleContent(entry: ApiOrderManagementHistory): boolean {
+  const fields = entry.changed_fields ?? [];
+  return (
+    fields.includes("status") ||
+    fields.includes("payment_status") ||
+    fields.includes("tracking_code") ||
+    (fields.includes("admin_note") && !!entry.admin_note)
+  );
+}
+
+function ManagementHistory({ history }: { history: ApiOrderManagementHistory[] }) {
+  const visible = history.filter(hasVisibleContent);
+  if (!visible.length) return null;
+
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+      <div className="flex items-center gap-2 mb-5">
+        <Clock className="h-4 w-4 text-(--color-primary)" />
+        <h2 className="text-sm font-extrabold text-(--color-secondary)">Order Management History</h2>
+      </div>
+      <div className="relative">
+        {visible.map((entry, i) => {
+          const isLast = i === visible.length - 1;
+          const fields = entry.changed_fields ?? [];
+          return (
+            <div key={i} className="flex gap-4">
+              <div className="flex flex-col items-center">
+                <div className="w-8 h-8 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
+                  <Clock className="h-4 w-4 text-blue-400" />
+                </div>
+                {!isLast && <div className="w-0.5 flex-1 my-1 bg-gray-100 rounded-full min-h-6" />}
+              </div>
+              <div className="pb-5 flex-1 min-w-0">
+                <p className="text-xs text-gray-500 font-medium mb-2">{fmtDate(entry.created_at)}</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {fields.includes("status") && (
+                    <span className="inline-flex items-center text-xs font-medium px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 border border-blue-100">
+                      Status: {statusLabel(entry.previous_status)} → {statusLabel(entry.new_status)}
+                    </span>
+                  )}
+                  {fields.includes("payment_status") && (
+                    <span className="inline-flex items-center text-xs font-medium px-2.5 py-1 rounded-lg bg-green-50 text-green-700 border border-green-100">
+                      Payment: {paymentLabel(entry.previous_payment_status)} → {paymentLabel(entry.new_payment_status)}
+                    </span>
+                  )}
+                  {fields.includes("tracking_code") && (
+                    <span className="inline-flex items-center text-xs font-medium px-2.5 py-1 rounded-lg bg-cyan-50 text-cyan-700 border border-cyan-100">
+                      Tracking updated: {entry.tracking_code ?? "removed"}
+                    </span>
+                  )}
+                  {fields.includes("admin_note") && entry.admin_note && (
+                    <span className="inline-flex items-center text-xs font-medium px-2.5 py-1 rounded-lg bg-amber-50 text-amber-700 border border-amber-100">
+                      Note updated: {entry.admin_note}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const [order,   setOrder]   = useState<ApiOrder | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [notFound, setNotFound] = useState(false);
+  const [order,           setOrder]           = useState<ApiOrder | null>(null);
+  const [loading,         setLoading]         = useState(true);
+  const [notFound,        setNotFound]        = useState(false);
+  const [invoiceLoading,  setInvoiceLoading]  = useState(false);
 
   useEffect(() => {
     getOrder(id).then((o) => {
@@ -149,6 +237,22 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
       setLoading(false);
     });
   }, [id]);
+
+  const handleDownloadInvoice = useCallback(async () => {
+    if (!order) return;
+    setInvoiceLoading(true);
+    const blob = await downloadOrderInvoice(order.uuid);
+    setInvoiceLoading(false);
+    if (!blob) return;
+    const url = URL.createObjectURL(blob);
+    const a   = document.createElement("a");
+    a.href     = url;
+    a.download = `invoice-${order.order_number}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }, [order]);
 
   if (loading) {
     return (
@@ -195,9 +299,24 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
             </h1>
             <p className="text-xs text-gray-400 mt-0.5">Placed on {fmtDate(order.created_at)}</p>
           </div>
-          <span className={`text-xs font-bold px-3 py-1.5 rounded-full ${status.cls}`}>
-            {status.label}
-          </span>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className={`text-xs font-bold px-3 py-1.5 rounded-full ${status.cls}`}>
+              {status.label}
+            </span>
+            {order.invoice_downloadable && (
+              <button
+                type="button"
+                onClick={handleDownloadInvoice}
+                disabled={invoiceLoading}
+                className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {invoiceLoading
+                  ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Downloading…</>
+                  : <><FileDown className="h-3.5 w-3.5" /> Download Invoice</>
+                }
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -309,7 +428,55 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                 </span>
               </div>
             )}
+            {order.payment_status && (() => {
+              const ps = PAYMENT_STATUS_MAP[order.payment_status!.toLowerCase()] ?? { label: order.payment_status!, cls: "bg-gray-100 text-gray-600" };
+              return (
+                <div className="mt-2 flex items-center justify-between text-xs text-gray-500">
+                  <span>Payment Status</span>
+                  <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${ps.cls}`}>{ps.label}</span>
+                </div>
+              );
+            })()}
           </div>
+
+          {/* Tracking Code */}
+          {order.tracking_code && (
+            <div className="bg-blue-50 rounded-2xl border border-blue-100 p-4">
+              <div className="flex items-center gap-2 mb-1.5">
+                <Tag className="h-4 w-4 text-(--color-primary)" />
+                <h2 className="text-sm font-extrabold text-(--color-secondary)">Tracking Code</h2>
+              </div>
+              <p className="text-sm font-mono font-semibold text-(--color-secondary) tracking-wide break-all">
+                {order.tracking_code}
+              </p>
+            </div>
+          )}
+
+          {/* Admin Notes — all notes from history, newest first */}
+          {(() => {
+            const notes = (order.management_history ?? [])
+              .filter((h) => h.admin_note)
+              .map((h) => ({ note: h.admin_note!, date: h.created_at }));
+            if (!notes.length) return null;
+            return (
+              <div className="bg-amber-50 rounded-2xl border border-amber-100 p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <MessageSquare className="h-4 w-4 text-amber-500" />
+                  <h2 className="text-sm font-extrabold text-(--color-secondary)">
+                    Notes from our team {notes.length > 1 && <span className="font-normal text-gray-400">({notes.length})</span>}
+                  </h2>
+                </div>
+                <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
+                  {notes.map((n, i) => (
+                    <div key={i} className={i > 0 ? "border-t border-amber-100 pt-3" : ""}>
+                      <p className="text-sm text-gray-600 leading-relaxed">{n.note}</p>
+                      <p className="text-[11px] text-gray-400 mt-1">{fmtDate(n.date)}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Delivery address */}
           {order.address && (
@@ -336,6 +503,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
               Contact Support →
             </Link>
           </div>
+
         </div>
       </div>
     </div>

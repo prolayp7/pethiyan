@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useId, KeyboardEvent, ClipboardEvent } from "react";
+import { useRef, useId, useEffect, KeyboardEvent, ClipboardEvent } from "react";
 
 const OTP_LENGTH = 6;
 
@@ -29,6 +29,11 @@ export default function OtpInput({
     inputRefs.current[clamped]?.focus();
   };
 
+  // Focus last box when a wrong-OTP error appears so user can backspace immediately
+  useEffect(() => {
+    if (error) focusIndex(OTP_LENGTH - 1);
+  }, [error]);
+
   const handleChange = (index: number, raw: string) => {
     // Take only the last digit typed (handles replace-while-focused)
     const digit = raw.replace(/\D/g, "").slice(-1);
@@ -40,12 +45,12 @@ export default function OtpInput({
   const handleKeyDown = (index: number, e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Backspace") {
       e.preventDefault();
-      if (digits[index]) {
-        // Clear current box
+      if (digits[index]?.trim()) {
+        // Current box has a real digit — clear it, stay here
         const next = digits.map((d, i) => (i === index ? "" : d)).join("").replace(/ /g, "");
         onChange(next);
       } else if (index > 0) {
-        // Move to previous and clear it
+        // Current box is empty — clear the previous box and move focus there
         const next = digits.map((d, i) => (i === index - 1 ? "" : d)).join("").replace(/ /g, "");
         onChange(next);
         focusIndex(index - 1);

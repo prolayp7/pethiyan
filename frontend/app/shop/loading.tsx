@@ -86,7 +86,7 @@ export default function ShopLoading() {
             </div>
 
             {/* Product grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+            <div className="grid grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-5">
               {Array.from({ length: 9 }).map((_, i) => (
                 <ProductCardSkeleton key={i} />
               ))}

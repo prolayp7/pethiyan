@@ -6,6 +6,8 @@ use App\Http\Resources\OrderSellerFeedbackResource;
 use App\Http\Resources\User\PromoLineResource;
 use App\Enums\Order\OrderItemStatusEnum;
 use App\Services\DeliveryBoyService;
+use App\Services\OrderService;
+use App\Services\SettingService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -18,6 +20,10 @@ class OrderResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $settingResource = app(SettingService::class)->getSettingByVariable('system');
+        $systemSettings  = $settingResource?->toArray($request)['value'] ?? [];
+        $invoiceDownloadable = OrderService::canCustomerDownloadInvoice($this->status, $systemSettings);
+
         $isDeliveryFeedbackGiven = DeliveryBoyService::checkDeliveryBoyFeedbackByOrderId(orderId: $this->id, deliveryBoyId: $this->delivery_boy_id);
         if ($isDeliveryFeedbackGiven) {
             $deliveryFeedback = DeliveryBoyService::getDeliveryBoyFeedbackByOrderId(orderId: $this->id, deliveryBoyId: $this->delivery_boy_id);
@@ -55,6 +61,7 @@ class OrderResource extends JsonResource
             'payment_status' => $this->payment_status,
             'status' => $this->status,
             'invoice' => url('order-invoice?id=' . $this->uuid) ?? "",
+            'invoice_downloadable' => $invoiceDownloadable,
             'fulfillment_type' => $this->fulfillment_type,
             'estimated_delivery_time' => $this->estimated_delivery_time,
             'delivery_time_slot_id' => $this->delivery_time_slot_id,
@@ -108,8 +115,26 @@ class OrderResource extends JsonResource
             'shipping_country' => $this->shipping_country,
             'shipping_country_code' => $this->shipping_country_code,
             'order_note' => $this->order_note ?? '',
+            'admin_note' => $this->admin_note ?? '',
+            'tracking_code' => $this->tracking_code ?? '',
 
             // Relationships
+            'management_history' => $this->when(
+                $this->relationLoaded('managementHistories'),
+                fn() => $this->managementHistories
+                    ->filter(fn($h) => !empty($h->changed_fields))
+                    ->map(fn($h) => [
+                        'changed_fields'          => $h->changed_fields,
+                        'previous_status'         => $h->previous_status,
+                        'new_status'              => $h->new_status,
+                        'previous_payment_status' => $h->previous_payment_status,
+                        'new_payment_status'      => $h->new_payment_status,
+                        'tracking_code'           => in_array('tracking_code', $h->changed_fields) ? $h->tracking_code : null,
+                        'admin_note'              => in_array('admin_note', $h->changed_fields) ? $h->admin_note : null,
+                        'created_at'              => $h->created_at?->format('Y-m-d H:i:s'),
+                    ])
+                    ->values()
+            ),
             'items' => OrderItemResource::collection($this->whenLoaded('items')),
             'seller_feedbacks' => OrderSellerFeedbackResource::collection($this->whenLoaded('sellerOrders')),
             'promo_line' => $this->whenLoaded('promoLine', fn() => new PromoLineResource($this->promoLine)),

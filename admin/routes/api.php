@@ -75,6 +75,9 @@ Route::get('newsletter-section', [NewsletterSectionApiController::class, 'index'
 // Shipping Rates (public)
 Route::post('shipping/rates', [ShippingRateApiController::class, 'index'])->name('shipping.rates');
 
+// Order tracking (public — no auth required)
+Route::post('orders/track', [OrderApiController::class, 'trackPublicOrder'])->name('orders.track.public');
+
 // User Auth Routes
 Route::post('register', [AuthApiController::class, 'register'])->name('register');
 Route::post('login', [AuthApiController::class, 'login'])->name('login');
@@ -136,6 +139,7 @@ Route::middleware('auth:sanctum')->group(function () {
         // profile
         Route::get('/profile', [UserApiController::class, 'getProfile']);
         Route::post('/profile', [UserApiController::class, 'updateProfile']);
+        Route::post('/password-update', [UserApiController::class, 'changePassword']);
 
         // Wallet routes
         Route::prefix('wallet')->name('wallet.')->group(function () {
@@ -236,6 +240,7 @@ Route::prefix('seller-feedback')->group(function () {
 Route::get('banners', [BannerApiController::class, 'index']);
 
 // Pages (public)
+Route::get('pages', [PageApiController::class, 'index'])->name('pages.index');
 Route::get('pages/{slug}', [PageApiController::class, 'show'])->name('pages.show');
 
 // Contact form submission (public, rate-limited)
@@ -255,6 +260,7 @@ Route::prefix('products')->name('products.')->middleware('throttle:60,1')->group
     Route::get('/', [ProductApiController::class, 'getAllProduct']);
     Route::get('/featured', [ProductApiController::class, 'getFeaturedProduct']);
     Route::get('/new-arrivals', [ProductApiController::class, 'getNewArrivals']);
+    Route::get('/best-sellers', [ProductApiController::class, 'getBestSellers']);
     Route::get('/by-ids', [ProductApiController::class, 'getByIds']);
     Route::get('/search-by-keywords', [ProductApiController::class, 'searchByKeywords']);
     Route::get('/store-wise', [ProductApiController::class, 'storeWise']);

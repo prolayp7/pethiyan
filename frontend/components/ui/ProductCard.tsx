@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Heart, ShoppingCart, Star } from "lucide-react";
 import { useCart } from "@/context/CartContext";
+import toast from "react-hot-toast";
 
 export interface Product {
   id: string;
@@ -46,6 +47,7 @@ export default function ProductCard({ product }: ProductCardProps) {
 
   const handleAddToCart = () => {
     addItem({ id: product.id, name: product.name, price: product.price });
+    toast.success("Product added to cart");
     openCart();
   };
 
@@ -94,10 +96,11 @@ export default function ProductCard({ product }: ProductCardProps) {
 
       {/* Wishlist button */}
       <button
+        type="button"
         onClick={() => setWishlisted((w) => !w)}
         className="absolute top-3 right-3 w-7 h-7 rounded-full bg-white shadow-sm flex items-center justify-center hover:scale-110 transition-transform"
         aria-label={wishlisted ? "Remove from wishlist" : "Add to wishlist"}
-        aria-pressed={wishlisted}
+        aria-pressed={wishlisted ? "true" : "false"}
       >
         <Heart
           className={`h-3.5 w-3.5 transition-colors ${wishlisted ? "fill-red-500 text-red-500" : "text-gray-400"}`}
@@ -138,6 +141,7 @@ export default function ProductCard({ product }: ProductCardProps) {
 
         {/* Add to Cart */}
         <button
+          type="button"
           onClick={handleAddToCart}
           className="mt-auto w-full flex items-center justify-center gap-2 py-2 rounded-xl bg-(--color-primary)/10 text-(--color-primary) text-xs font-semibold hover:bg-(--color-primary) hover:text-white transition-all duration-200"
           aria-label={`Add ${product.name} to cart`}

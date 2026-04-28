@@ -69,6 +69,7 @@ export default function LoginClient() {
   const [step, setStep] = useState<Step>("phone");
   const [phone, setPhone] = useState("");
   const [phoneError, setPhoneError] = useState("");
+  const [emailSentTo, setEmailSentTo] = useState("");
   const [otp, setOtp] = useState("");
   const [otpError, setOtpError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -93,6 +94,7 @@ export default function LoginClient() {
     setLoading(false);
 
     if (result.success) {
+      setEmailSentTo(result.emailSentTo ?? "");
       setStep("otp");
       setCountdown(RESEND_COOLDOWN);
     } else {
@@ -109,6 +111,7 @@ export default function LoginClient() {
     const result = await sendOtp(phone);
     setLoading(false);
     if (result.success) {
+      if (result.emailSentTo) setEmailSentTo(result.emailSentTo);
       setCountdown(RESEND_COOLDOWN);
     } else {
       setOtpError(result.message ?? "Failed to resend OTP.");
@@ -303,7 +306,7 @@ export default function LoginClient() {
                   </h2>
                   <p className="mt-1 text-sm text-gray-500">
                     We sent a 6-digit code to{" "}
-                    <strong className="text-(--color-secondary)">+91 {phone}</strong>
+                    <strong className="text-(--color-secondary)">{emailSentTo || phone}</strong>
                   </p>
                 </div>
 

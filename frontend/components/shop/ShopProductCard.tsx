@@ -46,7 +46,7 @@ const QA_BTN =
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export default function ShopProductCard({ product }: { product: RealApiProduct }) {
+export default function ShopProductCard({ product, view = 'grid' }: { product: RealApiProduct; view?: 'grid' | 'list' }) {
   const router = useRouter();
   const { addItem, openCart, updateQuantity } = useCart();
   const { isWishlisted, toggle } = useWishlist();
@@ -87,7 +87,7 @@ export default function ShopProductCard({ product }: { product: RealApiProduct }
   // Price to show in grid (prefer discounted special_price when present)
   // If hovering a variant, try to use that variant's pricing
   const hoveredVariant = product.variants?.find((v) => v.id === hoveredVariantId) ?? null;
-  const defaultDisplayTitle = hoveredVariant?.title ?? (product.type === "variant" ? (defaultVariant?.title ?? product.title) : product.title);
+  const defaultDisplayTitle = product.title;
   function getPricingForVariant(v: typeof defaultVariant | null) {
     if (!v) return null;
     // Prefer a store pricing that matches defaultPricing store_id if available
@@ -149,6 +149,10 @@ export default function ShopProductCard({ product }: { product: RealApiProduct }
   // ── Handlers ──────────────────────────────────────────────────────────────
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
+    if (product.type === "variant") {
+      void openQuickView(e);
+      return;
+    }
     if (!defaultVariant || !defaultPricing) return;
     const itemId = `${product.id}-v${defaultVariant.id}-s${defaultPricing.store_id}`;
     addItem({
@@ -172,6 +176,7 @@ export default function ShopProductCard({ product }: { product: RealApiProduct }
     });
     // Reflect selected qty (local `qty`) in cart after add
     setTimeout(() => updateQuantity(itemId, qty), 0);
+    toast.success("Product added to cart");
     openCart();
   };
 
@@ -261,6 +266,7 @@ export default function ShopProductCard({ product }: { product: RealApiProduct }
       weightUnit: selectedVariant.weight_unit ?? undefined,
     });
     setTimeout(() => updateQuantity(itemId, qty), 0);
+    toast.success("Product added to cart");
     openCart();
   };
 
@@ -268,6 +274,114 @@ export default function ShopProductCard({ product }: { product: RealApiProduct }
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <>
+      {view === 'list' ? (
+        <div onMouseLeave={() => setHoveredVariantId(null)} className="featured-card-border transition-all duration-200 bg-white overflow-hidden">
+          <Link href={`/products/${product.slug}`} className="group flex items-stretch">
+            {/* Thumbnail — full-height left panel */}
+            <div className="relative w-28 sm:w-32 shrink-0 bg-gray-50 min-h-28 sm:min-h-32">
+              {imgSrc ? (
+                <Image
+                  src={imgSrc}
+                  alt={product.title}
+                  fill
+                  unoptimized={/^https?:\/\/(localhost|127\.0\.0\.1)/i.test(imgSrc)}
+                  className="object-cover group-hover:scale-105 transition-transform duration-300"
+                  sizes="128px"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <Package className="h-8 w-8 text-gray-200" />
+                </div>
+              )}
+              {discount && (
+                <span className="absolute top-1.5 left-1.5 text-[9px] font-black px-1.5 py-0.5 rounded-full text-white bg-red-500">
+                  {discount}%
+                </span>
+              )}
+              {!inStock && (
+                <div className="absolute inset-0 bg-white/70 flex items-center justify-center">
+                  <span className="text-[8px] font-bold text-gray-500 tracking-widest uppercase text-center leading-tight">Out of Stock</span>
+                </div>
+              )}
+            </div>
+
+            {/* Right column: details + actions */}
+            <div className="flex-1 min-w-0 flex flex-col p-3 sm:p-4">
+              {/* Top: text info + wishlist/quickview icons side by side */}
+              <div className="flex items-start gap-2">
+                <div className="flex-1 min-w-0">
+                  {showCategoryNameInGrid && product.category && (
+                    <p className="text-[10px] text-[#1f4f8a] font-semibold uppercase tracking-wider mb-0.5">
+                      {product.category.title}
+                    </p>
+                  )}
+                  <p className="text-sm font-semibold text-gray-900 leading-snug line-clamp-2 group-hover:text-[#2e7c8a] transition-colors">
+                    {defaultDisplayTitle}
+                  </p>
+                  {product.type !== "variant" && <AttributePills attributes={defaultVariant?.attributes ?? null} />}
+                  <div className="flex items-baseline gap-1.5 mt-1">
+                    <span className="text-sm font-extrabold text-gray-900">
+                      {product.currency?.symbol || "₹"}{priceWithoutGst.toFixed(2)}
+                    </span>
+                    {showCompare && (
+                      <span className="text-[10px] text-gray-400 line-through">
+                        {product.currency?.symbol || "₹"}{compareWithoutGst.toFixed(2)}
+                      </span>
+                    )}
+                    {discount && (
+                      <span className="text-[10px] font-bold text-red-500">{discount}% off</span>
+                    )}
+                  </div>
+                  {showGstInGrid && (
+                    <span className="text-[10px] text-gray-400 block">+{product.tax?.gst_rate ?? ""}% GST</span>
+                  )}
+                </div>
+
+                {/* Wishlist + quick view — horizontal row, top right */}
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button
+                    type="button"
+                    onClick={handleToggleWishlist}
+                    disabled={wishlistBusy}
+                    className="h-7 w-7 rounded-full bg-gray-50 border border-gray-200 flex items-center justify-center text-gray-400 hover:text-red-500 hover:border-red-200 transition-colors"
+                    aria-label={isInWishlist ? "Remove from wishlist" : "Add to wishlist"}
+                  >
+                    {isInWishlist ? <Trash2 className="h-3 w-3 text-red-400" /> : <Heart className="h-3 w-3" />}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={openQuickView}
+                    className="h-7 w-7 rounded-full bg-gray-50 border border-gray-200 flex items-center justify-center text-gray-400 hover:text-[#2f6f9f] hover:border-[#2f6f9f]/30 transition-colors"
+                    aria-label="Quick view"
+                  >
+                    <Eye className="h-3 w-3" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Bottom row: min qty (left) + add to cart (right) — same horizontal line */}
+              <div className="flex items-center gap-2 mt-auto pt-1.5">
+                {showMinQtyInGrid && (
+                  <span className="flex items-center gap-1 text-[10px] text-gray-400 mr-auto">
+                    <Tag className="h-2.5 w-2.5 shrink-0" />
+                    Min: {minQty} pcs
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={handleAddToCart}
+                  disabled={!inStock}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold text-white transition-all hover:opacity-90 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed ml-auto bg-[linear-gradient(135deg,#17396f_0%,#2f6f9f_52%,#49ad57_100%)]"
+                  aria-label="Add to cart"
+                >
+                  <ShoppingBag className="h-3.5 w-3.5" />
+                  Add to Cart
+                </button>
+              </div>
+            </div>
+          </Link>
+        </div>
+      ) : (
       <div onMouseLeave={() => setHoveredVariantId(null)} className="featured-card-border transition-all duration-300 hover:-translate-y-1 h-full">
         <Link href={`/products/${product.slug}`} className="group flex flex-col h-full">
 
@@ -429,9 +543,9 @@ export default function ShopProductCard({ product }: { product: RealApiProduct }
             })()}
             {product.type !== "variant" && <AttributePills attributes={defaultVariant?.attributes ?? null} />}
 
-            {/* Bottom row: price+meta left, cart right */}
-            <div className="flex items-end justify-between gap-2 mt-auto pt-2 border-t border-gray-100">
-              {/* Left: price + GST + min qty */}
+            {/* Bottom row: price+meta, then cart — stacked on mobile, side-by-side on sm+ */}
+            <div className="flex flex-col gap-1.5 mt-auto pt-2 border-t border-gray-100 sm:flex-row sm:items-end sm:justify-between sm:gap-2">
+              {/* Price + GST + min qty */}
               <div className="flex flex-col gap-0.5 min-w-0">
                 <div className="flex items-baseline gap-1">
                   <span className="text-sm font-extrabold text-gray-900">
@@ -454,12 +568,12 @@ export default function ShopProductCard({ product }: { product: RealApiProduct }
                 )}
               </div>
 
-              {/* Right: add to cart */}
+              {/* Add to cart — full width on mobile, auto on sm+ */}
               <button
                 type="button"
                 onClick={handleAddToCart}
                 disabled={!inStock}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold text-white transition-all hover:opacity-90 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed shrink-0 bg-[linear-gradient(135deg,#17396f_0%,#2f6f9f_52%,#49ad57_100%)]"
+                className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold text-white transition-all hover:opacity-90 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed w-full sm:w-auto sm:shrink-0 bg-[linear-gradient(135deg,#17396f_0%,#2f6f9f_52%,#49ad57_100%)]"
                 aria-label="Add to cart"
               >
                 <ShoppingBag className="h-3.5 w-3.5" />
@@ -469,17 +583,16 @@ export default function ShopProductCard({ product }: { product: RealApiProduct }
           </div>
         </Link>
       </div>
+      )}
 
       {/* ── Quick View Modal ── */}
       {quickViewOpen && typeof document !== "undefined" && createPortal(
         <div
           className="fixed inset-0 z-[9999] bg-black/55 backdrop-blur-[1px] flex items-center justify-center p-3 sm:p-6"
-          onClick={closeQuickView}
           role="dialog" aria-modal="true" aria-label="Quick product view"
         >
           <div
             className="w-full max-w-5xl max-h-[92vh] overflow-hidden rounded-3xl bg-white shadow-2xl flex flex-col"
-            onClick={(e) => e.stopPropagation()}
           >
             {quickViewLoading ? (
               /* Skeleton loader */
@@ -516,6 +629,15 @@ export default function ShopProductCard({ product }: { product: RealApiProduct }
                 {/* ── Image panel ── */}
                 <div className="bg-[#f3f6fa] rounded-t-3xl lg:rounded-l-3xl lg:rounded-tr-none flex flex-col min-h-0">
                   <div className="relative flex-1 min-h-[280px] lg:min-h-0">
+                    {/* Mobile-only close button — fixed at top-right of image, never scrolls */}
+                    <button
+                      type="button"
+                      className="absolute top-3 right-3 z-20 lg:hidden h-9 w-9 rounded-full bg-white/90 shadow-md flex items-center justify-center text-[#0f2444] hover:bg-white transition-colors"
+                      onClick={closeQuickView}
+                      aria-label="Close quick view"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
                     {modalImages.length > 0 ? (
                       <Image
                         src={modalImages[Math.min(activeImageIndex, modalImages.length - 1)]}
@@ -580,7 +702,7 @@ export default function ShopProductCard({ product }: { product: RealApiProduct }
                           </span>
                         )}
                       </div>
-                      <button className="shrink-0 h-8 w-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-[#0f2444] transition-colors"
+                      <button className="shrink-0 h-8 w-8 rounded-full bg-gray-100 hover:bg-gray-200 hidden lg:flex items-center justify-center text-[#0f2444] transition-colors"
                         onClick={closeQuickView} aria-label="Close quick view">
                         <X className="h-4 w-4" />
                       </button>
@@ -588,7 +710,9 @@ export default function ShopProductCard({ product }: { product: RealApiProduct }
 
                     {/* Title */}
                     <h3 className="text-xl sm:text-2xl leading-tight font-extrabold text-[#0f2444]">
-                      {quickViewProduct.title}
+                      {quickViewProduct.type === "variant" && selectedVariant?.title
+                        ? `${quickViewProduct.title} - ${selectedVariant.title}`
+                        : quickViewProduct.title}
                     </h3>
 
                     {/* SKU */}
@@ -672,23 +796,26 @@ export default function ShopProductCard({ product }: { product: RealApiProduct }
                     )}
 
                     {/* Qty + Add to Cart */}
-                    <div className="mt-5 flex flex-wrap items-center gap-2.5">
-                      <div className="h-10 rounded-full bg-gray-100 px-3 flex items-center gap-3 shrink-0">
-                        <button className="text-gray-700" onClick={() => setQty((q) => Math.max(stepQty, q - (quickViewProduct?.policies?.quantity_step_size ?? 1)))} aria-label="Decrease quantity">
-                          <Minus className="h-4 w-4" />
-                        </button>
-                        <span className="min-w-7 text-center text-base font-semibold">{qty}</span>
-                        <button className="text-gray-700" onClick={() => setQty((q) => q + (quickViewProduct?.policies?.quantity_step_size ?? 1))} aria-label="Increase quantity">
-                          <Plus className="h-4 w-4" />
-                        </button>
+                    <div className="mt-5 flex flex-col gap-2.5 lg:flex-row lg:flex-wrap lg:items-center">
+                      {/* Qty control + price: stacked on mobile, inline on desktop */}
+                      <div className="flex items-center gap-2.5">
+                        <div className="h-10 rounded-full bg-gray-100 px-3 flex items-center gap-3 shrink-0">
+                          <button type="button" className="text-gray-700" onClick={() => setQty((q) => Math.max(stepQty, q - (quickViewProduct?.policies?.quantity_step_size ?? 1)))} aria-label="Decrease quantity">
+                            <Minus className="h-4 w-4" />
+                          </button>
+                          <span className="min-w-7 text-center text-base font-semibold">{qty}</span>
+                          <button type="button" className="text-gray-700" onClick={() => setQty((q) => q + (quickViewProduct?.policies?.quantity_step_size ?? 1))} aria-label="Increase quantity">
+                            <Plus className="h-4 w-4" />
+                          </button>
+                        </div>
+                        {priceNow > 0 && (
+                          <span className="text-sm font-bold text-[#0f4d9a] shrink-0">
+                            = {quickViewProduct.currency?.symbol || "₹"}{(priceNow * qty).toFixed(2)}
+                          </span>
+                        )}
                       </div>
-                      {priceNow > 0 && (
-                        <span className="text-sm font-bold text-[#0f4d9a] shrink-0">
-                          = {quickViewProduct.currency?.symbol || "₹"}{(priceNow * qty).toFixed(2)}
-                        </span>
-                      )}
                       <button onClick={addSelectedToCart} disabled={!qvInStock}
-                        className="flex-1 h-10 rounded-full text-white text-sm font-semibold transition-all hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed bg-[linear-gradient(135deg,#17396f_0%,#2f6f9f_52%,#49ad57_100%)] flex items-center justify-center gap-1.5">
+                        className="w-full lg:flex-1 h-10 rounded-full text-white text-sm font-semibold transition-all hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed bg-[linear-gradient(135deg,#17396f_0%,#2f6f9f_52%,#49ad57_100%)] flex items-center justify-center gap-1.5">
                         <ShoppingBag className="h-4 w-4" />
                         Add to Cart
                       </button>

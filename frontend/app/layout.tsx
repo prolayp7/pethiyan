@@ -220,26 +220,28 @@ export default async function RootLayout({
               {/* Cookie preferences */}
               <CookieConsentPopup />
 
-              {/* Toast notifications */}
-              <Toaster
-                position="top-right"
-                toastOptions={{
-                  duration: 3000,
-                  style: {
-                    borderRadius: "12px",
-                    fontSize: "13px",
-                    fontWeight: 600,
-                    boxShadow: "0 4px 24px rgba(0,0,0,0.10)",
-                  },
-                  success: { iconTheme: { primary: "#22c55e", secondary: "#fff" } },
-                  error:   { iconTheme: { primary: "#ef4444", secondary: "#fff" } },
-                }}
-              />
             </CartProvider>
           </WishlistProvider>
         </AuthProvider>
         </SiteSettingsProvider>
         </div>{/* /app-root */}
+
+        {/* Toast notifications — outside app-root so they sit above the cart drawer portal (z-[10001]) */}
+        <Toaster
+          position="top-right"
+          containerStyle={{ zIndex: 10002 }}
+          toastOptions={{
+            duration: 3000,
+            style: {
+              borderRadius: "12px",
+              fontSize: "13px",
+              fontWeight: 600,
+              boxShadow: "0 4px 24px rgba(0,0,0,0.10)",
+            },
+            success: { iconTheme: { primary: "#22c55e", secondary: "#fff" } },
+            error:   { iconTheme: { primary: "#ef4444", secondary: "#fff" } },
+          }}
+        />
       </body>
     </html>
   );

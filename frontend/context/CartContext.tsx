@@ -116,7 +116,7 @@ export function CartProvider({
     }
   }, [items, hydrated]);
 
-  const liveItemCount = items.reduce((sum, item) => sum + item.quantity, 0);
+  const liveItemCount = items.length;
   const itemCount = hydrated ? liveItemCount : initialItemCount;
   const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const totalGst = items.reduce((sum, item) => sum + (item.taxPerUnit ?? 0) * item.quantity, 0);

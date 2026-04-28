@@ -38,6 +38,11 @@
                             @csrf
                             <div class="row g-3">
                                 <div class="col-md-4">
+                                    <label class="form-label">Customer Name</label>
+                                    <input name="reviewer_name" class="form-control"
+                                           value="{{ old('reviewer_name') }}" placeholder="e.g. John D." maxlength="100" />
+                                </div>
+                                <div class="col-md-4">
                                     <label class="form-label">Product <span class="text-danger">*</span></label>
                                     <select id="product-search" name="product_id"
                                             class="form-select @error('product_id') is-invalid @enderror"
@@ -144,6 +149,8 @@
                                                     </span>
                                                     {{ $r->user->name }}
                                                 </div>
+                                            @elseif($r->reviewer_name)
+                                                <span>{{ $r->reviewer_name }}</span>
                                             @else
                                                 <span class="text-muted">Anonymous</span>
                                             @endif
@@ -194,6 +201,22 @@
                                                         </button>
                                                     </form>
                                                 @endif
+                                                <form method="POST" action="{{ route('admin.reviews.destroy', $r->id) }}"
+                                                      onsubmit="return confirm('Delete this review? This cannot be undone.')">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-sm" width="16" height="16"
+                                                             viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                                             stroke-linecap="round" stroke-linejoin="round">
+                                                            <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                                                            <path d="M4 7l16 0"/><path d="M10 11l0 6"/><path d="M14 11l0 6"/>
+                                                            <path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12"/>
+                                                            <path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3"/>
+                                                        </svg>
+                                                        Delete
+                                                    </button>
+                                                </form>
                                             </div>
                                         </td>
                                     </tr>

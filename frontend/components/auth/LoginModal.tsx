@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { X, ArrowRight, Mail, User as UserIcon, Lock, Eye, EyeOff, ShieldCheck, Truck, Tag } from "lucide-react";
+import { X, ArrowRight, Mail, Phone, User as UserIcon, Lock, Eye, EyeOff, ShieldCheck, Truck, Tag } from "lucide-react";
 import Image from "next/image";
 import { useSiteSettings } from "@/context/SiteSettingsContext";
 import Link from "next/link";
@@ -26,7 +26,7 @@ type Step = "form" | "otp";
 type LoginMode = "password" | "otp" | "forgot-password";
 type ForgotStep = "identifier" | "reset" | "success";
 
-const RESEND_SECONDS = 60;
+const RESEND_SECONDS = 300;
 
 // ── Validators ──────────────────────────────────────────────────────────────
 
@@ -54,6 +54,15 @@ function validatePassword(pw: string): string {
   if (!/[#_%$@!]/.test(pw)) return "At least one special character required (#  _  %  $  @  !)";
   if (/[^A-Za-z0-9#_%$@!]/.test(pw)) return "Only # _ % $ @ ! are allowed as special characters";
   return "";
+}
+
+function formatCountdown(seconds: number): string {
+  if (seconds >= 60) {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return s > 0 ? `${m}m ${s}s` : `${m}m`;
+  }
+  return `${seconds}s`;
 }
 
 // ── Component ────────────────────────────────────────────────────────────────
@@ -88,9 +97,9 @@ export default function LoginModal({ open, onClose, onSuccess, redirectTo }: Log
   const [loginIdentifier, setLoginIdentifier] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [showLoginPassword, setShowLoginPassword] = useState(false);
-  const [loginMobile, setLoginMobile] = useState("");
-  const [loginEmail, setLoginEmail] = useState("");
+  const [loginOtpInput, setLoginOtpInput] = useState("");
   const [loginOtpSentTo, setLoginOtpSentTo] = useState<{ sms: boolean; email: boolean }>({ sms: false, email: false });
+  const [loginOtpEmailSentTo, setLoginOtpEmailSentTo] = useState("");
 
   // Forgot-password fields
   const [forgotStep, setForgotStep] = useState<ForgotStep>("identifier");
@@ -155,7 +164,7 @@ export default function LoginModal({ open, onClose, onSuccess, redirectTo }: Log
       setStep("form");
       setLoginMode("password");
       setLoginIdentifier(""); setLoginPassword(""); setShowLoginPassword(false);
-      setLoginMobile(""); setLoginEmail(""); setLoginOtpSentTo({ sms: false, email: false });
+      setLoginOtpInput(""); setLoginOtpSentTo({ sms: false, email: false }); setLoginOtpEmailSentTo("");
       setForgotStep("identifier"); setForgotEmail(""); setForgotMobile("");
       setForgotOtp(""); setForgotNewPassword(""); setForgotConfirmPassword("");
       setShowForgotPassword(false); setShowForgotConfirm(false);
@@ -179,7 +188,7 @@ export default function LoginModal({ open, onClose, onSuccess, redirectTo }: Log
     setStep("form");
     setLoginMode("password");
     setLoginIdentifier(""); setLoginPassword(""); setShowLoginPassword(false);
-    setLoginMobile(""); setLoginEmail(""); setLoginOtpSentTo({ sms: false, email: false });
+    setLoginOtpInput(""); setLoginOtpSentTo({ sms: false, email: false }); setLoginOtpEmailSentTo("");
     setForgotStep("identifier"); setForgotEmail(""); setForgotMobile("");
     setForgotOtp(""); setForgotNewPassword(""); setForgotConfirmPassword("");
     setShowForgotPassword(false); setShowForgotConfirm(false);
@@ -280,28 +289,28 @@ export default function LoginModal({ open, onClose, onSuccess, redirectTo }: Log
   }
 
   function validateOtpLoginForm(): boolean {
-    const errs: Record<string, string> = {};
-    if (smsOtpEnabled && loginMobile && !isValidIndianMobile(loginMobile)) {
-      errs.loginMobile = "Enter a valid 10-digit mobile number";
+    const val = loginOtpInput.trim();
+    if (!val) {
+      setErrors({ loginOtpInput: "Enter your email or mobile number" });
+      triggerShake(["loginOtpInput"]);
+      return false;
     }
-    if (emailOtpEnabled && loginEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(loginEmail.trim())) {
-      errs.loginEmail = "Enter a valid email address";
-    }
-    // At least one must be provided
-    const hasMobile = smsOtpEnabled && isValidIndianMobile(loginMobile);
-    const hasEmail  = emailOtpEnabled && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(loginEmail.trim());
-    if (!hasMobile && !hasEmail) {
-      if (smsOtpEnabled && emailOtpEnabled) {
-        errs.loginOtpIdentifier = "Enter a mobile number or email address";
-      } else if (smsOtpEnabled) {
-        errs.loginMobile = "Enter a valid 10-digit mobile number";
-      } else if (emailOtpEnabled) {
-        errs.loginEmail = "Enter a valid email address";
+    const isPhone = /^\d+$/.test(val);
+    if (isPhone) {
+      if (!isValidIndianMobile(val)) {
+        setErrors({ loginOtpInput: "Enter a valid 10-digit mobile number" });
+        triggerShake(["loginOtpInput"]);
+        return false;
+      }
+    } else {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) {
+        setErrors({ loginOtpInput: "Enter a valid email address" });
+        triggerShake(["loginOtpInput"]);
+        return false;
       }
     }
-    setErrors(errs);
-    if (Object.keys(errs).length) triggerShake(Object.keys(errs));
-    return Object.keys(errs).length === 0;
+    setErrors({});
+    return true;
   }
 
   function validateRegisterForm(): boolean {
@@ -344,12 +353,16 @@ export default function LoginModal({ open, onClose, onSuccess, redirectTo }: Log
     if (!validateOtpLoginForm()) return;
     startLoading("form");
     try {
-      const mobile = smsOtpEnabled && isValidIndianMobile(loginMobile) ? loginMobile : null;
-      const email  = emailOtpEnabled && loginEmail.trim() ? loginEmail.trim() : null;
+      const val = loginOtpInput.trim();
+      const isPhone = /^\d+$/.test(val);
+      // Keep mobile ready for future SMS support; currently routes OTP via email/SMS per backend capability
+      const mobile = isPhone ? val : null;
+      const email  = !isPhone ? val : null;
       const res = await sendOtp(mobile, email);
       if (res.success) {
         setDemoOtp(res.demoOtp);
         setLoginOtpSentTo({ sms: Boolean(res.smsOtpSent), email: Boolean(res.emailOtpSent) });
+        setLoginOtpEmailSentTo(res.emailSentTo ?? "");
         setStep("otp");
         startCountdown();
       } else {
@@ -366,8 +379,10 @@ export default function LoginModal({ open, onClose, onSuccess, redirectTo }: Log
     setErrors({});
     startLoading("form");
     try {
-      const mobile = smsOtpEnabled && isValidIndianMobile(loginMobile) ? loginMobile : null;
-      const email  = emailOtpEnabled && loginEmail.trim() ? loginEmail.trim() : undefined;
+      const val = loginOtpInput.trim();
+      const isPhone = /^\d+$/.test(val);
+      const mobile = isPhone ? val : null;
+      const email  = !isPhone ? val : undefined;
       const res = await verifyOtp(mobile, otp, email ? { email } : undefined);
       if (res.success && res.user) { completeLogin(res.user); }
       else setApiError(res.message ?? "Invalid OTP. Please try again.");
@@ -502,13 +517,13 @@ export default function LoginModal({ open, onClose, onSuccess, redirectTo }: Log
     try {
       let res;
       if (tab === "login") {
-        const mobile = smsOtpEnabled && isValidIndianMobile(loginMobile) ? loginMobile : null;
-        const email  = emailOtpEnabled && loginEmail.trim() ? loginEmail.trim() : null;
-        res = await resendOtp(mobile, email);
+        const val = loginOtpInput.trim();
+        const isPhone = /^\d+$/.test(val);
+        res = await resendOtp(isPhone ? val : null, !isPhone ? val : null);
       } else {
         res = await resendOtp(regMobile, null);
       }
-      if (res.success) { setOtp(""); setDemoOtp(res.demoOtp); startCountdown(); }
+      if (res.success) { setOtp(""); setDemoOtp(res.demoOtp); if (res.emailSentTo) setLoginOtpEmailSentTo(res.emailSentTo); startCountdown(); }
       else setApiError(res.message ?? "Could not resend OTP.");
     } catch { setApiError("Something went wrong. Please try again."); }
     finally { stopLoading(); }
@@ -595,10 +610,6 @@ export default function LoginModal({ open, onClose, onSuccess, redirectTo }: Log
     finally { stopLoading(); }
   }
 
-  function handleBackdrop(e: React.MouseEvent<HTMLDivElement>) {
-    if (e.target === e.currentTarget) onClose();
-  }
-
   // ── Field class helper ────────────────────────────────────────────────────────
 
   function fieldCls(field: string, extra = "") {
@@ -616,6 +627,7 @@ export default function LoginModal({ open, onClose, onSuccess, redirectTo }: Log
 
   const isOtpStep = step === "otp";
   const handleVerifyOtp = tab === "login" ? handleLoginVerifyOtp : handleRegisterVerifyOtp;
+  const isPhoneOtpInput = loginOtpInput.length > 0 && /^\d+$/.test(loginOtpInput);
 
   // Registration OTP destination
   const registerSmsOtpSent   = Boolean(pendingAuth.current?.smsOtpSent);
@@ -630,16 +642,9 @@ export default function LoginModal({ open, onClose, onSuccess, redirectTo }: Log
     return parts.join(" & ") || `+91 ${regMobile}`;
   })();
 
-  // Login OTP destination
-  const loginOtpHeading = loginOtpSentTo.sms && loginOtpSentTo.email
-    ? "Verify your account"
-    : loginOtpSentTo.sms ? "Verify your mobile" : loginOtpSentTo.email ? "Verify your email" : "Verify your account";
-  const loginOtpDestination = (() => {
-    const parts: string[] = [];
-    if (loginOtpSentTo.sms && loginMobile) parts.push(`+91 ${loginMobile}`);
-    if (loginOtpSentTo.email && loginEmail) parts.push(loginEmail);
-    return parts.join(" & ") || (loginMobile ? `+91 ${loginMobile}` : loginEmail);
-  })();
+  // Login OTP destination — OTP always goes to email
+  const loginOtpHeading = "Verify your email";
+  const loginOtpDestination = loginOtpEmailSentTo || loginOtpInput.trim();
 
   const otpHeading     = tab === "login" ? loginOtpHeading     : registerOtpHeading;
   const otpDestination = tab === "login" ? loginOtpDestination : registerOtpDestination;
@@ -650,7 +655,6 @@ export default function LoginModal({ open, onClose, onSuccess, redirectTo }: Log
     <div
       className="fixed inset-0 z-[500] flex items-center justify-center p-4"
       style={{ background: "rgba(8,20,45,0.7)", backdropFilter: "blur(8px)" }}
-      onClick={handleBackdrop}
     >
       <div
         className="modal-enter relative w-full flex overflow-hidden rounded-2xl shadow-2xl"
@@ -840,7 +844,7 @@ export default function LoginModal({ open, onClose, onSuccess, redirectTo }: Log
                 <p className="text-center text-xs text-gray-500">
                   Didn&apos;t receive it?{" "}
                   {countdown > 0
-                    ? <span className="font-medium text-gray-400">Resend in {countdown}s</span>
+                    ? <span className="font-medium text-gray-400">Resend in {formatCountdown(countdown)}</span>
                     : <button type="button" onClick={handleResend} disabled={loading} className="font-semibold" style={{ color: "#17396f" }}>Resend OTP</button>
                   }
                 </p>
@@ -925,59 +929,44 @@ export default function LoginModal({ open, onClose, onSuccess, redirectTo }: Log
                 <form onSubmit={handleLoginSendOtp} className="space-y-3.5">
                   <div className="mb-1">
                     <h2 className="text-lg font-bold text-gray-900">Login with OTP</h2>
-                    <p className="text-xs text-gray-500 mt-0.5">
-                      {smsOtpEnabled && emailOtpEnabled
-                        ? "Enter your mobile number or email address — we'll send you a one-time password"
-                        : smsOtpEnabled
-                        ? "Enter your registered mobile number to receive a one-time password"
-                        : "Enter your registered email address to receive a one-time password"}
-                    </p>
+                    <p className="text-xs text-gray-500 mt-0.5">Enter your mobile number or email — we&apos;ll send you a one-time password</p>
                   </div>
 
-                  {errors.loginOtpIdentifier && (
-                    <p className="text-xs text-red-500 error-fade flex items-center gap-1" role="alert">
-                      <span className="inline-block w-1 h-1 rounded-full bg-red-500 shrink-0" />{errors.loginOtpIdentifier}
-                    </p>
-                  )}
-
-                  {smsOtpEnabled && (
-                    <div className={shaking.has("loginMobile") || shaking.has("loginOtpIdentifier") ? "shake" : ""}>
-                      <MobileInput
-                        value={loginMobile}
-                        onChange={(v) => {
-                          setLoginMobile(v);
-                          setFieldError("loginMobile", v && !isValidIndianMobile(v) ? "Enter a valid 10-digit mobile number" : "");
-                          setFieldError("loginOtpIdentifier", "");
+                  {/* Unified identifier input — auto-detects phone vs email */}
+                  <FormField error={errors.loginOtpInput}>
+                    <div
+                      className={`relative flex items-center border rounded-xl overflow-hidden bg-white transition-all duration-200 ${
+                        errors.loginOtpInput
+                          ? "border-red-400 ring-2 ring-red-100"
+                          : "border-[#e2e8f0] focus-within:border-[#2f6f9f] focus-within:ring-2 focus-within:ring-[#2f6f9f]/10"
+                      } ${shaking.has("loginOtpInput") ? "shake" : ""}`}
+                    >
+                      {isPhoneOtpInput ? (
+                        <span className="flex items-center gap-1.5 pl-3.5 pr-3 py-3 border-r border-[#e2e8f0] text-sm text-gray-500 bg-gray-50 shrink-0 select-none whitespace-nowrap">
+                          <Phone className="h-3.5 w-3.5" /> +91
+                        </span>
+                      ) : (
+                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+                          {loginOtpInput.includes("@") ? <Mail className="h-4 w-4" /> : <UserIcon className="h-4 w-4" />}
+                        </span>
+                      )}
+                      <input
+                        type={isPhoneOtpInput ? "tel" : "text"}
+                        placeholder={isPhoneOtpInput ? "10-digit mobile number" : "Email or mobile number *"}
+                        value={loginOtpInput}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (/^\d+$/.test(val) && val.length > 10) return;
+                          setLoginOtpInput(val);
+                          setFieldError("loginOtpInput", "");
                         }}
-                        error={errors.loginMobile}
                         disabled={loading}
-                        autoFocus={smsOtpEnabled}
+                        autoFocus
+                        inputMode={isPhoneOtpInput ? "numeric" : "text"}
+                        className={`flex-1 min-w-0 py-3 text-sm outline-none bg-white ${isPhoneOtpInput ? "px-3" : "pl-10 pr-4"}`}
                       />
                     </div>
-                  )}
-
-                  {emailOtpEnabled && (
-                    <FormField error={errors.loginEmail}>
-                      <div className={`relative ${shaking.has("loginEmail") || shaking.has("loginOtpIdentifier") ? "shake" : ""}`}>
-                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
-                          <Mail className="h-4 w-4" />
-                        </span>
-                        <input
-                          type="email"
-                          placeholder={smsOtpEnabled ? "Email address (optional)" : "Email address *"}
-                          value={loginEmail}
-                          onChange={(e) => {
-                            setLoginEmail(e.target.value);
-                            setFieldError("loginEmail", e.target.value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.target.value.trim()) ? "Enter a valid email address" : "");
-                            setFieldError("loginOtpIdentifier", "");
-                          }}
-                          disabled={loading}
-                          autoFocus={!smsOtpEnabled && emailOtpEnabled}
-                          className={fieldCls("loginEmail", "pl-10 pr-4 py-3")}
-                        />
-                      </div>
-                    </FormField>
-                  )}
+                  </FormField>
 
                   {apiError && <ApiError msg={apiError} />}
 
@@ -1042,6 +1031,14 @@ export default function LoginModal({ open, onClose, onSuccess, redirectTo }: Log
                           disabled={loading}
                           autoFocus={smsOtpEnabled}
                         />
+                      </div>
+                    )}
+
+                    {smsOtpEnabled && emailOtpEnabled && (
+                      <div className="flex items-center gap-3 my-1">
+                        <div className="flex-1 h-px bg-gray-200" />
+                        <span className="text-xs font-semibold text-gray-400 uppercase tracking-widest">OR</span>
+                        <div className="flex-1 h-px bg-gray-200" />
                       </div>
                     )}
 
@@ -1125,7 +1122,7 @@ export default function LoginModal({ open, onClose, onSuccess, redirectTo }: Log
                     <p className="text-center text-xs text-gray-500">
                       Didn&apos;t receive it?{" "}
                       {forgotCountdown > 0
-                        ? <span className="font-medium text-gray-400">Resend in {forgotCountdown}s</span>
+                        ? <span className="font-medium text-gray-400">Resend in {formatCountdown(forgotCountdown)}</span>
                         : <button type="button" onClick={handleForgotResend} disabled={loading} className="font-semibold" style={{ color: "#17396f" }}>Resend OTP</button>
                       }
                     </p>

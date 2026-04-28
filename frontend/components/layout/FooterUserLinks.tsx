@@ -16,6 +16,13 @@ export default function FooterUserLinks({ links }: { links: NavLink[] }) {
   const { isLoggedIn } = useAuth();
   const [loginOpen, setLoginOpen] = useState(false);
 
+  const visibleLinks = links.filter((link) => {
+    if (link.label === "Login / Register") return !isLoggedIn;
+    if (link.label === "My Account") return isLoggedIn;
+    if (link.label === "Payments") return false;
+    return true;
+  });
+
   function handleClick(e: React.MouseEvent<HTMLAnchorElement>, href: string) {
     if (isLoggedIn) return; // let Next.js navigate normally
     // Block navigation and open the modal instead
@@ -26,7 +33,7 @@ export default function FooterUserLinks({ links }: { links: NavLink[] }) {
   return (
     <>
       <ul className="space-y-3">
-        {links.map((link) => (
+        {visibleLinks.map((link) => (
           <li key={link.label}>
             <Link
               href={link.href}
