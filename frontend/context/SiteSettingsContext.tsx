@@ -13,6 +13,7 @@ const DEFAULTS: ApiSystemSettings = {
   showGstInGrid:           false,
   showCategoryNameInGrid:  true,
   showMinQtyInGrid:        false,
+  sellerSupportNumber: "",
 };
 
 const SiteSettingsContext = createContext<ApiSystemSettings>(DEFAULTS);

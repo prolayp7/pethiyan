@@ -8,7 +8,8 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useWishlist } from "@/context/WishlistContext";
-import LoginModal from "@/components/auth/LoginModal";
+import dynamic from "next/dynamic";
+const LoginModal = dynamic(() => import("@/components/auth/LoginModal"), { ssr: false });
 import BrowsingHistory from "@/components/product/BrowsingHistory";
 
 const NAV_ITEMS = [

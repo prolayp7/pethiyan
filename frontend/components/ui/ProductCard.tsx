@@ -1,11 +1,15 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import Image from "next/image";
 import Link from "next/link";
 import { Heart, ShoppingCart, Star } from "lucide-react";
 import { useCart } from "@/context/CartContext";
+import { useAuth } from "@/context/AuthContext";
 import toast from "react-hot-toast";
+
+const LoginModal = dynamic(() => import("@/components/auth/LoginModal"), { ssr: false });
 
 export interface Product {
   id: string;
@@ -41,7 +45,9 @@ const cardBgs: Record<string, string> = {
 
 export default function ProductCard({ product }: ProductCardProps) {
   const [wishlisted, setWishlisted] = useState(false);
+  const [loginOpen, setLoginOpen] = useState(false);
   const { addItem, openCart } = useCart();
+  const { isLoggedIn } = useAuth();
 
   const bg = cardBgs[product.category] ?? "from-gray-100 to-gray-50";
 
@@ -57,6 +63,7 @@ export default function ProductCard({ product }: ProductCardProps) {
       : null;
 
   return (
+    <>
     <article className="group relative bg-white rounded-2xl border border-(--color-border) overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300 h-full flex flex-col">
       {/* Image area */}
       <Link href={product.href} className="block relative aspect-4/3 overflow-hidden" tabIndex={-1} aria-hidden="true">
@@ -97,10 +104,10 @@ export default function ProductCard({ product }: ProductCardProps) {
       {/* Wishlist button */}
       <button
         type="button"
-        onClick={() => setWishlisted((w) => !w)}
+        onClick={() => { if (!isLoggedIn) { setLoginOpen(true); return; } setWishlisted((w) => !w); }}
         className="absolute top-3 right-3 w-7 h-7 rounded-full bg-white shadow-sm flex items-center justify-center hover:scale-110 transition-transform"
         aria-label={wishlisted ? "Remove from wishlist" : "Add to wishlist"}
-        aria-pressed={wishlisted ? "true" : "false"}
+        aria-pressed={wishlisted}
       >
         <Heart
           className={`h-3.5 w-3.5 transition-colors ${wishlisted ? "fill-red-500 text-red-500" : "text-gray-400"}`}
@@ -151,5 +158,7 @@ export default function ProductCard({ product }: ProductCardProps) {
         </button>
       </div>
     </article>
+    <LoginModal open={loginOpen} onClose={() => setLoginOpen(false)} />
+    </>
   );
 }

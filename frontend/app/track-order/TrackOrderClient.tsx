@@ -10,8 +10,10 @@ import {
   AlertCircle, ChevronRight, Tag, MessageSquare, LogIn, FileText,
 } from "lucide-react";
 import { trackOrder, type ApiOrder, type ApiTrackingStep } from "@/lib/api";
+import { shouldBypassOptimizer } from "@/lib/image";
 import { useAuth } from "@/context/AuthContext";
-import LoginModal from "@/components/auth/LoginModal";
+import dynamic from "next/dynamic";
+const LoginModal = dynamic(() => import("@/components/auth/LoginModal"), { ssr: false });
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -35,8 +37,8 @@ function fmtDateTime(dateStr: string) {
 }
 
 const STATUS_MAP: Record<string, { label: string; cls: string; bg: string }> = {
-  pending:                 { label: "Order Placed",           cls: "text-amber-700",  bg: "bg-amber-100"  },
-  awaiting_store_response: { label: "Awaiting Confirmation",  cls: "text-yellow-700", bg: "bg-yellow-100" },
+  pending:                 { label: "Order Accepted",         cls: "text-blue-700",   bg: "bg-blue-100"   },
+  awaiting_store_response: { label: "Order Accepted",         cls: "text-blue-700",   bg: "bg-blue-100"   },
   partially_accepted:      { label: "Partially Accepted",     cls: "text-orange-700", bg: "bg-orange-100" },
   accepted_by_seller:      { label: "Order Accepted",         cls: "text-blue-700",   bg: "bg-blue-100"   },
   ready_for_pickup:        { label: "Order Packing Done",     cls: "text-indigo-700", bg: "bg-indigo-100" },
@@ -216,7 +218,7 @@ function OrderResult({ order, onViewDetails, isLoggedIn }: { order: ApiOrder; on
                 <div key={item.id} className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-lg overflow-hidden border border-gray-100 bg-gray-50 relative shrink-0">
                     {item.image ? (
-                      <Image src={item.image} alt={item.product_name} fill className="object-cover" unoptimized={/^https?:\/\//i.test(item.image)} />
+                      <Image src={item.image} alt={item.product_name} fill className="object-cover" unoptimized={shouldBypassOptimizer(item.image)} />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
                         <ShoppingBag className="h-4 w-4 text-gray-300" />

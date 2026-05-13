@@ -1,39 +1,41 @@
 import type { Metadata, Viewport } from "next";
-import { cookies } from "next/headers";
-
-export const dynamic = "force-dynamic";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { CartProvider } from "@/context/CartContext";
 import { AuthProvider } from "@/context/AuthContext";
 import { WishlistProvider } from "@/context/WishlistContext";
 import { SiteSettingsProvider } from "@/context/SiteSettingsContext";
-import { getAnnouncementBar, getHeaderMenu, getSystemSettings, getWebSettings } from "@/lib/api";
+import { preload } from "react-dom";
+import { headers } from "next/headers";
+import { getAnnouncementBar, getHeaderMenu, getHeroSection, getSystemSettings, getWebSettings } from "@/lib/api";
 import GoogleAnalytics from "@/components/analytics/GoogleAnalytics";
 import { GTMScript, GTMNoScript } from "@/components/analytics/GoogleTagManager";
 import FacebookPixel from "@/components/analytics/FacebookPixel";
-import CartDrawer from "@/components/ui/CartDrawer";
+import GoogleAds from "@/components/analytics/GoogleAds";
 import CartPushLayout from "@/components/layout/CartPushLayout";
 import TopAnnouncementBar from "@/components/headers/TopAnnouncementBar";
 import OfferTickerClient from "@/components/headers/OfferTickerClient";
 import MainHeader from "@/components/headers/MainHeader1";
 import NavigationMenu from "@/components/headers/NavigationMenuServer";
-import MobileBottomNav from "@/components/ui/MobileBottomNav";
-import ScrollToTop from "@/components/ui/ScrollToTop";
 import Footer from "@/components/layout/Footercopy7";
-import CouponPopup from "@/components/popups/CouponPopup";
-import CookieConsentPopup from "@/components/popups/CookieConsentPopup";
-import { COOKIE_CONSENT_NAME, parseCookieConsent } from "@/lib/cookie-consent";
-import { CART_COUNT_COOKIE, WISHLIST_COUNT_COOKIE, parseCountCookie } from "@/lib/count-preferences";
+import GlobalClientMounts from "@/components/layout/GlobalClientMounts";
 import { organizationSchema, websiteSchema, jsonLd } from "@/lib/structured-data";
+import { API_BASE } from "@/lib/api";
 import { Toaster } from "react-hot-toast";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://pethiyan.com";
+const API_ORIGIN = (() => {
+  try {
+    return new URL(API_BASE).origin;
+  } catch {
+    return null;
+  }
+})();
 
 const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin"],
-  display: "swap",
+  display: "optional",
   weight: ["400", "500", "600", "700", "800"],
   // Minimise CLS from font swap — fallback metrics are tuned to match Inter
   adjustFontFallback: true,
@@ -131,23 +133,55 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const cookieStore = await cookies();
-  const consent = parseCookieConsent(cookieStore.get(COOKIE_CONSENT_NAME)?.value);
-  const initialCartCount = parseCountCookie(cookieStore.get(CART_COUNT_COOKIE)?.value);
-  const initialWishlistCount = parseCountCookie(cookieStore.get(WISHLIST_COUNT_COOKIE)?.value);
   const orgSchema = organizationSchema();
   const siteSchema = websiteSchema();
-  const [siteSettings, webSettings, headerMenu, announcementBar] = await Promise.all([
+
+  // Check if this is the homepage so we can preload the LCP hero image.
+  // getHeroSection uses next: { revalidate: 300 }, so within the same request
+  // this call is memoized — the page component's call costs zero extra I/O.
+  const reqHeaders = await headers();
+  const pathname = reqHeaders.get("x-pathname") ?? "/";
+  const isHomepage = pathname === "/";
+
+  const [siteSettings, webSettings, headerMenu, announcementBar, heroSection] = await Promise.all([
     getSystemSettings().then(s => s ?? {
       appName: "Pethiyan", logo: null, favicon: null,
       smsOtpEnabled: false, emailOtpEnabled: false,
       showVariantColorsInGrid: false, showGstInGrid: false,
       showCategoryNameInGrid: false, showMinQtyInGrid: false,
+      sellerSupportNumber: "",
     }),
     getWebSettings(),
     getHeaderMenu(),
     getAnnouncementBar(),
+    // Only fetch hero data on the homepage — this resolves in parallel with
+    // the other fetches above and adds no serial latency.
+    isHomepage ? getHeroSection() : Promise.resolve(null),
   ]);
+
+  // Inject <link rel="preload"> for the LCP hero image directly into <head>.
+  // The layout renders the <head> before any page body is streamed, so the
+  // browser discovers the image URL at ~0 ms instead of after body parsing.
+  if (isHomepage) {
+    const heroFirstImage = heroSection?.slides?.filter((s) => s.image)?.[0]?.image;
+    if (heroFirstImage) {
+      const enc = encodeURIComponent(heroFirstImage);
+      // Use the same widths Next.js <Image fill> uses in its auto-generated
+      // srcset so the browser's preload and the actual <img> request hit the
+      // same /_next/image cache entry — no double-fetch.
+      // 384 is critical: on a 375px mobile viewport (Lighthouse) the browser
+      // picks 384w (first breakpoint ≥ 375px). Without it the preload would
+      // fetch 640w and the <img> would fetch 384w — two separate requests.
+      preload(`/_next/image?url=${enc}&w=384&q=75`, {
+        as: "image",
+        fetchPriority: "high",
+        imageSrcSet: [384, 640, 750, 828, 1080, 1200, 1920]
+          .map((w) => `/_next/image?url=${enc}&w=${w}&q=75 ${w}w`)
+          .join(", "),
+        imageSizes: "(max-width: 640px) 100vw, (max-width: 1024px) 62vw, 55vw",
+      });
+    }
+  }
 
   const DEFAULT_TICKER = [
     "🚚 Free Shipping on Orders Above $50",
@@ -164,14 +198,19 @@ export default async function RootLayout({
   return (
     <html lang="en" className={inter.variable} suppressHydrationWarning>
       <head>
+        {API_ORIGIN ? <link rel="dns-prefetch" href={API_ORIGIN} /> : null}
+        {API_ORIGIN ? <link rel="preconnect" href={API_ORIGIN} crossOrigin="anonymous" /> : null}
         <script {...jsonLd(orgSchema)} key="org-schema" />
         <script {...jsonLd(siteSchema)} key="site-schema" />
-        {consent.analytics && webSettings?.googleAnalyticsId  && <GoogleAnalytics id={webSettings.googleAnalyticsId} />}
-        {consent.analytics && webSettings?.googleTagManagerId && <GTMScript      id={webSettings.googleTagManagerId} />}
+        {webSettings?.googleAnalyticsId  && <GoogleAnalytics id={webSettings.googleAnalyticsId} />}
+        {webSettings?.googleTagManagerId && <GTMScript      id={webSettings.googleTagManagerId} />}
+        {webSettings?.googleAdsId && (
+          <GoogleAds id={webSettings.googleAdsId} beginCheckoutEvent={webSettings.googleAdsBeginCheckoutLabel} />
+        )}
       </head>
       <body className="antialiased bg-background text-foreground font-sans">
-        {consent.analytics && webSettings?.googleTagManagerId && <GTMNoScript   id={webSettings.googleTagManagerId} />}
-        {consent.marketing && webSettings?.facebookPixelId    && <FacebookPixel id={webSettings.facebookPixelId} />}
+        {webSettings?.googleTagManagerId && <GTMNoScript   id={webSettings.googleTagManagerId} />}
+        {webSettings?.facebookPixelId    && <FacebookPixel id={webSettings.facebookPixelId} />}
         {/* Portal root — sits above app-root in z-order, outside its stacking context */}
         <div id="portal-root" />
 
@@ -179,8 +218,8 @@ export default async function RootLayout({
         <div id="app-root" style={{ isolation: "isolate", position: "relative", zIndex: 0 }}>
         <SiteSettingsProvider settings={siteSettings}>
         <AuthProvider>
-          <WishlistProvider initialCount={initialWishlistCount}>
-            <CartProvider initialItemCount={initialCartCount}>
+          <WishlistProvider>
+            <CartProvider>
               <CartPushLayout>
                 {/* Non-sticky top bars */}
                 {topBarActive && <TopAnnouncementBar text={topBarText} />}
@@ -205,20 +244,7 @@ export default async function RootLayout({
                 <Footer />
               </CartPushLayout>
 
-              {/* Mobile Bottom Navigation */}
-              <MobileBottomNav />
-
-              {/* Cart Drawer (portal) */}
-              <CartDrawer />
-
-              {/* Floating scroll-to-top */}
-              <ScrollToTop />
-
-              {/* Coupon popup — shown once per session after 2s */}
-              <CouponPopup />
-
-              {/* Cookie preferences */}
-              <CookieConsentPopup />
+              <GlobalClientMounts />
 
             </CartProvider>
           </WishlistProvider>

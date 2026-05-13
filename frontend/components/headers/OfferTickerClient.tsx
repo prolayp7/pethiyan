@@ -1,5 +1,3 @@
-"use client";
-
 export default function OfferTickerClient({ items }: { items: string[] }) {
   const tickerItems = [...items, ...items];
 

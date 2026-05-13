@@ -8,9 +8,9 @@ export const metadata: Metadata = {
   description: "Browse our full range of premium packaging products — pouches, kraft bags, tapes, and more.",
 };
 
-// Safety fallback: revalidate every 5 minutes even if webhook never fires.
+// Safety fallback: revalidate every hour even if webhook never fires.
 // Primary invalidation is on-demand via POST /api/revalidate from the backend.
-export const revalidate = 300;
+export const revalidate = 3600;
 
 export default async function ShopPage() {
   const [firstPage, categories, subCategories] = await Promise.all([

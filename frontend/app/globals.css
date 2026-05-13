@@ -335,9 +335,119 @@ body {
 /* =============================================
    HERO CAROUSEL — progress bar
    ============================================= */
+/* =============================================
+   HERO SECTION 10 — section root styles
+   --hero-min-height is injected as a CSS variable by the component
+   so that the dynamic clamp() value stays out of inline styles.
+   ============================================= */
+.hero-section-10 {
+  height: var(--hero-min-height, 620px);
+  background: linear-gradient(320deg, #071023 0%, #0c1d38 50%, #0f2444 100%);
+}
+
 @keyframes progress-bar {
   from { width: 0%; }
   to   { width: 100%; }
+}
+
+/* =============================================
+   FOOTER SEO PROSE — rich-text typography for footer SEO content block
+   Mirrors the heading/paragraph/list styles the admin rich-text editor produces.
+   ============================================= */
+.footer-seo-prose {
+  color: #374151;
+  font-size: 0.875rem;
+  line-height: 1.75;
+}
+.footer-seo-prose h1 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #111827;
+  margin-top: 0;
+  margin-bottom: 0.75rem;
+  line-height: 1.3;
+}
+.footer-seo-prose h2 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #111827;
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+  line-height: 1.35;
+}
+.footer-seo-prose h3 {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin-top: 1.25rem;
+  margin-bottom: 0.375rem;
+  line-height: 1.4;
+}
+.footer-seo-prose h4 {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin-top: 1rem;
+  margin-bottom: 0.25rem;
+}
+.footer-seo-prose p {
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+}
+.footer-seo-prose ul,
+.footer-seo-prose ol {
+  padding-left: 1.5rem;
+  margin-top: 0.25rem;
+  margin-bottom: 0.75rem;
+}
+.footer-seo-prose ul {
+  list-style-type: disc;
+}
+.footer-seo-prose ol {
+  list-style-type: decimal;
+}
+.footer-seo-prose li {
+  margin-bottom: 0.15rem;
+}
+.footer-seo-prose hr {
+  border: none;
+  border-top: 1px solid #e5e7eb;
+  margin: 1rem 0;
+}
+.footer-seo-prose a {
+  color: #1d4ed8;
+  text-underline-offset: 2px;
+}
+.footer-seo-prose a:hover {
+  text-decoration: underline;
+}
+.footer-seo-prose strong {
+  font-weight: 600;
+  color: #111827;
+}
+
+/* =============================================
+   HERO — mobile heading / subheading / description overrides
+   (Moved from HeroSection10's runtime <style> injection to guarantee
+   these rules are available from first paint, preventing CLS on mobile.)
+   ============================================= */
+@media (max-width: 639px) {
+  .hero-mobile-heading {
+    width: min(78vw, 20rem) !important;
+    max-width: none !important;
+    margin-bottom: 0.55rem !important;
+  }
+  .hero-mobile-subheading {
+    display: block;
+    font-size: 1.24em;
+    line-height: 1.2;
+    margin-top: 0.38em !important;
+    white-space: normal !important;
+    max-width: 100%;
+  }
+  .hero-mobile-description {
+    margin-top: 0.15rem;
+  }
 }
 
 /* =============================================
@@ -412,7 +522,7 @@ img {
 .cat-section { background: #ffffff; }
 
 /* ── Heading ── */
-.cat-eyebrow-text { color: #4caf50; }
+.cat-eyebrow-text { color: #15803d; } /* was #4caf50 — darkened to 5:1 on white (WCAG AA) */
 .cat-heading-gradient {
   /* Solid fallback for any browser that doesn't support gradient-clip text */
   color: #1a4f83;
@@ -435,9 +545,10 @@ img {
   overflow: hidden;
   cursor: pointer;
   box-shadow: 0 4px 28px rgba(0,0,0,0.09), 0 1px 4px rgba(0,0,0,0.05);
-  transition: box-shadow 400ms ease;
+  transition: box-shadow 400ms ease, transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .cat-hv-card:hover {
+  transform: translateY(-10px);
   box-shadow: 0 24px 56px rgba(0,0,0,0.17), 0 6px 16px rgba(0,0,0,0.09);
 }
 
@@ -451,6 +562,10 @@ img {
 /* ── Icon fallback background ── */
 .cat-hv-icon-bg {
   background: linear-gradient(155deg, #07203d 0%, #0d3560 48%, #0c4a44 100%);
+  transition: transform 600ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.cat-hv-card:hover .cat-hv-icon-bg {
+  transform: scale(1.04);
 }
 
 /* ── Base gradient overlay (always present) ── */
@@ -463,7 +578,24 @@ img {
   );
 }
 
-/* ── Shine sweep (triggered by Framer Motion on hover start) ── */
+/* ── Image wrapper — scales on hover ── */
+.cat-hv-image-wrap {
+  transition: transform 600ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.cat-hv-card:hover .cat-hv-image-wrap {
+  transform: scale(1.07);
+}
+
+/* ── Dark veil — fades in on hover ── */
+.cat-hv-dark-veil {
+  opacity: 0;
+  transition: opacity 450ms;
+}
+.cat-hv-card:hover .cat-hv-dark-veil {
+  opacity: 0.22;
+}
+
+/* ── Shine sweep — CSS one-shot animation on each hover entry ── */
 .cat-hv-shine {
   background: linear-gradient(
     105deg,
@@ -471,11 +603,38 @@ img {
     rgba(255,255,255,0.11) 50%,
     transparent 75%
   );
+  transform: translateX(-130%);
   will-change: transform;
 }
+.cat-hv-card:hover .cat-hv-shine {
+  animation: cat-shine-once 750ms ease-out;
+}
+@keyframes cat-shine-once {
+  from { transform: translateX(-130%); }
+  to   { transform: translateX(240%); }
+}
 
-/* ── Glass reveal panel ── */
-/* Framer Motion animates translateY from 100% → 0 on hover */
+/* ── Name peek — hides when glass panel appears ── */
+.cat-hv-name-peek {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 220ms, transform 220ms;
+}
+.cat-hv-card:hover .cat-hv-name-peek {
+  opacity: 0;
+  transform: translateY(6px);
+}
+
+/* ── Arrow nudge right on hover ── */
+.cat-hv-arrow {
+  display: inline-flex;
+  transition: transform 200ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.cat-hv-card:hover .cat-hv-arrow {
+  transform: translateX(3px);
+}
+
+/* ── Glass reveal panel — slides up from below on hover ── */
 .cat-hv-glass {
   position: absolute;
   bottom: 0;
@@ -486,6 +645,12 @@ img {
   background: linear-gradient(135deg, rgba(26, 56, 112, 0.92) 0%, rgba(43, 110, 150, 0.90) 52%, rgba(39, 160, 122, 0.88) 100%);
   border-top: 1px solid rgba(255, 255, 255, 0.13);
   padding: 20px 22px 24px;
+  transform: translateY(100%);
+  transition: transform 300ms cubic-bezier(0.34, 1.46, 0.64, 1);
+  will-change: transform;
+}
+.cat-hv-card:hover .cat-hv-glass {
+  transform: translateY(0%);
 }
 
 /* ── Shop Now pill button inside glass panel — matches .btn-brand ── */
@@ -574,4 +739,140 @@ img {
 /* Hide Firefox scrollbar on the scroll track */
 .blog-slider-scroll {
   scrollbar-width: none;
+}
+
+/* =============================================
+   FEATURED PRODUCTS — heading styles
+   (Moved from FeaturedProducts.module.css to eliminate
+   a separate CSS chunk that created a chained network request.)
+   ============================================= */
+.fp-eyebrow {
+  color: #15803d; /* was #4ea85f — darkened to 5:1 on white (WCAG AA) */
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.fp-heading-gradient {
+  background: linear-gradient(135deg, #1a4f83 0%, #2b6e92 48%, #2d8b6a 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+/* =============================================
+   BRAND STORY / WHY CHOOSE US — section styles
+   (Moved from BrandStory.module.css to eliminate
+   a separate CSS chunk that created a chained network request.)
+   ============================================= */
+.bs-section {
+  background: linear-gradient(140deg, #071023 0%, #0c1d38 50%, #0f2444 100%);
+}
+
+.bs-grid-overlay {
+  background-image:
+    linear-gradient(rgba(70, 190, 150, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(70, 190, 150, 0.045) 1px, transparent 1px),
+    linear-gradient(rgba(60, 130, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(60, 130, 255, 0.04) 1px, transparent 1px);
+  background-size: 10px 10px, 10px 10px, 50px 50px, 50px 50px;
+}
+
+.bs-glow-top {
+  background: radial-gradient(ellipse 55% 55% at 100% 0%, rgba(46, 124, 138, 0.22) 0%, transparent 70%);
+}
+
+.bs-glow-bottom {
+  background: radial-gradient(ellipse 55% 55% at 0% 100%, rgba(78, 168, 95, 0.18) 0%, transparent 70%);
+}
+
+.bs-item {
+  opacity: 0;
+}
+
+.bs-show {
+  animation: bs-fadeUp 550ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.bs-delay0 { animation-delay: 0ms; }
+.bs-delay1 { animation-delay: 80ms; }
+.bs-delay2 { animation-delay: 150ms; }
+.bs-delay3 { animation-delay: 220ms; }
+.bs-delay4 { animation-delay: 290ms; }
+.bs-delay5 { animation-delay: 360ms; }
+.bs-delay6 { animation-delay: 430ms; }
+.bs-delay7 { animation-delay: 500ms; }
+
+.bs-eyebrow {
+  color: rgba(78, 168, 95, 0.9);
+}
+
+.bs-heading {
+  background-image: linear-gradient(135deg, #6ea8d8 0%, #2e7c8a 42%, #4ea85f 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+.bs-subheading {
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.bs-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.bs-icon {
+  color: #4ea85f;
+}
+
+.bs-card-text {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+@keyframes bs-fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* =============================================
+   CATEGORY GRID — CSS entry animations
+   Replaces Framer Motion whileInView triggers
+   which caused forced reflows on initial load.
+   ============================================= */
+.cg-item {
+  opacity: 0;
+}
+
+.cg-show {
+  animation: cg-fadeUp 650ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.cg-delay0 { animation-delay: 0ms; }
+.cg-delay1 { animation-delay: 100ms; }
+.cg-delay2 { animation-delay: 200ms; }
+.cg-delay3 { animation-delay: 300ms; }
+.cg-delay4 { animation-delay: 400ms; }
+.cg-delay5 { animation-delay: 500ms; }
+
+@keyframes cg-fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(36px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

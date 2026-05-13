@@ -9,6 +9,7 @@ import {
   FileDown,
 } from "lucide-react";
 import { getOrder, downloadOrderInvoice, type ApiOrder, type ApiTrackingStep, type ApiOrderManagementHistory } from "@/lib/api";
+import { shouldBypassOptimizer } from "@/lib/image";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -24,10 +25,6 @@ function fmtDate(dateStr: string) {
   });
 }
 
-function shouldBypassOptimizer(src?: string | null): boolean {
-  if (!src) return false;
-  return /^https?:\/\//i.test(src);
-}
 
 const PAYMENT_STATUS_MAP: Record<string, { label: string; cls: string }> = {
   paid:        { label: "Paid",       cls: "bg-green-100 text-green-700"   },
@@ -41,8 +38,8 @@ const PAYMENT_STATUS_MAP: Record<string, { label: string; cls: string }> = {
 };
 
 const STATUS_MAP: Record<string, { label: string; cls: string }> = {
-  pending:                  { label: "Pending",               cls: "bg-amber-100 text-amber-700"   },
-  awaiting_store_response:  { label: "Awaiting Store Response", cls: "bg-yellow-100 text-yellow-700" },
+  pending:                  { label: "Order Accepted",        cls: "bg-blue-100 text-blue-700"     },
+  awaiting_store_response:  { label: "Order Accepted",        cls: "bg-blue-100 text-blue-700"     },
   partially_accepted:       { label: "Partially Accepted",    cls: "bg-orange-100 text-orange-700" },
   accepted_by_seller:       { label: "Order Accepted",        cls: "bg-blue-100 text-blue-700"     },
   ready_for_pickup:         { label: "Order Packing Done",    cls: "bg-indigo-100 text-indigo-700" },

@@ -4,10 +4,10 @@ import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import Link from "next/link";
 import {
   SlidersHorizontal, X, ChevronDown, ChevronRight, Package, Layers, Home,
-  Loader2,
 } from "lucide-react";
 import Container from "@/components/layout/Container";
 import ShopProductCard from "@/components/shop/ShopProductCard";
+import ShopProductCardSkeleton from "@/components/shop/ShopProductCardSkeleton";
 import RecentlyViewedProducts from "@/components/sections/RecentlyViewedProducts";
 import {
   type RealApiProduct, type ApiCategory, getProductsPage,
@@ -203,6 +203,7 @@ export default function ShopClient({
     return () => observer.disconnect();
   }, [fetchMore]);
 
+
   // ── Category tree ───────────────────────────────────────────────────────────
   const categoryTree = useMemo(() => {
     return initialCategories.map((cat) => ({
@@ -336,6 +337,17 @@ export default function ShopClient({
 
   const hasActiveFilters = selectedIds.size > 0 || selectedAttrs.size > 0 || selectedMinQtys.size > 0;
   const totalActiveCount = selectedIds.size + activeAttrCount + selectedMinQtys.size;
+
+  // ── Auto-load when active filters yield no results from loaded pages ─────────
+  // Products can be spread across multiple pages (e.g. Stand-Up Pouches only
+  // appear on pages 2-4). Without this, selecting such a category shows an
+  // empty state and the user never scrolls to trigger the normal infinite scroll.
+  const filteredCount = filtered.length;
+  useEffect(() => {
+    if (hasActiveFilters && filteredCount === 0 && hasMore && !loadingMore) {
+      fetchMore();
+    }
+  }, [hasActiveFilters, filteredCount, hasMore, loadingMore, fetchMore]);
 
   return (
     <div className="min-h-screen bg-(--background)">
@@ -660,7 +672,14 @@ export default function ShopClient({
             )}
 
             {/* Product grid */}
-            {filtered.length === 0 && !loadingMore ? (
+            {filtered.length === 0 && loadingMore ? (
+              /* Skeleton grid — shown while auto-fetching pages for a filtered category */
+              <div className="grid grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5" aria-label="Loading products" aria-busy="true">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <ShopProductCardSkeleton key={i} />
+                ))}
+              </div>
+            ) : filtered.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-24 text-center">
                 <Package className="h-16 w-16 text-gray-200 mb-4" aria-hidden="true" />
                 <h2 className="text-lg font-semibold text-(--color-secondary) mb-1">No products found</h2>
@@ -674,7 +693,7 @@ export default function ShopClient({
               </div>
             ) : (
               <div className="relative">
-                {/* Product grid or list */}
+                {/* Product grid */}
                 <div
                   className="grid grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5"
                   aria-label="Shop products"
@@ -687,11 +706,12 @@ export default function ShopClient({
                 {/* Infinite scroll sentinel — all viewports */}
                 <div ref={sentinelRef} className="h-2 mt-6" aria-hidden="true" />
 
-                {/* Loading indicator */}
+                {/* Bottom skeleton row while fetching more pages */}
                 {loadingMore && (
-                  <div className="flex justify-center items-center gap-2 py-6 text-sm text-gray-500">
-                    <Loader2 className="h-5 w-5 animate-spin text-[#2f6f9f]" aria-hidden="true" />
-                    Loading more products…
+                  <div className="grid grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5 mt-4" aria-busy="true">
+                    {Array.from({ length: 3 }).map((_, i) => (
+                      <ShopProductCardSkeleton key={i} />
+                    ))}
                   </div>
                 )}
               </div>

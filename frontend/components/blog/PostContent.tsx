@@ -1,20 +1,14 @@
-import type { BlogPost } from "@/lib/blog-data";
+"use client";
 
 interface PostContentProps {
-  post: BlogPost;
+  content: string;
 }
 
-export default function PostContent({ post }: PostContentProps) {
+export default function PostContent({ content }: PostContentProps) {
   return (
-    <div className="blog-prose">
-      {post.sections.map((section, index) => (
-        <section key={section.id} id={section.id} aria-labelledby={`${section.id}-heading`} className="scroll-mt-28">
-          <h2 id={`${section.id}-heading`}>{`${index + 1}. ${section.title}`}</h2>
-          {section.body.map((paragraph) => (
-            <p key={paragraph}>{paragraph}</p>
-          ))}
-        </section>
-      ))}
-    </div>
+    <div
+      className="blog-prose"
+      dangerouslySetInnerHTML={{ __html: content }}
+    />
   );
 }

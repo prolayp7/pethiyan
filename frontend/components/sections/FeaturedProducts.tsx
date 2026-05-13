@@ -6,7 +6,6 @@ import { ArrowLeft, ArrowRight } from "lucide-react";
 import Container from "@/components/layout/Container";
 import ShopProductCard from "@/components/shop/ShopProductCard";
 import type { ApiFeaturedProductsSection } from "@/lib/api";
-import styles from "./FeaturedProducts.module.css";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -46,12 +45,12 @@ export default function FeaturedProducts({ section }: FeaturedProductsProps) {
         {/* Header */}
         <div className="mb-6 flex items-end justify-between sm:mb-10">
           <div>
-            <p className={`${styles.eyebrow} mb-2`}>
+            <p className="fp-eyebrow mb-2">
               {eyebrow}
             </p>
             <h2
               id="featured-heading"
-              className={`${styles.headingGradient} text-3xl font-extrabold sm:text-4xl`}
+              className="fp-heading-gradient text-3xl font-extrabold sm:text-4xl"
             >
               {heading}
             </h2>
@@ -59,7 +58,7 @@ export default function FeaturedProducts({ section }: FeaturedProductsProps) {
           </div>
           <Link
             href={viewAllLink}
-            className="hidden items-center gap-1.5 text-sm font-semibold text-[#6ea8d8] transition-all hover:gap-2.5 sm:flex"
+            className="hidden items-center gap-1.5 text-sm font-semibold text-[#1a4f83] transition-all hover:gap-2.5 sm:flex"
           >
             View All
             <ArrowRight className="h-4 w-4" aria-hidden="true" />
@@ -93,13 +92,13 @@ export default function FeaturedProducts({ section }: FeaturedProductsProps) {
                   className="flex snap-x snap-mandatory gap-5 overflow-x-auto px-12 pb-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                   aria-label="Featured products slider"
                 >
-                  {products.map((product) => (
+                  {products.map((product, i) => (
                     <div
                       key={product.id}
                       data-featured-slide
                       className="w-[85%] max-w-[320px] shrink-0 snap-start"
                     >
-                      <ShopProductCard product={product} />
+                      <ShopProductCard product={product} priority={i < 4} />
                     </div>
                   ))}
                 </div>
@@ -108,8 +107,8 @@ export default function FeaturedProducts({ section }: FeaturedProductsProps) {
 
             {/* Desktop grid */}
             <div className="hidden sm:grid grid-cols-2 lg:grid-cols-4 gap-5">
-              {products.map((product) => (
-                <ShopProductCard key={product.id} product={product} />
+              {products.map((product, i) => (
+                <ShopProductCard key={product.id} product={product} priority={i < 4} />
               ))}
             </div>
 

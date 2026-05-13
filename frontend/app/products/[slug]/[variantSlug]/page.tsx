@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import {
   getProduct,
   getProducts,
+  getProductReviews,
   selectPrimaryStorePricing,
   resolveStorePricingDisplay,
   type ApiFaq,
@@ -101,12 +102,15 @@ export default async function ProductVariantPage({
 }) {
   const { slug, variantSlug } = await params;
 
-  const product = await getProduct(slug);
+  const [product, reviewsResult] = await Promise.all([
+    getProduct(slug),
+    getProductReviews(slug),
+  ]);
 
   if (!product) notFound();
 
   const faqs: ApiFaq[] = product.faqs ?? [];
-  const reviews: ApiReview[] = product.reviews ?? [];
+  const { reviews, averageRating, totalReviews } = reviewsResult;
 
   const variant = product.variants?.find((v) => v.slug === variantSlug);
   if (!variant) notFound();
@@ -119,6 +123,9 @@ export default async function ProductVariantPage({
     titleOverride: seo.openGraphTitle,
     descriptionOverride: seo.openGraphDescription,
     imageOverride: seo.openGraphImage,
+    aggregateRating: totalReviews > 0 && averageRating > 0
+      ? { ratingValue: averageRating, reviewCount: totalReviews }
+      : null,
   });
   const bcSchema = breadcrumbSchema([
     { label: "Home", href: "/" },

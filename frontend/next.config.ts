@@ -31,8 +31,9 @@ const nextConfig: NextConfig = {
     unoptimized: process.env.NODE_ENV === "development",
     formats: ["image/avif", "image/webp"],
     qualities: [75, 80, 85],
-    // 30-day cache for optimized images — safe because Next.js uses content-addressed URLs
-    minimumCacheTTL: 2592000,
+    // 1-year cache — images are served via content-addressed /_next/image URLs;
+    // on-demand revalidation (webhook) handles any real changes.
+    minimumCacheTTL: 31536000,
     remotePatterns: [
       { protocol: "http",  hostname: "localhost", port: apiPort, pathname: "/**" },
       { protocol: "http",  hostname: "localhost",               pathname: "/**" },
@@ -76,7 +77,7 @@ const nextConfig: NextConfig = {
       {
         source: "/images/:path*",
         headers: [
-          { key: "Cache-Control", value: "public, max-age=2592000, stale-while-revalidate=86400" },
+          { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
         ],
       },
       {
@@ -172,7 +173,7 @@ export default withPWA({
         handler: "CacheFirst" as const,
         options: {
           cacheName: "product-images",
-          expiration: { maxEntries: 200, maxAgeSeconds: 86400 },
+          expiration: { maxEntries: 500, maxAgeSeconds: 2592000 },
           cacheableResponse: { statuses: [0, 200] },
         },
       },

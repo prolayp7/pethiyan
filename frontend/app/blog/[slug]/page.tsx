@@ -1,3 +1,4 @@
+import Image from "next/image";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -5,7 +6,84 @@ import { ChevronRight, Clock3, Facebook, Linkedin, Share2, Twitter } from "lucid
 import Container from "@/components/layout/Container";
 import PostContent from "@/components/blog/PostContent";
 import RelatedPosts from "@/components/blog/RelatedPosts";
-import { getBlogPostBySlug, getRelatedPosts } from "@/lib/blog-data";
+import { API_BASE } from "@/lib/api";
+import type { BlogPost } from "@/lib/blog-data";
+
+export const revalidate = 3600;
+
+interface ApiCategory {
+  id: number;
+  title: string;
+  slug: string;
+  description: string | null;
+  coverImage: string | null;
+  postsCount: number;
+  seo: { title: string | null; description: string | null };
+}
+
+interface ApiAuthor {
+  name: string;
+  role: string;
+  bio: string | null;
+  avatar: string | null;
+}
+
+interface ApiPost {
+  id: number;
+  title: string;
+  slug: string;
+  excerpt: string | null;
+  content: string | null;
+  featuredImage: string;
+  isFeatured: boolean;
+  publishedAt: string | null;
+  readingTime: string | number | null;
+  tags: string[];
+  category: ApiCategory | null;
+  author: ApiAuthor;
+  seo: { title: string | null; description: string | null };
+}
+
+interface PostApiResponse {
+  post: ApiPost;
+  relatedPosts: ApiPost[];
+}
+
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+function formatReadingTime(value: string | number | null): string {
+  if (value == null) return "";
+  if (typeof value === "number") return `${value} min read`;
+  return value;
+}
+
+function extractToc(html: string): Array<{ id: string; title: string }> {
+  const matches = [...html.matchAll(/<h2[^>]*\sid="([^"]+)"[^>]*>([\s\S]*?)<\/h2>/gi)];
+  return matches.map((m) => ({
+    id: m[1],
+    title: m[2].replace(/<[^>]+>/g, "").trim(),
+  }));
+}
+
+async function fetchPost(slug: string): Promise<PostApiResponse | null> {
+  try {
+    const res = await fetch(
+      `${API_BASE}/api/blog/posts/${encodeURIComponent(slug)}`,
+      { next: { revalidate: 3600 } },
+    );
+    if (res.status === 404) return null;
+    if (!res.ok) throw new Error(`API error ${res.status}`);
+    return res.json() as Promise<PostApiResponse>;
+  } catch {
+    return null;
+  }
+}
 
 export async function generateMetadata({
   params,
@@ -13,26 +91,26 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const post = getBlogPostBySlug(slug);
+  const data = await fetchPost(slug);
 
-  if (!post) {
-    return {
-      title: "Post Not Found",
-    };
-  }
+  if (!data) return { title: "Post Not Found" };
+
+  const { post } = data;
+  const title = post.seo.title ?? post.title;
+  const description = post.seo.description ?? post.excerpt ?? undefined;
 
   return {
-    title: post.title,
-    description: post.excerpt,
+    title,
+    description,
     openGraph: {
-      title: post.title,
-      description: post.excerpt,
+      title,
+      description,
       images: [{ url: post.featuredImage, alt: post.title }],
     },
     twitter: {
       card: "summary_large_image",
-      title: post.title,
-      description: post.excerpt,
+      title,
+      description,
       images: [post.featuredImage],
     },
   };
@@ -44,13 +122,13 @@ export default async function BlogPostPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const post = getBlogPostBySlug(slug);
+  const data = await fetchPost(slug);
 
-  if (!post) {
-    notFound();
-  }
+  if (!data) notFound();
 
-  const relatedPosts = getRelatedPosts(post);
+  const { post, relatedPosts } = data;
+  const toc = extractToc(post.content ?? "");
+  const transformedRelated = relatedPosts.map(transformToblogPost);
 
   return (
     <div className="bg-[linear-gradient(180deg,#f8fafc_0%,#ffffff_10%,#f8fafc_100%)]">
@@ -60,10 +138,14 @@ export default async function BlogPostPage({
             <Link href="/" className="hover:text-slate-900">Home</Link>
             <ChevronRight className="h-4 w-4" />
             <Link href="/blog" className="hover:text-slate-900">Blog</Link>
-            <ChevronRight className="h-4 w-4" />
-            <Link href={`/blog/category/${post.category}`} className="hover:text-slate-900">
-              {post.category.replace(/-/g, " ")}
-            </Link>
+            {post.category && (
+              <>
+                <ChevronRight className="h-4 w-4" />
+                <Link href={`/blog/category/${post.category.slug}`} className="hover:text-slate-900">
+                  {post.category.title}
+                </Link>
+              </>
+            )}
             <ChevronRight className="h-4 w-4" />
             <span className="text-slate-900">{post.title}</span>
           </nav>
@@ -74,9 +156,11 @@ export default async function BlogPostPage({
         <Container className="py-10 sm:py-14">
           <div className="mx-auto max-w-5xl">
             <div className="mb-8 flex flex-wrap items-center gap-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-              <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-700">
-                {post.category.replace(/-/g, " ")}
-              </span>
+              {post.category && (
+                <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-700">
+                  {post.category.title}
+                </span>
+              )}
               {post.tags.map((tag) => (
                 <Link
                   key={tag}
@@ -94,41 +178,55 @@ export default async function BlogPostPage({
                   <h1 className="max-w-4xl text-4xl font-black tracking-tight text-slate-950 sm:text-5xl">
                     {post.title}
                   </h1>
-                  <p className="mt-5 max-w-3xl text-lg leading-8 text-slate-600">{post.excerpt}</p>
+                  {post.excerpt && (
+                    <p className="mt-5 max-w-3xl text-lg leading-8 text-slate-600">{post.excerpt}</p>
+                  )}
 
                   <div className="mt-8 flex flex-wrap items-center justify-between gap-5 border-y border-slate-200 py-5">
                     <div className="flex items-center gap-4">
-                      <img
-                        src={post.author.avatar}
-                        alt={post.author.name}
-                        className="h-14 w-14 rounded-full object-cover"
-                      />
+                      {post.author.avatar && (
+                        <Image
+                          src={post.author.avatar}
+                          alt={post.author.name}
+                          width={56}
+                          height={56}
+                          sizes="56px"
+                          className="h-14 w-14 rounded-full object-cover"
+                        />
+                      )}
                       <div>
                         <p className="text-sm font-semibold text-slate-900">{post.author.name}</p>
                         <p className="text-sm text-slate-500">{post.author.role}</p>
                       </div>
                     </div>
                     <div className="flex flex-wrap items-center gap-5 text-sm text-slate-500">
-                      <span>{post.publishedAt}</span>
-                      <span className="inline-flex items-center gap-2">
-                        <Clock3 className="h-4 w-4" />
-                        {post.readingTime}
-                      </span>
+                      {post.publishedAt && <span>{formatDate(post.publishedAt)}</span>}
+                      {post.readingTime != null && (
+                        <span className="inline-flex items-center gap-2">
+                          <Clock3 className="h-4 w-4" />
+                          {formatReadingTime(post.readingTime)}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </header>
 
                 <div className="relative mt-8 overflow-hidden rounded-[30px] border border-slate-200 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.08)]">
-                  <img
+                  <Image
                     src={post.featuredImage}
                     alt={post.title}
+                    width={1280}
+                    height={720}
+                    sizes="(min-width: 1280px) 960px, (min-width: 768px) 92vw, 100vw"
                     className="aspect-[16/9] w-full object-cover"
                   />
                 </div>
 
-                <div className="mt-10 rounded-[30px] border border-slate-200 bg-white p-6 shadow-[0_16px_70px_rgba(15,23,42,0.06)] sm:p-10">
-                  <PostContent post={post} />
-                </div>
+                {post.content && (
+                  <div className="mt-10 rounded-[30px] border border-slate-200 bg-white p-6 shadow-[0_16px_70px_rgba(15,23,42,0.06)] sm:p-10">
+                    <PostContent content={post.content} />
+                  </div>
+                )}
               </div>
 
               <aside className="lg:sticky lg:top-28">
@@ -156,20 +254,22 @@ export default async function BlogPostPage({
                     </div>
                   </section>
 
-                  <section aria-labelledby="table-of-contents">
-                    <h2 id="table-of-contents" className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">
-                      On this page
-                    </h2>
-                    <ol className="mt-4 space-y-3 text-sm text-slate-600">
-                      {post.sections.map((section) => (
-                        <li key={section.id}>
-                          <a href={`#${section.id}`} className="hover:text-slate-950">
-                            {section.title}
-                          </a>
-                        </li>
-                      ))}
-                    </ol>
-                  </section>
+                  {toc.length > 0 && (
+                    <section aria-labelledby="table-of-contents">
+                      <h2 id="table-of-contents" className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">
+                        On this page
+                      </h2>
+                      <ol className="mt-4 space-y-3 text-sm text-slate-600">
+                        {toc.map((item) => (
+                          <li key={item.id}>
+                            <a href={`#${item.id}`} className="hover:text-slate-950">
+                              {item.title}
+                            </a>
+                          </li>
+                        ))}
+                      </ol>
+                    </section>
+                  )}
 
                   <section aria-labelledby="author-block">
                     <h2 id="author-block" className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">
@@ -177,17 +277,24 @@ export default async function BlogPostPage({
                     </h2>
                     <div className="mt-4 rounded-[22px] bg-slate-50 p-4">
                       <div className="flex items-center gap-3">
-                        <img
-                          src={post.author.avatar}
-                          alt={post.author.name}
-                          className="h-12 w-12 rounded-full object-cover"
-                        />
+                        {post.author.avatar && (
+                          <Image
+                            src={post.author.avatar}
+                            alt={post.author.name}
+                            width={48}
+                            height={48}
+                            sizes="48px"
+                            className="h-12 w-12 rounded-full object-cover"
+                          />
+                        )}
                         <div>
                           <p className="font-semibold text-slate-900">{post.author.name}</p>
                           <p className="text-sm text-slate-500">{post.author.role}</p>
                         </div>
                       </div>
-                      <p className="mt-4 text-sm leading-7 text-slate-600">{post.author.bio}</p>
+                      {post.author.bio && (
+                        <p className="mt-4 text-sm leading-7 text-slate-600">{post.author.bio}</p>
+                      )}
                     </div>
                   </section>
                 </div>
@@ -197,7 +304,28 @@ export default async function BlogPostPage({
         </Container>
       </article>
 
-      <RelatedPosts posts={relatedPosts} />
+      <RelatedPosts posts={transformedRelated} />
     </div>
   );
+}
+
+function transformToblogPost(post: ApiPost): BlogPost {
+  return {
+    slug: post.slug,
+    title: post.title,
+    excerpt: post.excerpt ?? "",
+    featuredImage: post.featuredImage,
+    publishedAt: post.publishedAt ? formatDate(post.publishedAt) : "",
+    readingTime: formatReadingTime(post.readingTime),
+    category: post.category?.slug ?? "",
+    tags: post.tags ?? [],
+    author: {
+      name: post.author?.name ?? "",
+      role: post.author?.role ?? "",
+      bio: post.author?.bio ?? "",
+      avatar: post.author?.avatar ?? "",
+    },
+    featured: post.isFeatured,
+    sections: [],
+  };
 }

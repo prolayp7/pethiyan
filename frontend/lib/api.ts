@@ -334,12 +334,15 @@ export interface ApiSystemSettings {
   showGstInGrid:           boolean;
   showCategoryNameInGrid:  boolean;
   showMinQtyInGrid:        boolean;
+  sellerSupportNumber: string;
 }
 
 export interface ApiWebSettings {
   googleAnalyticsId: string;
   googleTagManagerId: string;
   facebookPixelId: string;
+  googleAdsId: string;
+  googleAdsBeginCheckoutLabel: string;
   metaTitle: string;
   metaDescription: string;
   metaKeywords: string;
@@ -685,6 +688,7 @@ export interface RealApiProduct {
     quantity_step_size?: number;
     total_allowed_quantity?: number | null;
     is_returnable: boolean;
+    returnable_days?: number | null;
     is_cancelable: boolean;
     requires_otp?: boolean;
   };
@@ -716,7 +720,7 @@ export async function getProducts(params?: Record<string, string>): Promise<Real
   try {
     const res = await fetch(`${API_BASE}/api/products${query}`, {
       headers: { Accept: "application/json" },
-      next: { revalidate: 60 },
+      next: { revalidate: 86400 },
     } as RequestInit);
     if (!res.ok) return [];
     const json = await res.json();
@@ -744,7 +748,7 @@ export async function getProductsPage(page = 1, perPage = 24): Promise<ProductsP
   try {
     const res = await fetch(
       `${API_BASE}/api/products?page=${page}&perPage=${perPage}`,
-      { headers: { Accept: "application/json" }, next: { revalidate: 60 } } as RequestInit,
+      { headers: { Accept: "application/json" }, next: { revalidate: 86400 } } as RequestInit,
     );
     if (!res.ok) return empty;
     const json = await res.json();
@@ -769,7 +773,7 @@ export async function getFeaturedProducts(): Promise<RealApiProduct[]> {
   try {
     const res = await fetch(`${API_BASE}/api/products/featured`, {
       headers: { Accept: "application/json" },
-      next: { revalidate: 60 },
+      next: { revalidate: 86400 },
     } as RequestInit);
     if (!res.ok) return [];
     const json = await res.json();
@@ -784,7 +788,7 @@ export async function getFeaturedProductsSection(): Promise<ApiFeaturedProductsS
   try {
     const res = await fetch(`${API_BASE}/api/settings/featured-products-section`, {
       headers: { Accept: "application/json" },
-      next: { revalidate: 60, tags: ["featured-products"] },
+      next: { revalidate: 86400, tags: ["featured-products"] },
     } as RequestInit);
 
     if (!res.ok) return null;
@@ -825,7 +829,7 @@ export async function getNewArrivals(days = 30, limit = 40): Promise<RealApiProd
       `${API_BASE}/api/products/new-arrivals?days=${days}&limit=${limit}`,
       {
         headers: { Accept: "application/json" },
-        next: { revalidate: 60 },
+        next: { revalidate: 86400 },
       } as RequestInit
     );
     if (!res.ok) return [];
@@ -906,21 +910,39 @@ export async function getProductsByIds(
   return [];
 }
 
-export async function getProductReviews(slug: string): Promise<ApiReview[]> {
+export interface ApiReviewsResult {
+  reviews: ApiReview[];
+  averageRating: number;
+  totalReviews: number;
+}
+
+export async function getProductReviews(slug: string): Promise<ApiReviewsResult> {
   const res = await apiFetch<ApiResponse<ApiReview[]> | ApiReview[]>(
     `/api/products/${slug}/reviews`
   );
-  if (!res) return [];
-  if (Array.isArray(res)) return res;
-  // Paginated wrapper: { data: { data: { reviews: [...] } } }
+  const empty: ApiReviewsResult = { reviews: [], averageRating: 0, totalReviews: 0 };
+  if (!res) return empty;
+  if (Array.isArray(res)) return { reviews: res, averageRating: 0, totalReviews: res.length };
+
+  // Response shape: { success, data: { current_page, data: { average_rating, total_reviews, reviews: { data: [...] } } } }
   const raw = res as unknown as Record<string, unknown>;
   const outer = raw.data as Record<string, unknown> | undefined;
   const inner = outer?.data as Record<string, unknown> | undefined;
-  if (inner && Array.isArray(inner.reviews)) return inner.reviews as ApiReview[];
-  // Simple array at data.data
-  if (outer && Array.isArray(outer.data)) return outer.data as ApiReview[];
-  if ("data" in res && Array.isArray(res.data)) return res.data;
-  return [];
+
+  const averageRating = typeof inner?.average_rating === "number" ? inner.average_rating : 0;
+  const totalReviews = typeof inner?.total_reviews === "number" ? inner.total_reviews : 0;
+
+  if (inner) {
+    const reviewsRaw = inner.reviews as ApiReview[] | { data: ApiReview[] } | undefined;
+    if (Array.isArray(reviewsRaw)) return { reviews: reviewsRaw, averageRating, totalReviews };
+    if (reviewsRaw && Array.isArray((reviewsRaw as { data: ApiReview[] }).data)) {
+      return { reviews: (reviewsRaw as { data: ApiReview[] }).data, averageRating, totalReviews };
+    }
+  }
+  // Fallback: simple array at data.data
+  if (outer && Array.isArray(outer.data)) return { reviews: outer.data as ApiReview[], averageRating, totalReviews };
+  if ("data" in res && Array.isArray(res.data)) return { reviews: res.data, averageRating, totalReviews };
+  return empty;
 }
 
 export async function getAvailableOrderItemsForProduct(slug: string): Promise<Array<{id:number, order_id:number, product_id:number}>> {
@@ -1000,7 +1022,7 @@ export async function getCategories(params?: Record<string, string>): Promise<Ap
   try {
     const res = await fetch(`${API_BASE}/api/categories${query}`, {
       headers: { Accept: "application/json" },
-      next: { revalidate: 30 },
+      next: { revalidate: 86400 },
     } as RequestInit);
     if (!res.ok) return [];
     return extractCatArray(await res.json());
@@ -1013,7 +1035,7 @@ export async function getSubCategories(): Promise<ApiCategory[]> {
   try {
     const res = await fetch(`${API_BASE}/api/categories/sub-categories`, {
       headers: { Accept: "application/json" },
-      next: { revalidate: 30 },
+      next: { revalidate: 86400 },
     } as RequestInit);
     if (!res.ok) return [];
     return extractCatArray(await res.json());
@@ -1884,6 +1906,7 @@ export async function getSystemSettings(): Promise<ApiSystemSettings | null> {
     showGstInGrid:           setting.showGstInGrid           === true,
     showCategoryNameInGrid:  setting.showCategoryNameInGrid  !== false,
     showMinQtyInGrid:        setting.showMinQtyInGrid        === true,
+    sellerSupportNumber: typeof setting.sellerSupportNumber === "string" ? setting.sellerSupportNumber.trim() : "",
   };
 }
 
@@ -1904,9 +1927,11 @@ export async function getWebSettings(): Promise<ApiWebSettings | null> {
   const str = (key: string) => (typeof s[key] === "string" ? (s[key] as string).trim() : "");
 
   return {
-    googleAnalyticsId:      str("googleAnalyticsId"),
-    googleTagManagerId:     str("googleTagManagerId"),
-    facebookPixelId:        str("facebookPixelId"),
+    googleAnalyticsId:           str("googleAnalyticsId"),
+    googleTagManagerId:          str("googleTagManagerId"),
+    facebookPixelId:             str("facebookPixelId"),
+    googleAdsId:                 str("googleAdsId"),
+    googleAdsBeginCheckoutLabel: str("googleAdsBeginCheckoutLabel"),
     metaTitle:              str("metaTitle"),
     metaDescription:        str("metaDescription"),
     metaKeywords:           str("metaKeywords"),
@@ -2916,7 +2941,7 @@ export async function getProductsByCategory(categorySlug: string): Promise<RealA
       `${API_BASE}/api/products?categories=${encodeURIComponent(categorySlug)}&per_page=100&include_child_categories=1`,
       {
         headers: { Accept: "application/json" },
-        next: { revalidate: 60 },
+        next: { revalidate: 86400 },
       } as RequestInit
     );
     if (!res.ok) return [];

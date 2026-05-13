@@ -2,6 +2,15 @@
   "name": "frontend",
   "version": "0.1.0",
   "private": true,
+  "browserslist": [
+    "chrome >= 95",
+    "edge >= 95",
+    "firefox >= 94",
+    "safari >= 15.4",
+    "ios_saf >= 15.4",
+    "samsung >= 17",
+    "opera >= 81"
+  ],
   "scripts": {
     "dev": "next dev",
     "build": "next build",

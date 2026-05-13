@@ -1,6 +1,12 @@
-import { initializeApp, getApps, type FirebaseApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, signInWithPopup, type Auth } from "firebase/auth";
+// Type-only imports are erased at compile time — they cost zero bundle bytes.
+import type { FirebaseApp } from "firebase/app";
+import type { Auth } from "firebase/auth";
 import { API_BASE } from "@/lib/api";
+
+// The Firebase SDK (~450 KB) is NOT imported statically. Dynamic imports inside
+// getFirebase() / signInWithGoogle() mean the SDK is only parsed and evaluated
+// when the user actually clicks "Sign in with Google", keeping it out of the
+// initial JS bundle and off the critical path entirely.
 
 type FirebaseWebConfig = {
   apiKey: string;
@@ -66,15 +72,22 @@ async function getFirebaseConfig(): Promise<FirebaseWebConfig> {
 
 async function getFirebase() {
   if (!app) {
+    const [{ initializeApp, getApps }, { getAuth }] = await Promise.all([
+      import("firebase/app"),
+      import("firebase/auth"),
+    ]);
     const firebaseConfig = await getFirebaseConfig();
-    app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+    app = getApps().length ? getApps()[0]! : initializeApp(firebaseConfig);
     auth = getAuth(app);
   }
   return { app, auth };
 }
 
 export async function signInWithGoogle(): Promise<{ idToken: string; name: string | null; email: string | null }> {
-  const { auth } = await getFirebase();
+  const [{ auth }, { GoogleAuthProvider, signInWithPopup }] = await Promise.all([
+    getFirebase(),
+    import("firebase/auth"),
+  ]);
   const provider = new GoogleAuthProvider();
   provider.addScope("email");
   provider.addScope("profile");

@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Clock3 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -9,6 +10,11 @@ interface BlogCardProps {
 }
 
 export default function BlogCard({ post, variant = "default" }: BlogCardProps) {
+  const featuredImageSizes =
+    variant === "featured"
+      ? "(min-width: 1024px) 42vw, (min-width: 640px) 50vw, calc(100vw - 3rem)"
+      : "(min-width: 1280px) 31vw, (min-width: 768px) 47vw, calc(100vw - 3rem)";
+
   return (
     <article
       className={cn(
@@ -18,14 +24,13 @@ export default function BlogCard({ post, variant = "default" }: BlogCardProps) {
     >
       <Link href={`/blog/${post.slug}`} className="block">
         <div className={cn("relative overflow-hidden", variant === "featured" ? "aspect-[16/10]" : "aspect-[16/11]")}>
-          <img
+          <Image
             src={post.featuredImage}
             alt={post.title}
+            fill
+            sizes={featuredImageSizes}
             className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
             loading="lazy"
-            decoding="async"
-            width={800}
-            height={533}
           />
         </div>
       </Link>
@@ -46,14 +51,20 @@ export default function BlogCard({ post, variant = "default" }: BlogCardProps) {
         </div>
         <div className="flex items-center justify-between gap-4 border-t border-slate-100 pt-4">
           <div className="flex items-center gap-3">
-            <img
+            <Image
               src={post.author.avatar}
               alt={post.author.name}
+              width={40}
+              height={40}
+              sizes="40px"
               className="h-10 w-10 rounded-full object-cover"
             />
             <div>
               <p className="text-sm font-semibold text-slate-900">{post.author.name}</p>
               <p className="text-xs text-slate-500">{post.author.role}</p>
+              {post.author.bio && (
+                <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-400">{post.author.bio}</p>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-1 text-xs font-medium text-slate-500">

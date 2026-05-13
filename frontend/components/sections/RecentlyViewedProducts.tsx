@@ -8,6 +8,49 @@ import ShopProductCard from "@/components/shop/ShopProductCard";
 import { getProductsByIds, type RealApiProduct } from "@/lib/api";
 import { clearRecentlyViewedIds, readRecentlyViewedIds } from "@/lib/recently-viewed";
 
+// ─── Skeleton — reserves layout space while products are loading ──────────────
+// Matches the section's exact outer wrapper + grid so the footer never shifts.
+function RecentlyViewedSkeleton() {
+  return (
+    <section
+      className="border-t border-(--color-border) bg-white py-14"
+      aria-hidden="true"
+    >
+      <Container>
+        {/* Header skeleton */}
+        <div className="mb-8">
+          <div className="h-3 w-28 rounded-full bg-gray-100 animate-pulse mb-3" />
+          <div className="h-7 w-52 rounded-full bg-gray-100 animate-pulse mb-3" />
+          <div className="h-4 max-w-lg w-full rounded-full bg-gray-100 animate-pulse" />
+        </div>
+
+        {/* Desktop 4-col grid skeleton */}
+        <div className="hidden sm:grid grid-cols-2 lg:grid-cols-4 gap-5">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="rounded-2xl overflow-hidden border border-gray-100">
+              <div className="aspect-square bg-gray-100 animate-pulse" />
+              <div className="p-3 space-y-2">
+                <div className="h-3 bg-gray-100 rounded-full animate-pulse" />
+                <div className="h-3 w-3/4 bg-gray-100 rounded-full animate-pulse" />
+                <div className="h-4 w-16 bg-gray-100 rounded-full animate-pulse mt-1" />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Mobile single card skeleton */}
+        <div className="sm:hidden rounded-2xl overflow-hidden border border-gray-100">
+          <div className="aspect-square bg-gray-100 animate-pulse" />
+          <div className="p-3 space-y-2">
+            <div className="h-3 bg-gray-100 rounded-full animate-pulse" />
+            <div className="h-3 w-3/4 bg-gray-100 rounded-full animate-pulse" />
+          </div>
+        </div>
+      </Container>
+    </section>
+  );
+}
+
 interface RecentlyViewedProductsProps {
   excludeProductId?: number;
   title?: string;
@@ -17,6 +60,8 @@ interface RecentlyViewedProductsProps {
   viewAllHref?: string;
   viewAllLabel?: string;
   showClearAction?: boolean;
+  /** Pre-read server-side cookie IDs — ensures SSR/CSR output matches, preventing footer CLS. */
+  initialIds?: number[];
 }
 
 export default function RecentlyViewedProducts({
@@ -28,10 +73,18 @@ export default function RecentlyViewedProducts({
   viewAllHref = "/shop",
   viewAllLabel = "Browse all",
   showClearAction = true,
+  initialIds,
 }: RecentlyViewedProductsProps) {
   const [products, setProducts] = useState<RealApiProduct[]>([]);
   const [loaded, setLoaded] = useState(false);
   const mobileSliderRef = useRef<HTMLDivElement | null>(null);
+
+  // Derive initial hasIds from server-provided initialIds so SSR and client
+  // hydration produce identical output — eliminates the footer layout shift
+  // that occurred when the useState initializer ran with cookie data on client
+  // but returned false on the server (document undefined).
+  const initialHasIds = (initialIds ?? []).filter((id) => id !== excludeProductId).length > 0;
+  const [hasIds] = useState(initialHasIds);
 
   function scrollSlider(direction: "prev" | "next") {
     const el = mobileSliderRef.current;
@@ -72,6 +125,9 @@ export default function RecentlyViewedProducts({
     };
   }, [excludeProductId, maxItems]);
 
+  // Only show skeleton when we know there are IDs to fetch.
+  // For empty cookie (fresh visitor / PageSpeed bot), return null immediately.
+  if (!loaded && hasIds) return <RecentlyViewedSkeleton />;
   if (!loaded || products.length === 0) return null;
 
   return (

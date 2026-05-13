@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { flushPurchaseEvent } from "@/lib/analytics";
 import { getOrder, type ApiOrder } from "@/lib/api";
+import { shouldBypassOptimizer } from "@/lib/image";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -20,9 +21,6 @@ function fmt(n: number) {
   }).format(n);
 }
 
-function bypassOptimizer(src?: string | null) {
-  return typeof src === "string" && /^https?:\/\//i.test(src);
-}
 
 const PAYMENT_LABELS: Record<string, string> = {
   razorpay: "Razorpay",
@@ -163,7 +161,7 @@ function OrderConfirmedInner() {
                           src={item.image}
                           alt={item.product_name}
                           width={56} height={56}
-                          unoptimized={bypassOptimizer(item.image)}
+                          unoptimized={shouldBypassOptimizer(item.image)}
                           className="w-full h-full object-contain"
                         />
                       ) : (

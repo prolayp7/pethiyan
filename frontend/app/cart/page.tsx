@@ -9,16 +9,12 @@ import {
 } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { applyCoupon, type ApiCouponResult } from "@/lib/api";
+import { shouldBypassOptimizer } from "@/lib/image";
 import Container from "@/components/layout/Container";
 import BrowsingHistory from "@/components/product/BrowsingHistory";
 import YourItems from "@/components/sections/YourItems";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-
-function shouldBypassOptimizer(src?: string | null): boolean {
-  if (!src) return false;
-  return /^https?:\/\//i.test(src);
-}
 
 function formatWeightDisplay(weight?: number, weightUnit?: string, quantity = 1): string | null {
   if (weight == null || weight <= 0) return null;

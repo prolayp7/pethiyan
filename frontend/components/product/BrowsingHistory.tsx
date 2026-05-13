@@ -7,7 +7,7 @@ import { ArrowRight, ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
 import Container from "@/components/layout/Container";
 import { getBrowsingHistorySlugs, clearBrowsingHistory } from "@/lib/browsingHistory";
 import { API_BASE, type RealApiProduct } from "@/lib/api";
-import { normalizeImageUrl } from "@/lib/image";
+import { normalizeImageUrl, shouldBypassOptimizer } from "@/lib/image";
 import AttributePills, { AttributePillsWithVariants } from "@/components/product/AttributePills";
 
 const COLOR_MAP: Record<string, string> = {
@@ -109,7 +109,7 @@ function HistoryCard({ product }: { product: RealApiProduct }) {
             sizes="176px"
             loading="lazy"
             quality={80}
-            unoptimized={/^https?:\/\//i.test(img)}
+            unoptimized={shouldBypassOptimizer(img)}
           />
         ) : (
           <div className="absolute inset-0 bg-linear-to-br from-(--color-primary)/10 to-(--color-primary-light)" />

@@ -11,11 +11,7 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/context/CartContext";
-
-function shouldBypassOptimizer(src?: string | null): boolean {
-  if (!src) return false;
-  return /^https?:\/\//i.test(src);
-}
+import { shouldBypassOptimizer } from "@/lib/image";
 
 export default function CartDrawer() {
   const { isOpen, closeCart, items, total, totalGst, updateQuantity, removeItem } = useCart();

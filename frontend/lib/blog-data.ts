@@ -2,7 +2,8 @@ export interface BlogCategory {
   slug: string;
   title: string;
   description: string;
-  accent: string;
+  coverImage?: string | null;
+  accent?: string;
 }
 
 export interface BlogSection {

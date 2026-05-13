@@ -32,7 +32,6 @@ export default function ProfilePage() {
 
   const isDirty =
     name !== (user?.name ?? "") ||
-    email !== (user?.email ?? "") ||
     companyName !== (user?.company_name ?? "") ||
     gstin !== (user?.gstin ?? "");
 
@@ -42,7 +41,6 @@ export default function ProfilePage() {
     setSaving(true);
     const result = await updateProfile({
       name: name.trim(),
-      email: email.trim() || undefined,
       company_name: companyName.trim() || undefined,
       gstin: gstin.trim() || undefined
     });
@@ -50,7 +48,6 @@ export default function ProfilePage() {
     if (result.success) {
       updateUser({
         name: name.trim(),
-        email: email.trim() || null,
         company_name: companyName.trim() || null,
         gstin: gstin.trim() || null
       });
@@ -162,7 +159,7 @@ export default function ProfilePage() {
             <p className="text-[11px] text-gray-400 mt-1">Mobile number cannot be changed.</p>
           </div>
 
-          {/* Email */}
+          {/* Email (readonly) */}
           <div>
             <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block">
               Email Address <span className="text-gray-400 font-normal">(optional)</span>
@@ -172,12 +169,12 @@ export default function ProfilePage() {
               <input
                 type="email"
                 value={email}
-                onChange={(e) => { setEmail(e.target.value); setError(""); }}
-                placeholder="your@email.com"
-                className={`${inputCls} pl-10`}
+                disabled
+                title="Email address"
+                className={`${inputCls} pl-10 opacity-60 cursor-not-allowed`}
               />
             </div>
-            <p className="text-[11px] text-gray-400 mt-1">Used for order confirmation emails and GST invoices.</p>
+            <p className="text-[11px] text-gray-400 mt-1">Email address cannot be changed.</p>
           </div>
 
           {/* Company name */}

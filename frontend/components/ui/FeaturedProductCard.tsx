@@ -3,7 +3,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
+
+const LoginModal = dynamic(() => import("@/components/auth/LoginModal"), { ssr: false });
 import { createPortal } from "react-dom";
 import { Tag, Package, ShoppingBag, Heart, Eye, X, ChevronLeft, ChevronRight, Minus, Plus, Trash2 } from "lucide-react";
 import { useCart } from "@/context/CartContext";
@@ -85,6 +88,7 @@ export default function FeaturedProductCard({ p }: { p: FallbackProduct }) {
   const [quickViewOpen, setQuickViewOpen] = useState(false);
   const [quickViewLoading, setQuickViewLoading] = useState(false);
   const [wishlistBusy, setWishlistBusy] = useState(false);
+  const [loginOpen, setLoginOpen] = useState(false);
   const [quickViewProduct, setQuickViewProduct] = useState<RealApiProduct | null>(null);
   const [selectedVariantId, setSelectedVariantId] = useState<number | null>(null);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
@@ -236,7 +240,7 @@ export default function FeaturedProductCard({ p }: { p: FallbackProduct }) {
       e.stopPropagation();
       if (!Number.isFinite(numericProductId)) return;
       if (!isLoggedIn) {
-        toast.error("Please login to manage wishlist.");
+        setLoginOpen(true);
         return;
       }
       if (wishlistBusy) return;
@@ -624,6 +628,7 @@ export default function FeaturedProductCard({ p }: { p: FallbackProduct }) {
           </div>
         </div>
       , document.body)}
+      <LoginModal open={loginOpen} onClose={() => setLoginOpen(false)} />
     </>
   );
 }

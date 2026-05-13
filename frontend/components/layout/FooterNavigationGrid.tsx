@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Facebook, Globe, Instagram, Linkedin, Mail, MapPin, MessageCircle, Phone, Send, Twitter, type LucideIcon, Youtube } from "lucide-react";
 import FooterUserLinks from "./FooterUserLinks";
+import { shouldBypassOptimizer } from "@/lib/image";
 
 type NavLink = { label: string; href: string };
 type NavColumn = { title: string; links: NavLink[] };
@@ -62,7 +63,7 @@ export default function FooterNavigationGrid({
                   alt={appName}
                   fill
                   className="object-contain object-left"
-                  unoptimized
+                  unoptimized={shouldBypassOptimizer(logoSrc)}
                 />
               </div>
             </Link>

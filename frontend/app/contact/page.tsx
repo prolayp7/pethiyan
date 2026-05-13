@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { ChevronRight, Home, Phone, Mail, MapPin, Clock, MessageCircle } from "lucide-react";
 import Container from "@/components/layout/Container";
 import ContactForm from "./ContactForm";
@@ -87,6 +88,12 @@ export async function generateMetadata(): Promise<Metadata> {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default async function ContactPage() {
+  const cookieStore = await cookies();
+  const rvCookieStr = cookieStore.get("recently_viewed_ids")?.value;
+  const initialRecentlyViewedIds = rvCookieStr
+    ? decodeURIComponent(rvCookieStr).split(",").map(Number).filter((n) => Number.isInteger(n) && n > 0).slice(0, 10)
+    : [];
+
   const { contact: c } = await getContactData();
 
   const officeLines = [c.officeName, c.officeAddress].filter(Boolean);
@@ -247,6 +254,7 @@ export default async function ContactPage() {
         eyebrow="Continue exploring"
         description="Reconnect with the packaging products you checked before reaching out to us."
         viewAllLabel="See all products"
+        initialIds={initialRecentlyViewedIds}
       />
     </div>
   );

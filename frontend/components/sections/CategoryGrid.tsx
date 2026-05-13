@@ -1,13 +1,8 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import {
-  motion,
-  useAnimation,
-  type Variants,
-} from "framer-motion";
 import {
   ArrowLeft,
   ArrowRight,
@@ -22,6 +17,7 @@ import {
   ShoppingBag,
 } from "lucide-react";
 import type { ApiCategory } from "@/lib/api";
+import { shouldBypassOptimizer } from "@/lib/image";
 
 // ─── Static fallback data ─────────────────────────────────────────────────────
 const staticCategories = [
@@ -35,24 +31,17 @@ const staticCategories = [
 
 const fallbackIcons = [Archive, Box, Truck, Package, Wrench, Layers, Palette, Leaf, ShoppingBag];
 
-// ─── Animation variants ───────────────────────────────────────────────────────
+const CG_DELAY_CLASSES = ["cg-delay0","cg-delay1","cg-delay2","cg-delay3","cg-delay4","cg-delay5"];
 
-const sectionVariants: Variants = {
-  hidden: {},
-  visible: { transition: { staggerChildren: 0.10 } },
-};
+// Tiny light-gray SVG used as a blur placeholder while the real image loads.
+// Eliminates the blank-image flash without needing a per-image LQIP fetch.
+const BLUR_DATA_URL = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0IDQiPjxyZWN0IHdpZHRoPSI0IiBoZWlnaHQ9IjQiIGZpbGw9IiNmMGYyZjUiLz48L3N2Zz4=";
 
-const headingVariants: Variants = {
-  hidden:  { opacity: 0, y: 22 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.65, ease: [0.22, 1, 0.36, 1] } },
-};
-
-const cardVariants: Variants = {
-  hidden:  { opacity: 0, y: 36 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.65, ease: [0.22, 1, 0.36, 1] } },
-};
-
-// ─── CategoryCard ─────────────────────────────────────────────────────────────
+// ─── CategoryCard — pure CSS hover effects, no Framer Motion ─────────────────
+// All hover animations (lift, image scale, shine sweep, glass panel slide,
+// name peek fade) are driven by CSS transitions + :hover selectors in
+// globals.css — no JS animation library needed, eliminating the
+// framer-motion chunk from the homepage bundle.
 
 interface CardProps {
   href: string;
@@ -60,107 +49,61 @@ interface CardProps {
   desc?: string | null;
   image?: string | null;
   Icon?: React.ComponentType<{ className?: string }>;
+  animClass?: string;
+  priority?: boolean;
 }
 
-function CategoryCard({ href, name, desc, image, Icon }: CardProps) {
-  const [hovered, setHovered] = useState(false);
-  const shineControls = useAnimation();
-
-  const handleHoverStart = async () => {
-    setHovered(true);
-    // Shine sweeps once across the card on each hover entry
-    await shineControls.start({
-      x: "240%",
-      transition: { duration: 0.75, ease: "easeOut" },
-    });
-    shineControls.set({ x: "-130%" });
-  };
-
-  const handleHoverEnd = () => setHovered(false);
-
+function CategoryCard({ href, name, desc, image, Icon, animClass = "", priority = false }: CardProps) {
   return (
-    <motion.div variants={cardVariants}>
-      {/* Link wraps the whole card; glass panel "button" is a span (no nested <a>) */}
+    <div className={`cg-item ${animClass}`}>
       <Link href={href} className="block" aria-label={`Shop ${name}`}>
-        <motion.div
-          className="cat-hv-card relative"
-          onHoverStart={handleHoverStart}
-          onHoverEnd={handleHoverEnd}
-          animate={{ y: hovered ? -10 : 0 }}
-          transition={{ type: "spring", stiffness: 280, damping: 26 }}
-        >
-          {/* ── Card body (3:4 portrait) ─────────────────────── */}
+        <div className="cat-hv-card">
           <div className="cat-hv-body">
 
             {/* Image or icon background */}
             {image ? (
-              <motion.div
-                className="absolute inset-0"
-                animate={{ scale: hovered ? 1.07 : 1 }}
-                transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-              >
+              <div className="cat-hv-image-wrap absolute inset-0">
                 <Image
                   src={image}
                   alt={name}
                   fill
                   className="object-cover"
                   sizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, 33vw"
-                  loading="lazy"
+                  priority={priority}
+                  loading={priority ? "eager" : "lazy"}
                   quality={80}
-                  unoptimized={/^https?:\/\//i.test(image)}
+                  placeholder="blur"
+                  blurDataURL={BLUR_DATA_URL}
+                  unoptimized={shouldBypassOptimizer(image)}
                 />
-              </motion.div>
+              </div>
             ) : (
-              <motion.div
+              <div
                 className="cat-hv-icon-bg absolute inset-0 flex items-center justify-center"
-                animate={{ scale: hovered ? 1.04 : 1 }}
-                transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
                 aria-hidden="true"
               >
                 {Icon && <Icon className="w-20 h-20 text-white/20" />}
-              </motion.div>
+              </div>
             )}
 
-            {/* Base gradient overlay — darkens on hover */}
-            <motion.div
-              className="cat-hv-overlay absolute inset-0 z-[1]"
-              animate={{ opacity: hovered ? 1.3 : 1 }}
-              transition={{ duration: 0.45 }}
-            />
+            {/* Base gradient overlay */}
+            <div className="cat-hv-overlay absolute inset-0 z-1" />
 
-            {/* Extra dark veil — fades in on hover for more contrast behind glass */}
-            <motion.div
-              className="absolute inset-0 z-[2] bg-black"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: hovered ? 0.22 : 0 }}
-              transition={{ duration: 0.45 }}
-            />
+            {/* Dark veil — fades in on hover via CSS */}
+            <div className="cat-hv-dark-veil absolute inset-0 z-2 bg-black" />
 
-            {/* Shine sweep (one-shot on hover entry) */}
-            <motion.div
-              className="cat-hv-shine absolute inset-0 z-[3] pointer-events-none"
-              initial={{ x: "-130%" }}
-              animate={shineControls}
-            />
+            {/* Shine sweep — CSS one-shot animation */}
+            <div className="cat-hv-shine absolute inset-0 z-3 pointer-events-none" />
 
-            {/* Always-visible name peek — fades out when glass panel appears */}
-            <motion.div
-              className="absolute bottom-0 inset-x-0 z-[4] px-6 pb-5"
-              animate={{ opacity: hovered ? 0 : 1, y: hovered ? 6 : 0 }}
-              transition={{ duration: 0.22 }}
-            >
+            {/* Name peek — fades out when glass appears */}
+            <div className="cat-hv-name-peek absolute bottom-0 inset-x-0 z-4 px-6 pb-5">
               <p className="text-white/80 text-xs font-bold uppercase tracking-[0.18em]">
                 {name}
               </p>
-            </motion.div>
+            </div>
 
-            {/* ── Glass reveal panel — slides up from below ── */}
-            <motion.div
-              className="cat-hv-glass z-[5]"
-              initial={{ y: "100%" }}
-              animate={{ y: hovered ? "0%" : "100%" }}
-              transition={{ type: "spring", stiffness: 320, damping: 34 }}
-            >
+            {/* Glass reveal panel — slides up from below via CSS */}
+            <div className="cat-hv-glass z-5">
               <h3 className="text-white text-xl font-black leading-tight mb-2">
                 {name}
               </h3>
@@ -171,19 +114,16 @@ function CategoryCard({ href, name, desc, image, Icon }: CardProps) {
               )}
               <span className="cat-hv-btn font-bold">
                 Shop Now
-                <motion.span
-                  animate={{ x: hovered ? 3 : 0 }}
-                  transition={{ type: "spring", stiffness: 400, damping: 22 }}
-                >
+                <span className="cat-hv-arrow">
                   <ArrowRight className="w-3.5 h-3.5" />
-                </motion.span>
+                </span>
               </span>
-            </motion.div>
+            </div>
 
-          </div>{/* /cat-hv-body */}
-        </motion.div>
+          </div>
+        </div>
       </Link>
-    </motion.div>
+    </div>
   );
 }
 
@@ -197,11 +137,7 @@ function sortCategoriesByAdminOrder(categories: ApiCategory[]): ApiCategory[] {
   return [...categories].sort((left, right) => {
     const leftOrder = typeof left.sort_order === "number" ? left.sort_order : Number.MAX_SAFE_INTEGER;
     const rightOrder = typeof right.sort_order === "number" ? right.sort_order : Number.MAX_SAFE_INTEGER;
-
-    if (leftOrder !== rightOrder) {
-      return leftOrder - rightOrder;
-    }
-
+    if (leftOrder !== rightOrder) return leftOrder - rightOrder;
     return left.name.localeCompare(right.name);
   });
 }
@@ -216,7 +152,6 @@ export default function CategoryGrid({ categories = [] }: CategoryGridProps) {
     count <= 4 ? "sm:grid-cols-2 lg:grid-cols-4" :
                  "sm:grid-cols-2 md:grid-cols-3";
 
-  // Unified card props for both mobile slider and desktop grid
   const cards = hasApiData
     ? apiParents.map((cat, i) => ({
         key: String(cat.id),
@@ -236,6 +171,17 @@ export default function CategoryGrid({ categories = [] }: CategoryGridProps) {
       }));
 
   const sliderRef = useRef<HTMLDivElement | null>(null);
+  const sectionRef = useRef<HTMLElement | null>(null);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) setVisible(true); },
+      { threshold: 0.1 }
+    );
+    if (sectionRef.current) observer.observe(sectionRef.current);
+    return () => observer.disconnect();
+  }, []);
 
   function scrollCatSlider(dir: "prev" | "next") {
     const el = sliderRef.current;
@@ -247,17 +193,11 @@ export default function CategoryGrid({ categories = [] }: CategoryGridProps) {
   }
 
   return (
-    <section className="cat-section pt-12 pb-6 lg:pt-16 lg:pb-8" aria-labelledby="category-heading">
+    <section ref={sectionRef} className="cat-section pt-12 pb-6 lg:pt-16 lg:pb-8" aria-labelledby="category-heading">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
         {/* ── Heading ── */}
-        <motion.div
-          className="mb-10"
-          initial={{ opacity: 0, y: 22 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-60px" }}
-          transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
-        >
+        <div className={`cg-item cg-delay0 ${visible ? "cg-show" : ""} mb-10 min-h-27.5 sm:min-h-32`}>
           <p className="cat-eyebrow-text text-sm font-semibold uppercase tracking-wider mb-2">
             Browse Range
           </p>
@@ -270,9 +210,9 @@ export default function CategoryGrid({ categories = [] }: CategoryGridProps) {
           <p className="cat-subheading mt-3 text-sm">
             Find the perfect packaging for every product and every brand story
           </p>
-        </motion.div>
+        </div>
 
-        {/* ── Mobile horizontal slider (hidden on sm+) ── */}
+        {/* ── Mobile horizontal slider ── */}
         <div className="relative sm:hidden">
           <button
             type="button"
@@ -294,7 +234,7 @@ export default function CategoryGrid({ categories = [] }: CategoryGridProps) {
             ref={sliderRef}
             className="flex snap-x snap-mandatory gap-4 overflow-x-auto px-10 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           >
-            {cards.map((c) => (
+            {cards.map((c, i) => (
               <div
                 key={c.key}
                 data-cat-slide
@@ -306,21 +246,17 @@ export default function CategoryGrid({ categories = [] }: CategoryGridProps) {
                   desc={c.desc}
                   image={c.image}
                   Icon={c.Icon}
+                  priority={i < 2}
+                  animClass={visible ? `cg-show ${CG_DELAY_CLASSES[i] ?? "cg-delay5"}` : (CG_DELAY_CLASSES[i] ?? "cg-delay5")}
                 />
               </div>
             ))}
           </div>
         </div>
 
-        {/* ── Desktop / tablet grid (hidden below sm) ── */}
-        <motion.div
-          className={`hidden sm:grid ${gridCols} gap-6 lg:gap-8`}
-          variants={sectionVariants}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: "-80px" }}
-        >
-          {cards.map((c) => (
+        {/* ── Desktop / tablet grid ── */}
+        <div className={`hidden sm:grid ${gridCols} gap-6 lg:gap-8`}>
+          {cards.map((c, i) => (
             <CategoryCard
               key={c.key}
               href={c.href}
@@ -328,9 +264,11 @@ export default function CategoryGrid({ categories = [] }: CategoryGridProps) {
               desc={c.desc}
               image={c.image}
               Icon={c.Icon}
+              priority={i < 2}
+              animClass={visible ? `cg-show ${CG_DELAY_CLASSES[i] ?? "cg-delay5"}` : (CG_DELAY_CLASSES[i] ?? "cg-delay5")}
             />
           ))}
-        </motion.div>
+        </div>
 
       </div>
     </section>

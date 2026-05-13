@@ -1,5 +1,6 @@
+import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, Search } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import Container from "@/components/layout/Container";
 import type { BlogPost } from "@/lib/blog-data";
 
@@ -30,18 +31,17 @@ export default function BlogHero({ title, eyebrow, description, featuredPost }: 
               Read featured article
               <ArrowRight className="h-4 w-4" />
             </Link>
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-3 text-sm text-blue-50/90 backdrop-blur">
-              <Search className="h-4 w-4 text-emerald-300" />
-              Search by topic, packaging type, or brand growth idea
-            </div>
           </div>
         </div>
 
         <article className="overflow-hidden rounded-[28px] border border-white/12 bg-white/10 shadow-[0_30px_80px_rgba(2,8,23,0.35)] backdrop-blur">
           <div className="relative aspect-[4/3] overflow-hidden">
-            <img
+            <Image
               src={featuredPost.featuredImage}
               alt={featuredPost.title}
+              fill
+              priority
+              sizes="(min-width: 1024px) 40vw, (min-width: 640px) 92vw, 100vw"
               className="h-full w-full object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-slate-950/75 via-slate-950/15 to-transparent" />

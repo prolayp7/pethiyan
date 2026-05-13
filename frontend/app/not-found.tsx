@@ -1,9 +1,16 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { Home, Search, ShoppingBag } from "lucide-react";
 import Container from "@/components/layout/Container";
 import RecentlyViewedProducts from "@/components/sections/RecentlyViewedProducts";
 
-export default function NotFound() {
+export default async function NotFound() {
+  const cookieStore = await cookies();
+  const rvCookieStr = cookieStore.get("recently_viewed_ids")?.value;
+  const initialRecentlyViewedIds = rvCookieStr
+    ? decodeURIComponent(rvCookieStr).split(",").map(Number).filter((n) => Number.isInteger(n) && n > 0).slice(0, 10)
+    : [];
+
   return (
     <>
     <div style={{ background: "var(--background)", minHeight: "70vh" }} className="flex items-center">
@@ -68,6 +75,7 @@ export default function NotFound() {
       eyebrow="Pick up where you left off"
       description="Products you've browsed recently."
       showClearAction={false}
+      initialIds={initialRecentlyViewedIds}
     />
     </>
   );

@@ -11,6 +11,7 @@ import {
   ChevronLeft, ChevronRight, type LucideIcon,
 } from "lucide-react";
 import type { ApiHeroSlide, ApiHeroBadge } from "@/lib/api";
+import { shouldBypassOptimizer } from "@/lib/image";
 
 /* ─── Icon name → Lucide component map ──────────────────────────── */
 
@@ -38,7 +39,7 @@ export default function HeroSection10({ slides: apiSlides, badges: apiBadges, se
   const heroMinHeight = `clamp(320px, 65vw, ${heroHeight}px)`;
 
   if (activeSlides.length === 0) return null;
-  const autoplay = Autoplay({ delay: autoplayDelay, stopOnInteraction: false });
+  const autoplay = Autoplay({ delay: autoplayDelay, stopOnInteraction: false, stopOnMouseEnter: true });
 
   const [emblaRef, emblaApi] = useEmblaCarousel(
     { loop: true, duration: 40 },
@@ -72,8 +73,6 @@ export default function HeroSection10({ slides: apiSlides, badges: apiBadges, se
         background: "linear-gradient(140deg, #071023 0%, #0c1d38 50%, #0f2444 100%)",
       }}
       aria-label="Hero carousel"
-      onMouseEnter={() => autoplay.stop()}
-      onMouseLeave={() => autoplay.reset()}
     >
       <div
         className="relative flex flex-col lg:flex-row h-full"
@@ -278,7 +277,7 @@ export default function HeroSection10({ slides: apiSlides, badges: apiBadges, se
                       src={s.image}
                       alt={s.heading.replace("\n", " ")}
                       fill
-                      unoptimized
+                      unoptimized={shouldBypassOptimizer(s.image)}
                       className="object-cover"
                       priority={s.id === 1}
                       sizes="(max-width: 1024px) 100vw, 54vw"

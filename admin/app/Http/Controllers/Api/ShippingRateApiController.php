@@ -37,10 +37,16 @@ class ShippingRateApiController extends Controller
         $pincode      = $request->input('pincode');
         $weightGrams  = (int) $request->input('weight', 500);
 
-        // 1. Check serviceability
-        $pin = PinServiceArea::where('pincode', $pincode)
-            ->where('is_serviceable', true)
-            ->with(['zoneRef'])
+        // 1. Check serviceability — JOIN pin_zones to get zone data in one query
+        $pin = PinServiceArea::where('pin_service_areas.pincode', $pincode)
+            ->where('pin_service_areas.is_serviceable', true)
+            ->leftJoin('pin_zones', 'pin_zones.id', '=', 'pin_service_areas.zone_id')
+            ->select(
+                'pin_service_areas.*',
+                'pin_zones.id as zone_ref_id',
+                'pin_zones.code as zone_ref_code',
+                'pin_zones.default_delivery_time as zone_ref_delivery_time',
+            )
             ->first();
 
         if (!$pin) {
@@ -51,7 +57,6 @@ class ShippingRateApiController extends Controller
                 'pincode'        => $pincode,
                 'is_serviceable' => false,
                 'reason'         => $exists ? 'Pincode is not serviceable.' : 'Pincode not found.',
-                'zone'           => null,
                 'delivery_time'  => null,
                 'weight_grams'   => $weightGrams,
                 'rates'          => [],
@@ -59,15 +64,13 @@ class ShippingRateApiController extends Controller
             ]);
         }
 
-        $zone         = $pin->zoneRef;
-        $zoneCode     = $zone?->code ?? $pin->zone;
-        $deliveryTime = $pin->delivery_time ?? $zone?->default_delivery_time;
+        $zoneCode     = $pin->zone_ref_code ?? $pin->zone;
+        $deliveryTime = $pin->zone_ref_delivery_time ?? $pin->delivery_time;
 
-        if (!$zone) {
+        if (!$pin->zone_ref_id) {
             return ApiResponseType::sendJsonResponse(true, 'Shipping rates fetched.', [
                 'pincode'        => $pincode,
                 'is_serviceable' => true,
-                'zone'           => $zoneCode,
                 'delivery_time'  => $deliveryTime,
                 'weight_grams'   => $weightGrams,
                 'rates'          => [],
@@ -76,7 +79,7 @@ class ShippingRateApiController extends Controller
         }
 
         // 2. Fetch active tariffs for this zone
-        $tariffs = ShippingTariff::where('zone_id', $zone->id)
+        $tariffs = ShippingTariff::where('zone_id', $pin->zone_ref_id)
             ->where('is_active', true)
             ->with('deliveryPartner:id,name,is_active')
             ->get()
@@ -111,7 +114,6 @@ class ShippingRateApiController extends Controller
         return ApiResponseType::sendJsonResponse(true, 'Shipping rates fetched.', [
             'pincode'        => $pincode,
             'is_serviceable' => true,
-            'zone'           => $zoneCode,
             'delivery_time'  => $deliveryTime,
             'weight_grams'   => $weightGrams,
             'rates'          => $rates,

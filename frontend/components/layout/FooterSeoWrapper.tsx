@@ -11,9 +11,10 @@ interface FooterSeoWrapperProps {
 
 export default function FooterSeoWrapper({ enabled, homepageOnly, introHtml }: FooterSeoWrapperProps) {
   const pathname = usePathname();
+  const isHomepage = pathname === "/";
+  const shouldRender = enabled && (!homepageOnly || isHomepage);
 
-  if (!enabled) return null;
-  if (homepageOnly && pathname !== "/") return null;
+  if (!shouldRender) return null;
 
   return <FooterSeoContent introHtml={introHtml} />;
 }

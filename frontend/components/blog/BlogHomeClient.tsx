@@ -7,54 +7,63 @@ import BlogHero from "@/components/blog/BlogHero";
 import CategoryCard from "@/components/blog/CategoryCard";
 import SearchAndFilterBar from "@/components/blog/SearchAndFilterBar";
 import Container from "@/components/layout/Container";
-import { blogCategories, type BlogPost } from "@/lib/blog-data";
+import { type BlogCategory, type BlogPost } from "@/lib/blog-data";
+
+interface HeroSettings {
+  eyebrow: string;
+  heading: string;
+  subheading: string;
+}
 
 interface BlogHomeClientProps {
   featuredPosts: BlogPost[];
   latestPosts: BlogPost[];
   allPosts: BlogPost[];
+  categories: BlogCategory[];
+  heroSettings: HeroSettings;
 }
 
 /** Shared arrow button styles — matches home page blog slider */
 const ARROW_CLASS =
   "absolute z-20 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-[#c8d7ea] bg-white/95 text-[#1a4f83] shadow-sm transition-colors hover:bg-[#f3f8ff]";
 
-function scrollSlider(ref: React.RefObject<HTMLDivElement | null>, direction: "prev" | "next") {
+function scrollSlider(
+  ref: React.RefObject<HTMLDivElement | null>,
+  indexRef: React.MutableRefObject<number>,
+  direction: "prev" | "next",
+) {
   const el = ref.current;
   if (!el) return;
-  const firstCard = el.querySelector<HTMLElement>("[data-blog-slide]");
-  const gap = 24;
-  const cardWidth = firstCard?.offsetWidth ?? el.clientWidth * 0.9;
-  el.scrollBy({ left: direction === "next" ? cardWidth + gap : -(cardWidth + gap), behavior: "smooth" });
+  const slides = el.querySelectorAll<HTMLElement>("[data-blog-slide]");
+  if (slides.length === 0) return;
+
+  const delta = direction === "next" ? 1 : -1;
+  const nextIndex = Math.max(0, Math.min(indexRef.current + delta, slides.length - 1));
+  indexRef.current = nextIndex;
+  slides[nextIndex]?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "start" });
 }
 
-export default function BlogHomeClient({ featuredPosts, latestPosts, allPosts }: BlogHomeClientProps) {
-  const [search, setSearch] = useState("");
+export default function BlogHomeClient({ featuredPosts, latestPosts, allPosts, categories, heroSettings }: BlogHomeClientProps) {
   const [activeCategory, setActiveCategory] = useState("");
   const featuredSliderRef = useRef<HTMLDivElement | null>(null);
   const latestSliderRef = useRef<HTMLDivElement | null>(null);
   const categorySliderRef = useRef<HTMLDivElement | null>(null);
+  const featuredIndexRef = useRef(0);
+  const latestIndexRef = useRef(0);
+  const categoryIndexRef = useRef(0);
 
   const filteredPosts = useMemo(() => {
-    const normalized = search.trim().toLowerCase();
-    return latestPosts.filter((post) => {
-      const matchesCategory = activeCategory === "" || post.category === activeCategory;
-      const matchesSearch =
-        normalized === "" ||
-        post.title.toLowerCase().includes(normalized) ||
-        post.excerpt.toLowerCase().includes(normalized) ||
-        post.tags.some((tag) => tag.toLowerCase().includes(normalized));
-
-      return matchesCategory && matchesSearch;
-    });
-  }, [activeCategory, latestPosts, search]);
+    return latestPosts.filter((post) =>
+      activeCategory === "" || post.category === activeCategory
+    );
+  }, [activeCategory, latestPosts]);
 
   const categoryCounts = useMemo(() => {
-    return blogCategories.reduce<Record<string, number>>((acc, category) => {
+    return categories.reduce<Record<string, number>>((acc, category) => {
       acc[category.slug] = allPosts.filter((post) => post.category === category.slug).length;
       return acc;
     }, {});
-  }, [allPosts]);
+  }, [allPosts, categories]);
 
   const heroPost = featuredPosts[0] ?? latestPosts[0];
 
@@ -65,17 +74,15 @@ export default function BlogHomeClient({ featuredPosts, latestPosts, allPosts }:
   return (
     <div className="bg-[linear-gradient(180deg,#f7fafc_0%,#ffffff_12%,#f8fafc_100%)]">
       <BlogHero
-        eyebrow="Editorial Journal"
-        title="Ideas, systems, and stories for better packaging"
-        description="A modern editorial space for packaging strategy, launch planning, fulfillment clarity, and the details that make ecommerce brands feel more intentional."
+        eyebrow={heroSettings.eyebrow}
+        title={heroSettings.heading}
+        description={heroSettings.subheading}
         featuredPost={heroPost}
       />
 
       <Container className="relative z-10 -mt-8 pb-16 sm:-mt-10 sm:pb-20">
         <SearchAndFilterBar
-          search={search}
-          onSearchChange={setSearch}
-          categories={blogCategories}
+          categories={categories}
           activeCategory={activeCategory}
           onCategoryChange={setActiveCategory}
         />
@@ -93,7 +100,7 @@ export default function BlogHomeClient({ featuredPosts, latestPosts, allPosts }:
           <div className="relative sm:hidden">
             <button
               type="button"
-              onClick={() => scrollSlider(featuredSliderRef, "prev")}
+              onClick={() => scrollSlider(featuredSliderRef, featuredIndexRef, "prev")}
               aria-label="Scroll featured posts left"
               className={`${ARROW_CLASS} left-2 blog-slider-arrow`}
             >
@@ -101,7 +108,7 @@ export default function BlogHomeClient({ featuredPosts, latestPosts, allPosts }:
             </button>
             <button
               type="button"
-              onClick={() => scrollSlider(featuredSliderRef, "next")}
+              onClick={() => scrollSlider(featuredSliderRef, featuredIndexRef, "next")}
               aria-label="Scroll featured posts right"
               className={`${ARROW_CLASS} right-2 blog-slider-arrow`}
             >
@@ -146,7 +153,7 @@ export default function BlogHomeClient({ featuredPosts, latestPosts, allPosts }:
           <div className="relative sm:hidden bg-white rounded-[20px] py-3 -mx-4 px-4">
             <button
               type="button"
-              onClick={() => scrollSlider(categorySliderRef, "prev")}
+              onClick={() => scrollSlider(categorySliderRef, categoryIndexRef, "prev")}
               aria-label="Scroll categories left"
               className={`${ARROW_CLASS} left-2 blog-slider-arrow`}
             >
@@ -154,7 +161,7 @@ export default function BlogHomeClient({ featuredPosts, latestPosts, allPosts }:
             </button>
             <button
               type="button"
-              onClick={() => scrollSlider(categorySliderRef, "next")}
+              onClick={() => scrollSlider(categorySliderRef, categoryIndexRef, "next")}
               aria-label="Scroll categories right"
               className={`${ARROW_CLASS} right-2 blog-slider-arrow`}
             >
@@ -165,7 +172,7 @@ export default function BlogHomeClient({ featuredPosts, latestPosts, allPosts }:
               className="blog-slider-scroll flex snap-x snap-mandatory gap-6 overflow-x-auto px-12 pb-2 [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
               aria-label="Blog categories slider"
             >
-              {blogCategories.map((category) => (
+              {categories.map((category) => (
                 <div
                   key={category.slug}
                   data-blog-slide
@@ -182,7 +189,7 @@ export default function BlogHomeClient({ featuredPosts, latestPosts, allPosts }:
 
           {/* Desktop / tablet grid — hidden below sm */}
           <div className="hidden sm:grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-            {blogCategories.map((category) => (
+            {categories.map((category) => (
               <CategoryCard
                 key={category.slug}
                 category={category}
@@ -198,7 +205,7 @@ export default function BlogHomeClient({ featuredPosts, latestPosts, allPosts }:
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-emerald-600">Latest Posts</p>
               <h2 className="mt-3 text-3xl font-black tracking-tight text-slate-950">
-                {search || activeCategory ? "Filtered results" : "Fresh thinking from the journal"}
+                {activeCategory ? "Filtered results" : "Fresh thinking from the journal"}
               </h2>
             </div>
             <p className="text-sm text-slate-500">{filteredPosts.length} articles</p>
@@ -210,7 +217,7 @@ export default function BlogHomeClient({ featuredPosts, latestPosts, allPosts }:
               <div className="relative sm:hidden">
                 <button
                   type="button"
-                  onClick={() => scrollSlider(latestSliderRef, "prev")}
+                  onClick={() => scrollSlider(latestSliderRef, latestIndexRef, "prev")}
                   aria-label="Scroll latest posts left"
                   className={`${ARROW_CLASS} left-2 blog-slider-arrow`}
                 >
@@ -218,7 +225,7 @@ export default function BlogHomeClient({ featuredPosts, latestPosts, allPosts }:
                 </button>
                 <button
                   type="button"
-                  onClick={() => scrollSlider(latestSliderRef, "next")}
+                  onClick={() => scrollSlider(latestSliderRef, latestIndexRef, "next")}
                   aria-label="Scroll latest posts right"
                   className={`${ARROW_CLASS} right-2 blog-slider-arrow`}
                 >

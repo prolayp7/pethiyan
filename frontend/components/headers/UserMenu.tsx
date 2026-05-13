@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -12,8 +13,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import LoginModal from "@/components/auth/LoginModal";
 import { useAuth } from "@/context/AuthContext";
+
+const LoginModal = dynamic(() => import("@/components/auth/LoginModal"), { ssr: false });
 
 const menuItems = [
   { label: "Account", href: "/account", icon: User },

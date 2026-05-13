@@ -1,10 +1,13 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import dynamic from "next/dynamic";
 import { createPortal } from "react-dom";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+
+const LoginModal = dynamic(() => import("@/components/auth/LoginModal"), { ssr: false });
 import {
   Heart, ShoppingBag, Package, Tag, Trash2,
   Eye, X, ChevronLeft, ChevronRight, Minus, Plus,
@@ -18,7 +21,7 @@ import {
   API_BASE, getProduct, addToWishlist, getWishlistItems, removeWishlistItem,
   type RealApiProduct, type RealApiVariant,
 } from "@/lib/api";
-import { normalizeImageUrl } from "@/lib/image";
+import { normalizeImageUrl, shouldBypassOptimizer } from "@/lib/image";
 import { useSiteSettings } from "@/context/SiteSettingsContext";
 import AttributePills, { AttributePillsWithVariants } from "@/components/product/AttributePills";
 
@@ -46,7 +49,9 @@ const QA_BTN =
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export default function ShopProductCard({ product, view = 'grid' }: { product: RealApiProduct; view?: 'grid' | 'list' }) {
+const BLUR_DATA_URL = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0IDQiPjxyZWN0IHdpZHRoPSI0IiBoZWlnaHQ9IjQiIGZpbGw9IiNmMGYyZjUiLz48L3N2Zz4=";
+
+export default function ShopProductCard({ product, view = 'grid', priority = false }: { product: RealApiProduct; view?: 'grid' | 'list'; priority?: boolean }) {
   const router = useRouter();
   const { addItem, openCart, updateQuantity } = useCart();
   const { isWishlisted, toggle } = useWishlist();
@@ -58,6 +63,7 @@ export default function ShopProductCard({ product, view = 'grid' }: { product: R
   } = useSiteSettings();
 
   const [wishlistBusy, setWishlistBusy]           = useState(false);
+  const [loginOpen, setLoginOpen]                 = useState(false);
   const [quickViewOpen, setQuickViewOpen]         = useState(false);
   const [quickViewLoading, setQuickViewLoading]   = useState(false);
   const [quickViewProduct, setQuickViewProduct]   = useState<RealApiProduct | null>(null);
@@ -183,7 +189,7 @@ export default function ShopProductCard({ product, view = 'grid' }: { product: R
   const handleToggleWishlist = (e: React.MouseEvent) => {
     void (async () => {
       e.preventDefault();
-      if (!isLoggedIn) { toast.error("Please login to manage wishlist."); return; }
+      if (!isLoggedIn) { setLoginOpen(true); return; }
       if (wishlistBusy) return;
       setWishlistBusy(true);
       try {
@@ -284,7 +290,11 @@ export default function ShopProductCard({ product, view = 'grid' }: { product: R
                   src={imgSrc}
                   alt={product.title}
                   fill
-                  unoptimized={/^https?:\/\/(localhost|127\.0\.0\.1)/i.test(imgSrc)}
+                  priority={priority}
+                  loading={priority ? "eager" : "lazy"}
+                  placeholder="blur"
+                  blurDataURL={BLUR_DATA_URL}
+                  unoptimized={shouldBypassOptimizer(imgSrc)}
                   className="object-cover group-hover:scale-105 transition-transform duration-300"
                   sizes="128px"
                 />
@@ -392,7 +402,11 @@ export default function ShopProductCard({ product, view = 'grid' }: { product: R
                 src={imgSrc}
                 alt={product.title}
                 fill
-                unoptimized={/^https?:\/\/(localhost|127\.0\.0\.1)/i.test(imgSrc)}
+                priority={priority}
+                loading={priority ? "eager" : "lazy"}
+                placeholder="blur"
+                blurDataURL={BLUR_DATA_URL}
+                unoptimized={shouldBypassOptimizer(imgSrc)}
                 className="object-cover group-hover:scale-105 transition-transform duration-500"
                 sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
               />
@@ -643,7 +657,7 @@ export default function ShopProductCard({ product, view = 'grid' }: { product: R
                         src={modalImages[Math.min(activeImageIndex, modalImages.length - 1)]}
                         alt={quickViewProduct.title}
                         fill
-                        unoptimized={/^https?:\/\/(localhost|127\.0\.0\.1)/i.test(modalImages[Math.min(activeImageIndex, modalImages.length - 1)] || "")}
+                        unoptimized={shouldBypassOptimizer(modalImages[Math.min(activeImageIndex, modalImages.length - 1)])}
                         className="object-contain"
                         sizes="(max-width: 1024px) 100vw, 50vw"
                       />
@@ -674,7 +688,7 @@ export default function ShopProductCard({ product, view = 'grid' }: { product: R
                           aria-label={`View image ${idx + 1}`}
                         >
                           <Image src={img} alt="" fill className="object-cover"
-                            unoptimized={/^https?:\/\/(localhost|127\.0\.0\.1)/i.test(img)} sizes="52px" />
+                            unoptimized={shouldBypassOptimizer(img)} sizes="52px" />
                         </button>
                       ))}
                     </div>
@@ -771,7 +785,7 @@ export default function ShopProductCard({ product, view = 'grid' }: { product: R
                                   {imgUrl ? (
                                     <Image src={imgUrl} alt={v.title || ""} fill
                                       className="object-contain p-1.5" sizes="100px"
-                                      unoptimized={/^https?:\/\/(localhost|127\.0\.0\.1)/i.test(imgUrl)} />
+                                      unoptimized={shouldBypassOptimizer(imgUrl)} />
                                   ) : (
                                     <div className="w-full h-full flex items-center justify-center">
                                       <Package className={`h-6 w-6 ${isSelected ? "text-white/60" : "text-gray-300"}`} />
@@ -867,6 +881,7 @@ export default function ShopProductCard({ product, view = 'grid' }: { product: R
         </div>,
         document.body
       )}
+      <LoginModal open={loginOpen} onClose={() => setLoginOpen(false)} />
     </>
   );
 }

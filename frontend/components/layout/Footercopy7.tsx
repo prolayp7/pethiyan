@@ -1,3 +1,4 @@
+import { headers } from "next/headers";
 import { getFooterData } from "@/lib/api";
 import OfferMarquee from "./OfferMarquee";
 import FooterNavigationGrid from "./FooterNavigationGrid";
@@ -20,7 +21,13 @@ const userLinks = {
 /* ─── Component ──────────────────────────────────────────────── */
 
 export default async function Footer() {
+  const headerStore = await headers();
+  const pathname = headerStore.get("x-pathname") ?? "/";
+  const isHomepage = pathname === "/";
   const footerData = await getFooterData();
+
+  const seoEnabled      = footerData?.footerSeo?.enabled      ?? true;
+  const seoHomepageOnly = footerData?.footerSeo?.homepageOnly ?? false;
 
   const navColumns = [
     ...(footerData?.menus.navigation.map((menu) => ({
@@ -32,7 +39,7 @@ export default async function Footer() {
 
   return (
     <footer
-      className="bg-[#050810] text-white overflow-x-hidden pb-20 lg:pb-0"
+      className="bg-[#050810] text-white pb-20 lg:pb-0"
       aria-label="Site footer"
     >
 
@@ -40,17 +47,17 @@ export default async function Footer() {
           MARQUEE — SCROLLING OFFER STRIP
       ══════════════════════════════════════════════════════════ */}
       <OfferMarquee
-        homepageOnly={footerData?.highlightTicker.homepageOnly ?? true}
         items={footerData?.highlightTicker.items ?? []}
+        shouldRender={!((footerData?.highlightTicker.homepageOnly ?? true) && !isHomepage)}
       />
 
        {/* ══════════════════════════════════════════════════════════
           FOOTER SEO CONTENT — conditionally rendered per admin settings
       ══════════════════════════════════════════════════════════ */}
       <FooterSeoWrapper
-        enabled={footerData?.footerSeo.enabled ?? true}
-        homepageOnly={footerData?.footerSeo.homepageOnly ?? false}
-        introHtml={footerData?.footerSeo.introHtml}
+        enabled={seoEnabled}
+        homepageOnly={seoHomepageOnly}
+        introHtml={footerData?.footerSeo?.introHtml}
       />
 
       {/* ══════════════════════════════════════════════════════════
@@ -76,7 +83,6 @@ export default async function Footer() {
     </footer>
   );
 }
-
 
 
 

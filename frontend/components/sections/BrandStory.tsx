@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, CheckCircle2 } from "lucide-react";
 import type { ApiWhyChooseUsSection } from "@/lib/api";
-import styles from "./BrandStory.module.css";
 
 interface BrandStoryProps {
   section?: ApiWhyChooseUsSection | null;
@@ -39,48 +38,43 @@ export default function BrandStory({ section }: BrandStoryProps) {
     });
   }
 
-  function getDelayClass(index: number) {
-    const delayClasses = [
-      styles.delay1,
-      styles.delay2,
-      styles.delay3,
-      styles.delay4,
-      styles.delay5,
-      styles.delay6,
-      styles.delay7,
-    ];
+  const DELAY_CLASSES = [
+    "bs-delay1", "bs-delay2", "bs-delay3", "bs-delay4",
+    "bs-delay5", "bs-delay6", "bs-delay7",
+  ];
 
-    return delayClasses[index] ?? styles.delay7;
+  function getDelayClass(index: number) {
+    return DELAY_CLASSES[index] ?? "bs-delay7";
   }
 
   return (
     <section
       ref={ref}
-      className={`${styles.section} relative overflow-hidden pt-10 pb-8 sm:py-16 lg:py-20`}
+      className={`bs-section relative overflow-hidden pt-10 pb-8 sm:py-16 lg:py-20`}
       aria-labelledby="brand-heading"
     >
         {/* Grid overlay */}
-        <div aria-hidden="true" className={`${styles.gridOverlay} pointer-events-none absolute inset-0`} />
+        <div aria-hidden="true" className="bs-grid-overlay pointer-events-none absolute inset-0" />
         {/* Corner glows */}
-        <div aria-hidden="true" className={`${styles.glowTop} pointer-events-none absolute inset-0`} />
-        <div aria-hidden="true" className={`${styles.glowBottom} pointer-events-none absolute inset-0`} />
+        <div aria-hidden="true" className="bs-glow-top pointer-events-none absolute inset-0" />
+        <div aria-hidden="true" className="bs-glow-bottom pointer-events-none absolute inset-0" />
 
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
           {/* Heading */}
           <div
-            className={`${styles.item} ${styles.delay0} ${visible ? styles.show : ""} mb-12 max-w-4xl text-left`}
+            className={`bs-item bs-delay0 ${visible ? "bs-show" : ""} mb-12 max-w-4xl text-left`}
           >
-            <p className={`${styles.eyebrow} mb-2 text-xs font-bold uppercase tracking-[0.22em]`}>
+            <p className="bs-eyebrow mb-2 text-xs font-bold uppercase tracking-[0.22em]">
               {section.eyebrow}
             </p>
             <h2
               id="brand-heading"
-              className={`${styles.heading} text-3xl font-extrabold sm:text-4xl`}
+              className="bs-heading text-3xl font-extrabold sm:text-4xl"
             >
               {section.heading}
             </h2>
-            <p className={`${styles.subheading} mt-3 text-sm`}>
+            <p className="bs-subheading mt-3 text-sm">
               {section.subheading}
             </p>
           </div>
@@ -96,12 +90,12 @@ export default function BrandStory({ section }: BrandStoryProps) {
                 <div
                   key={i}
                   data-why-slide
-                  className={`${styles.card} ${styles.item} ${getDelayClass(i)} ${visible ? styles.show : ""} w-[calc(100vw-3rem)] max-w-full shrink-0 snap-start rounded-2xl p-5`}
+                  className={`bs-card bs-item ${getDelayClass(i)} ${visible ? "bs-show" : ""} w-[calc(100vw-3rem)] max-w-full shrink-0 snap-start rounded-2xl p-5`}
                 >
                   <div className="flex min-w-0 items-start gap-3">
-                    <CheckCircle2 className={`${styles.icon} mt-0.5 h-5 w-5 shrink-0`} />
+                    <CheckCircle2 className="bs-icon mt-0.5 h-5 w-5 shrink-0" />
                     <span
-                      className={`${styles.cardText} min-w-0 whitespace-normal text-sm leading-relaxed wrap-break-word`}
+                      className="bs-card-text min-w-0 whitespace-normal text-sm leading-relaxed wrap-break-word"
                     >
                       {item}
                     </span>
@@ -137,11 +131,11 @@ export default function BrandStory({ section }: BrandStoryProps) {
             {features.map((item, i) => (
               <div
                 key={i}
-                className={`${styles.card} ${styles.item} ${getDelayClass(i)} ${visible ? styles.show : ""} flex min-h-16 items-center gap-3 rounded-2xl px-5 py-4`}
+                className={`bs-card bs-item ${getDelayClass(i)} ${visible ? "bs-show" : ""} flex min-h-16 items-center gap-3 rounded-2xl px-5 py-4`}
               >
-                <CheckCircle2 className={`${styles.icon} h-5 w-5 shrink-0`} />
+                <CheckCircle2 className="bs-icon h-5 w-5 shrink-0" />
                 <span
-                  className={`${styles.cardText} min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-sm leading-relaxed`}
+                  className="bs-card-text min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-sm leading-relaxed"
                   title={item}
                 >
                   {item}

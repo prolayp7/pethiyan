@@ -1,31 +1,104 @@
-"use client";
-
 import Link from "next/link";
-import { useRef } from "react";
-import { ArrowLeft, ArrowRight } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import Container from "@/components/layout/Container";
 import BlogCard from "@/components/blog/BlogCard";
-import { getLatestPosts } from "@/lib/blog-data";
+import RecentBlogsMobileSlider from "@/components/blog/RecentBlogsMobileSlider";
+import { API_BASE } from "@/lib/api";
+import type { BlogPost } from "@/lib/blog-data";
 
-export default function RecentBlogsSection() {
-  const mobileSliderRef = useRef<HTMLDivElement | null>(null);
-  const posts = getLatestPosts().slice(0, 3);
+interface ApiCategory {
+  id: number;
+  title: string;
+  slug: string;
+  description: string | null;
+  coverImage: string | null;
+  postsCount: number;
+}
+
+interface ApiPost {
+  id: number;
+  title: string;
+  slug: string;
+  excerpt: string | null;
+  featuredImage: string;
+  isFeatured: boolean;
+  publishedAt: string | null;
+  readingTime: string | number | null;
+  tags: string[];
+  category: ApiCategory | null;
+  author: { name: string; role: string; bio: string | null; avatar: string | null };
+}
+
+interface BlogHomeApiResponse {
+  settings: {
+    isActive: boolean;
+    eyebrow: string;
+    heading: string;
+    subheading: string;
+  };
+  featuredPosts: ApiPost[];
+  latestPosts: ApiPost[];
+}
+
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+function formatReadingTime(value: string | number | null): string {
+  if (value == null) return "";
+  if (typeof value === "number") return `${value} min read`;
+  return value;
+}
+
+function transformPost(post: ApiPost): BlogPost {
+  return {
+    slug: post.slug,
+    title: post.title,
+    excerpt: post.excerpt ?? "",
+    featuredImage: post.featuredImage,
+    publishedAt: post.publishedAt ? formatDate(post.publishedAt) : "",
+    readingTime: formatReadingTime(post.readingTime),
+    category: post.category?.slug ?? "",
+    tags: post.tags ?? [],
+    author: {
+      name: post.author?.name ?? "",
+      role: post.author?.role ?? "",
+      bio: post.author?.bio ?? "",
+      avatar: post.author?.avatar ?? "",
+    },
+    featured: post.isFeatured,
+    sections: [],
+  };
+}
+
+async function fetchRecentPosts(): Promise<BlogPost[]> {
+  try {
+    const res = await fetch(`${API_BASE}/api/blog`, { next: { revalidate: 3600 } });
+    if (!res.ok) return [];
+    const data = (await res.json()) as BlogHomeApiResponse;
+
+    const allPosts = [...(data.featuredPosts ?? []), ...(data.latestPosts ?? [])];
+    const seen = new Set<string>();
+    const unique = allPosts.filter((p) => {
+      if (seen.has(p.slug)) return false;
+      seen.add(p.slug);
+      return true;
+    });
+    return unique.slice(0, 3).map(transformPost);
+  } catch {
+    return [];
+  }
+}
+
+export default async function RecentBlogsSection() {
+  const posts = await fetchRecentPosts();
 
   if (posts.length === 0) {
     return null;
-  }
-
-  function scrollMobileBlogs(direction: "prev" | "next") {
-    const el = mobileSliderRef.current;
-    if (!el) return;
-    const firstCard = el.querySelector<HTMLElement>("[data-blog-slide]");
-    const gap = 24;
-    const cardWidth = firstCard?.offsetWidth ?? el.clientWidth * 0.9;
-    const amount = cardWidth + gap;
-    el.scrollBy({
-      left: direction === "next" ? amount : -amount,
-      behavior: "smooth",
-    });
   }
 
   return (
@@ -56,47 +129,14 @@ export default function RecentBlogsSection() {
           </div>
           <Link
             href="/blog"
-            className="inline-flex items-center gap-2 self-start rounded-full border border-slate-200 bg-slate-50 px-5 py-2.5 text-sm font-semibold text-slate-900 transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+            className="inline-flex items-center gap-2 self-start rounded-full border border-slate-200 bg-slate-50 px-5 py-2.5 text-sm font-semibold text-slate-900 transition hover:border-(--color-primary) hover:text-(--color-primary)"
           >
             View all articles
             <ArrowRight className="h-4 w-4" aria-hidden="true" />
           </Link>
         </div>
 
-        <div className="relative mt-4 lg:hidden">
-          <button
-            type="button"
-            onClick={() => scrollMobileBlogs("prev")}
-            aria-label="Scroll blog posts left"
-            className="blog-slider-arrow absolute left-2 z-20 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-[#c8d7ea] bg-white/95 text-[#1a4f83] shadow-sm transition-colors hover:bg-[#f3f8ff]"
-          >
-            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-          </button>
-          <button
-            type="button"
-            onClick={() => scrollMobileBlogs("next")}
-            aria-label="Scroll blog posts right"
-            className="blog-slider-arrow absolute right-2 z-20 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-[#c8d7ea] bg-white/95 text-[#1a4f83] shadow-sm transition-colors hover:bg-[#f3f8ff]"
-          >
-            <ArrowRight className="h-4 w-4" aria-hidden="true" />
-          </button>
-
-          <div
-            ref={mobileSliderRef}
-            className="blog-slider-scroll flex snap-x snap-mandatory gap-6 overflow-x-auto px-12 pb-0 [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
-            aria-label="Recent blog posts slider"
-          >
-            {posts.map((post) => (
-              <div
-                key={post.slug}
-                data-blog-slide
-                className="w-[calc(100vw-3rem)] max-w-full shrink-0 snap-start"
-              >
-                <BlogCard post={post} />
-              </div>
-            ))}
-          </div>
-        </div>
+        <RecentBlogsMobileSlider posts={posts} />
 
         <div className="mt-10 hidden grid-cols-1 gap-6 lg:grid-cols-3 lg:grid">
           {posts.map((post) => (

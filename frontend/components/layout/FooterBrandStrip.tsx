@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Facebook, Instagram, Linkedin } from "lucide-react";
 import { getSystemSettings } from "@/lib/api";
+import { shouldBypassOptimizer } from "@/lib/image";
 
 const socialLinks = [
   { label: "Facebook", href: "#", icon: Facebook },
@@ -31,7 +32,7 @@ export default async function FooterBrandStrip() {
             width={220}
             height={64}
             className="h-12 sm:h-14 w-auto object-contain"
-            unoptimized
+            unoptimized={shouldBypassOptimizer(logoSrc)}
           />
         </Link>
 

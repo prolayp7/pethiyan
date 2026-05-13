@@ -2,27 +2,29 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import dynamic from "next/dynamic";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Menu, Search, X, PackageSearch, Heart } from "lucide-react";
 import { cn } from "@/lib/utils";
-import SearchBar from "./SearchBar";
+import DeferredSearchBar from "./DeferredSearchBar";
 import CartButton from "./CartButton";
 import UserMenu from "./UserMenu";
-import MobileMenu from "./MobileMenu";
-import LoginModal from "@/components/auth/LoginModal";
 import { useCart } from "@/context/CartContext";
 import { useWishlist } from "@/context/WishlistContext";
 import { useAuth } from "@/context/AuthContext";
 import { useSiteSettings } from "@/context/SiteSettingsContext";
 import type { ApiMenuItem } from "@/lib/api";
+import { shouldBypassOptimizer } from "@/lib/image";
+
+const MobileMenu = dynamic(() => import("./MobileMenu"), { ssr: false });
+const LoginModal = dynamic(() => import("@/components/auth/LoginModal"), { ssr: false });
 
 interface MainHeaderProps {
   mobileNavItems?: ApiMenuItem[];
 }
 
 export default function MainHeader({ mobileNavItems }: MainHeaderProps) {
-  const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
@@ -52,7 +54,9 @@ export default function MainHeader({ mobileNavItems }: MainHeaderProps) {
           <div className="relative flex items-center justify-between py-3">
 
             {/* ── LEFT: Logo + mobile hamburger ── */}
-            <div className="flex items-center gap-2 shrink-0 z-10">
+            {/* bg-white + pr-4 create a solid zone that visually blocks the
+                absolutely-centred search bar from bleeding into the logo area. */}
+            <div className="flex items-center gap-2 shrink-0 z-10 bg-white pr-4">
               <button
                 className="lg:hidden p-2 -ml-1 rounded-full hover:bg-gray-100 transition-colors"
                 onClick={() => setMobileMenuOpen(true)}
@@ -68,13 +72,20 @@ export default function MainHeader({ mobileNavItems }: MainHeaderProps) {
                 aria-label={`${appName} — Home`}
               >
                 {logo ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    suppressHydrationWarning
-                    src={logo}
-                    alt={appName}
-                    style={{ height: 40, width: "auto", maxWidth: 160, objectFit: "contain", display: "block" }}
-                  />
+                  // fill + explicit container gives deterministic 40×160 px display
+                  // regardless of the logo image's natural dimensions.
+                  // object-left aligns the contained image to the left edge.
+                  <div className="relative h-10 w-40 shrink-0">
+                    <Image
+                      src={logo}
+                      alt={appName}
+                      fill
+                      className="object-contain object-left"
+                      unoptimized={shouldBypassOptimizer(logo)}
+                      priority
+                      sizes="160px"
+                    />
+                  </div>
                 ) : (
                   <span className="text-xl font-extrabold text-(--color-secondary)">{appName}</span>
                 )}
@@ -84,12 +95,12 @@ export default function MainHeader({ mobileNavItems }: MainHeaderProps) {
             {/* ── CENTER: Search bar — absolutely centered ── */}
             <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 justify-center pointer-events-none hidden md:flex">
               <div className="w-full max-w-xl lg:max-w-4xl pl-6 pr-10 pointer-events-auto">
-                <SearchBar />
+                <DeferredSearchBar />
               </div>
             </div>
 
             {/* ── RIGHT: Action icons ── */}
-            <div className="flex items-center gap-1 shrink-0 z-10">
+            <div className="flex items-center gap-1 shrink-0 z-10 bg-white pl-4">
               {/* Search / Close icon — mobile only */}
               <button
                 className="md:hidden p-2 rounded-full hover:bg-gray-100 transition-colors"
