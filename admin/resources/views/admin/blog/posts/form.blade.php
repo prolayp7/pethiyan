@@ -60,14 +60,40 @@
                             <label class="form-label">Content</label>
                             <textarea class="hugerte-mytextarea form-control" name="content" rows="12">{{ old('content', $post->content) }}</textarea>
                         </div>
+                        <div class="col-12">
+                            <label class="form-label">Table of Contents</label>
+                            <div id="toc-list" class="d-flex flex-column gap-2 mb-2">
+                                @foreach(old('toc_items', $post->metadata['table_of_contents'] ?? []) as $i => $item)
+                                <div class="input-group toc-row">
+                                    <span class="input-group-text text-muted toc-num" style="min-width:42px">{{ $i + 1 }}</span>
+                                    <input type="text" class="form-control" name="toc_items[]" value="{{ $item }}" placeholder="Section heading…">
+                                    <button type="button" class="btn btn-outline-danger toc-remove-btn" tabindex="-1">&times;</button>
+                                </div>
+                                @endforeach
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="toc-add-btn">+ Add Item</button>
+                            <div class="form-hint mt-1">Displayed in the "In This Article" block on the blog post page.</div>
+                        </div>
                         <div class="col-md-6">
                             <label class="form-label">Featured Image</label>
-                            <x-filepond_image name="featured_image" imageUrl="{{ $post->featured_image_url ?? '' }}"/>
+                            @if($post->exists && ($post->featured_image_url ?? ''))
+                                <div class="mb-2 d-flex align-items-center gap-3">
+                                    <img src="{{ $post->featured_image_url }}" alt="Featured image" class="rounded border" style="height: 72px; object-fit: cover;">
+                                    <span class="text-muted small">Current image — upload a new file below to replace it.</span>
+                                </div>
+                            @endif
+                            <x-filepond_image name="featured_image" imageUrl=""/>
                             <div class="form-hint mt-2">Recommended: 1600 x 900 px. Max upload size: 5 MB.</div>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Author Avatar</label>
-                            <x-filepond_image name="author_avatar" imageUrl="{{ $post->author_avatar_url ?? '' }}"/>
+                            @if($post->exists && ($post->author_avatar_url ?? ''))
+                                <div class="mb-2 d-flex align-items-center gap-3">
+                                    <img src="{{ $post->author_avatar_url }}" alt="Author avatar" class="rounded-circle border" style="height: 72px; width: 72px; object-fit: cover;">
+                                    <span class="text-muted small">Current avatar — upload a new file below to replace it.</span>
+                                </div>
+                            @endif
+                            <x-filepond_image name="author_avatar" imageUrl=""/>
                             <div class="form-hint mt-2">Recommended: 256 x 256 px. Max upload size: 3 MB.</div>
                         </div>
                         <div class="col-md-4">

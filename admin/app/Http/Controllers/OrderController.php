@@ -63,7 +63,7 @@ class OrderController extends Controller
         $this->orderService = $orderService;
         $this->currencyService = $currencyService;
         $this->settingService = $settingService;
-        $user = auth()->user();
+        $user = Auth::user();
         if ($user) {
             $this->editPermission = $this->hasPermission(SellerPermissionEnum::ORDER_EDIT()) || $user->hasRole(DefaultSystemRolesEnum::SELLER());
         }
@@ -77,17 +77,52 @@ class OrderController extends Controller
     public function index(): View
     {
         $this->authorize('viewAny', SellerOrder::class);
+        $columns = $this->buildOrderColumns();
+        return view($this->panelView('orders.index'), compact('columns'));
+    }
 
-        $columns = [
+    public function indexAccepted(): View
+    {
+        $this->authorize('viewAny', SellerOrder::class);
+        $columns = $this->buildOrderColumns();
+        return view($this->panelView('orders.index'), array_merge(compact('columns'), [
+            'defaultStatus' => OrderStatusEnum::ACCEPTED_BY_SELLER(),
+            'pageTitle'     => 'Order Accepted',
+        ]));
+    }
+
+    public function indexCancelled(): View
+    {
+        $this->authorize('viewAny', SellerOrder::class);
+        $columns = $this->buildOrderColumns();
+        return view($this->panelView('orders.index'), array_merge(compact('columns'), [
+            'defaultStatus' => OrderStatusEnum::CANCELLED(),
+            'pageTitle'     => 'Order Cancelled',
+        ]));
+    }
+
+    public function indexDispatched(): View
+    {
+        $this->authorize('viewAny', SellerOrder::class);
+        $columns = $this->buildOrderColumns();
+        return view($this->panelView('orders.index'), array_merge(compact('columns'), [
+            'defaultStatus' => OrderStatusEnum::DELIVERED(),
+            'pageTitle'     => 'Order Dispatched',
+        ]));
+    }
+
+    private function buildOrderColumns(): array
+    {
+        return [
             ['data' => 'id', 'name' => 'id', 'title' => __('labels.id')],
             ['data' => 'order_date', 'name' => 'order_date', 'title' => __('labels.order_date'), 'orderable' => false, 'searchable' => false],
             ['data' => 'order_details', 'name' => 'order_details', 'title' => __('labels.order_details'), 'orderable' => false, 'searchable' => false],
             ['data' => 'product_details', 'name' => 'product_details', 'title' => __('labels.product_details'), 'orderable' => false, 'searchable' => false],
             ['data' => 'promo', 'name' => 'promo', 'title' => 'Promo', 'orderable' => false, 'searchable' => false],
             ['data' => 'payment_status', 'name' => 'payment_status', 'title' => __('labels.payment_status'), 'orderable' => false, 'searchable' => false],
+            ['data' => 'order_status', 'name' => 'order_status', 'title' => __('labels.order_status'), 'orderable' => false, 'searchable' => false],
             ['data' => 'actions', 'name' => 'actions', 'title' => __('labels.actions'), 'orderable' => false, 'searchable' => false],
         ];
-        return view($this->panelView('orders.index'), compact('columns'));
     }
 
     /**
@@ -106,6 +141,8 @@ class OrderController extends Controller
         $paymentType = $request->get('payment_type');
         $dateRange = $request->get('range');
         $promoCode = trim($request->get('promo_code', ''));
+        $startDate = $request->get('start_date');
+        $endDate = $request->get('end_date');
 
         $orderColumnIndex = $request->get('order')[0]['column'] ?? 0;
         $orderDirection = $request->get('order')[0]['dir'] ?? 'desc';
@@ -131,7 +168,12 @@ class OrderController extends Controller
                 $query->where('payment_method', $paymentType);
             }
 
-            if ($dateRange !== null && $dateRange !== '') {
+            if (!empty($startDate) && !empty($endDate) && strtotime($startDate) && strtotime($endDate)) {
+                $query->whereBetween('created_at', [
+                    Carbon::parse($startDate)->startOfDay(),
+                    Carbon::parse($endDate)->endOfDay(),
+                ]);
+            } elseif ($dateRange !== null && $dateRange !== '') {
                 $fromDate = $this->getDateRange($dateRange);
                 if ($fromDate) {
                     $query->where('created_at', '>=', $fromDate);
@@ -186,7 +228,7 @@ class OrderController extends Controller
             });
 
         if ($this->getPanel() === 'seller') {
-            $user = auth()->user();
+            $user = Auth::user();
             $seller = $user?->seller();
 
             if (!$seller) {
@@ -222,8 +264,12 @@ class OrderController extends Controller
         }
 
         // Filter by date range if provided
-        if ($dateRange !== null && $dateRange !== '') {
-
+        if (!empty($startDate) && !empty($endDate) && strtotime($startDate) && strtotime($endDate)) {
+            $query->whereBetween('created_at', [
+                Carbon::parse($startDate)->startOfDay(),
+                Carbon::parse($endDate)->endOfDay(),
+            ]);
+        } elseif ($dateRange !== null && $dateRange !== '') {
             $fromDate = $this->getDateRange($dateRange);
             if ($fromDate) {
                 $query->where('created_at', '>=', $fromDate);
@@ -360,6 +406,7 @@ class OrderController extends Controller
                    </div>"
                 : "<span class='text-muted'>—</span>",
             'payment_status' => $this->renderPaymentStatusBadge((string) ($order->payment_status ?? PaymentStatusEnum::PENDING())),
+            'order_status' => $this->renderOrderStatusBadge((string) ($order->status ?? OrderStatusEnum::PENDING())),
             'actions' => view('partials.order-actions', [
                 'panel' => 'admin',
                 'uuid' => $order->uuid ?? '',
@@ -473,6 +520,22 @@ class OrderController extends Controller
         return '<span class="badge bg-' . $color . '-lt text-uppercase">' . e(Str::replace('_', ' ', $paymentStatus)) . '</span>';
     }
 
+    private function renderOrderStatusBadge(string $orderStatus): string
+    {
+        $color = match ($orderStatus) {
+            OrderStatusEnum::DELIVERED() => 'green',
+            OrderStatusEnum::CANCELLED(), OrderStatusEnum::FAILED(), OrderStatusEnum::REJECTED_BY_SELLER() => 'red',
+            OrderStatusEnum::ACCEPTED_BY_SELLER(), OrderStatusEnum::PARTIALLY_ACCEPTED() => 'teal',
+            OrderStatusEnum::PREPARING(), OrderStatusEnum::READY_FOR_PICKUP(), OrderStatusEnum::ASSIGNED(),
+            OrderStatusEnum::COLLECTED(), OrderStatusEnum::OUT_FOR_DELIVERY() => 'blue',
+            default => 'yellow',
+        };
+
+        $label = OrderStatusEnum::tryFrom($orderStatus)?->label() ?? Str::headline($orderStatus);
+
+        return '<span class="badge bg-' . $color . '-lt">' . e($label) . '</span>';
+    }
+
     private function getDateRange($dateRange): ?Carbon
     {
         $fromDate = null;
@@ -513,7 +576,7 @@ class OrderController extends Controller
     public function show(int $id): View
     {
         if ($this->getPanel() === 'seller') {
-            $user = auth()->user();
+            $user = Auth::user();
             $seller = $user?->seller();
 
             if (!$seller) {
@@ -570,7 +633,7 @@ class OrderController extends Controller
             'tracking_code' => ['nullable', 'string', 'max:100'],
         ]);
 
-        $result = $this->orderService->updateOrderByAdmin($order, $validated, Auth::id());
+        $result = $this->orderService->updateOrderByAdmin($order, $validated, Auth::guard('admin')->id());
 
         return redirect()
             ->route('admin.orders.show', $order->id)
@@ -623,7 +686,7 @@ class OrderController extends Controller
     public function updateStatus(int $id, string $status): JsonResponse
     {
         try {
-            $seller = auth()->user()->seller();
+            $seller = Auth::user()->seller();
             if (!$seller) {
                 return ApiResponseType::sendJsonResponse(false, __('labels.seller_not_found'));
             }
@@ -760,6 +823,104 @@ class OrderController extends Controller
         } catch (AuthorizationException) {
             abort(403, __('messages.unauthorized_action'));
         }
+    }
+
+    public function exportOrders(Request $request)
+    {
+        $this->authorize('viewAny', Order::class);
+
+        $status      = $request->get('status');
+        $paymentType = $request->get('payment_type');
+        $dateRange   = $request->get('range');
+        $promoCode   = trim($request->get('promo_code', ''));
+        $startDate   = $request->get('start_date');
+        $endDate     = $request->get('end_date');
+
+        $query = Order::with(['items.product', 'items.variant', 'user']);
+
+        if ($status !== null && $status !== '') {
+            $query->where('status', $status);
+        }
+
+        if ($paymentType !== null && $paymentType !== '') {
+            $query->where('payment_method', $paymentType);
+        }
+
+        if (!empty($startDate) && !empty($endDate) && strtotime($startDate) && strtotime($endDate)) {
+            $query->whereBetween('created_at', [
+                Carbon::parse($startDate)->startOfDay(),
+                Carbon::parse($endDate)->endOfDay(),
+            ]);
+        } elseif ($dateRange !== null && $dateRange !== '') {
+            $fromDate = $this->getDateRange($dateRange);
+            if ($fromDate) {
+                $query->where('created_at', '>=', $fromDate);
+            }
+        }
+
+        if (!empty($promoCode)) {
+            $query->where('promo_code', 'like', "%$promoCode%");
+        }
+
+        $orders = $query->orderBy('id', 'asc')->get();
+
+        $filename = 'orders-export-' . now()->format('Y-m-d_H-i-s') . '.csv';
+
+        $headers = [
+            'Content-Type'        => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ];
+
+        $callback = function () use ($orders) {
+            $handle = fopen('php://output', 'w');
+
+            fputcsv($handle, [
+                'Order ID', 'Order Number', 'Date', 'Buyer Name', 'Email',
+                'Phone', 'Payment Method', 'Payment Status', 'Order Status',
+                'Subtotal', 'Shipping', 'Handling', 'GST', 'Promo Code',
+                'Promo Discount', 'Gift Card Discount', 'Total Payable',
+                'Shipping Address', 'City', 'State', 'Country', 'Pincode',
+                'Tracking Code', 'Is Rush Order', 'Items Count',
+            ]);
+
+            foreach ($orders as $order) {
+                fputcsv($handle, [
+                    $order->id,
+                    $order->slug ?? $order->id,
+                    $order->created_at?->format('Y-m-d H:i:s'),
+                    $order->shipping_name ?? '',
+                    $order->email ?? '',
+                    $order->shipping_phone ?? '',
+                    $order->payment_method ?? '',
+                    $order->payment_status ?? '',
+                    $order->status ?? '',
+                    $order->subtotal ?? 0,
+                    $order->delivery_charge ?? 0,
+                    $order->handling_charges ?? 0,
+                    $order->total_gst ?? 0,
+                    $order->promo_code ?? '',
+                    $order->promo_discount ?? 0,
+                    $order->gift_card_discount ?? 0,
+                    $order->total_payable ?? $order->final_total ?? 0,
+                    trim(implode(', ', array_filter([
+                        $order->shipping_address_1,
+                        $order->shipping_address_2,
+                        $order->shipping_landmark,
+                    ]))),
+                    $order->shipping_city ?? '',
+                    $order->shipping_state ?? '',
+                    $order->shipping_country ?? '',
+                    $order->shipping_zip ?? '',
+                    $order->tracking_code ?? '',
+                    $order->is_rush_order ? 'Yes' : 'No',
+                    $order->items->count(),
+                ]);
+            }
+
+            fclose($handle);
+        };
+
+        return response()->stream($callback, 200, $headers);
     }
 
     private function canManageAdminOrder(): bool

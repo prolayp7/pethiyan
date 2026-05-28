@@ -31,7 +31,7 @@
         };
 
         FilePond.registerPlugin(FilePondPluginImagePreview);
-            const input = document.querySelector('[name="{{ $name }}"]');
+        const input = document.querySelector('[name="{{ $name }}"]');
         if (input) {
             let imageUrl = normalizeLocalhostOrigin(input.getAttribute('data-image-url'));
             FilePond.create(input, {
@@ -43,8 +43,14 @@
                 server: {
                     load: (source, load, error, progress, abort) => {
                         fetch(normalizeLocalhostOrigin(source))
-                            .then(response => response.blob())
-                            .then(blob => load(blob))
+                            .then(response => {
+                                const contentType = response.headers.get('content-type') || 'image/jpeg';
+                                return response.blob().then(blob => {
+                                    const ext = contentType.split('/').pop() || 'jpg';
+                                    return new File([blob], `image.${ext}`, { type: contentType });
+                                });
+                            })
+                            .then(file => load(file))
                             .catch(err => error(err));
                         return { abort: () => {} };
                     },

@@ -720,7 +720,7 @@ export async function getProducts(params?: Record<string, string>): Promise<Real
   try {
     const res = await fetch(`${API_BASE}/api/products${query}`, {
       headers: { Accept: "application/json" },
-      next: { revalidate: 86400 },
+      cache: "no-store",
     } as RequestInit);
     if (!res.ok) return [];
     const json = await res.json();
@@ -748,7 +748,7 @@ export async function getProductsPage(page = 1, perPage = 24): Promise<ProductsP
   try {
     const res = await fetch(
       `${API_BASE}/api/products?page=${page}&perPage=${perPage}`,
-      { headers: { Accept: "application/json" }, next: { revalidate: 86400 } } as RequestInit,
+      { headers: { Accept: "application/json" }, cache: "no-store" } as RequestInit,
     );
     if (!res.ok) return empty;
     const json = await res.json();
@@ -773,7 +773,7 @@ export async function getFeaturedProducts(): Promise<RealApiProduct[]> {
   try {
     const res = await fetch(`${API_BASE}/api/products/featured`, {
       headers: { Accept: "application/json" },
-      next: { revalidate: 86400 },
+      cache: "no-store",
     } as RequestInit);
     if (!res.ok) return [];
     const json = await res.json();
@@ -829,7 +829,7 @@ export async function getNewArrivals(days = 30, limit = 40): Promise<RealApiProd
       `${API_BASE}/api/products/new-arrivals?days=${days}&limit=${limit}`,
       {
         headers: { Accept: "application/json" },
-        next: { revalidate: 86400 },
+        cache: "no-store",
       } as RequestInit
     );
     if (!res.ok) return [];
@@ -1614,6 +1614,25 @@ function normalizeOrder(raw: Record<string, unknown>): ApiOrder {
     };
   }) as ApiOrderItem[];
 
+  // Build structured address from flat shipping_* fields returned by the API
+  const shippingName  = (raw.shipping_name  as string | undefined)?.trim();
+  const shippingPhone = (raw.shipping_phone as string | undefined)?.trim();
+  const addressLine1  = (raw.shipping_address_1 as string | undefined)?.trim();
+  const address: ApiAddress | undefined =
+    shippingName || addressLine1
+      ? {
+          id: 0,
+          name: shippingName ?? "",
+          phone: shippingPhone ?? "",
+          address_line1: addressLine1 ?? "",
+          address_line2: (raw.shipping_address_2 as string | undefined)?.trim() || undefined,
+          city: (raw.shipping_city  as string | undefined)?.trim() ?? "",
+          state: (raw.shipping_state as string | undefined)?.trim() ?? "",
+          pincode: (raw.shipping_zip as string | undefined)?.trim() ?? "",
+          is_default: false,
+        }
+      : (raw.address as ApiAddress | undefined);
+
   return {
     ...(raw as object),
     uuid: (raw.uuid as string) ?? (raw.slug as string) ?? String(raw.id),
@@ -1628,6 +1647,7 @@ function normalizeOrder(raw: Record<string, unknown>): ApiOrder {
     promo_discount: parseFloat(String(raw.promo_discount ?? 0)),
     gift_card_discount: parseFloat(String(raw.gift_card_discount ?? 0)),
     invoice_downloadable: raw.invoice_downloadable === true,
+    address,
     items,
   } as ApiOrder;
 }
@@ -2941,7 +2961,7 @@ export async function getProductsByCategory(categorySlug: string): Promise<RealA
       `${API_BASE}/api/products?categories=${encodeURIComponent(categorySlug)}&per_page=100&include_child_categories=1`,
       {
         headers: { Accept: "application/json" },
-        next: { revalidate: 86400 },
+        cache: "no-store",
       } as RequestInit
     );
     if (!res.ok) return [];
